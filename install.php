@@ -137,6 +137,8 @@ if (!empty($_POST)) {
         $config->dbport = '';
     }
 
+    $config->foreign_keys = ( trim($_POST['foreign_keys']) == 'true' ) ? true : false;
+    
     $config->admin    = empty($_POST['admin']) ? 'admin' : trim($_POST['admin']);
 
     $config->dataroot = trim($_POST['dataroot']);
@@ -152,6 +154,7 @@ if (!empty($_POST)) {
     $config->prefix   = 'mdl_';
     $config->dbport   = empty($distro->dbport) ? '' : $distro->dbport;
     $config->dbsocket = empty($distro->dbsocket) ? '' : $distro->dbsocket;
+    $config->foreign_keys = empty($distro->foreign_keys) ? false : $distro->foreign_keys;
 
     $config->admin    = 'admin';
 
@@ -284,6 +287,7 @@ if ($config->stage == INSTALL_SAVE) {
     $CFG->early_install_lang = false;
 
     $database = moodle_database::get_driver_instance($config->dbtype, 'native');
+
     if (!$database->driver_installed()) {
         $config->stage = INSTALL_DATABASETYPE;
     } else {
@@ -467,6 +471,13 @@ if ($config->stage == INSTALL_DATABASE) {
         echo '<div class="fitemelement"><input id="id_dbsocket" name="dbsocket" type="text" value="'.s($config->dbsocket).'" size="50" /></div>';
         echo '</div>';
     }
+
+    // Foreign Key Support:
+    echo '<div class="fitem"><div class="fitemtitle"><label for="foreign_keys">'.get_string('foreignkeysupport').' ('.get_string('experimental').')</label></div>';
+    echo '<div class="fitemelement"><select id="foreign_keys" name="foreign_keys">';
+    echo '<option value="false">'.get_string('no').'</option>';
+    echo '<option value="true">'.get_string('yes').'</option>';
+    echo '</select></div>';
 
     if ($hint_database !== '') {
         echo '<div class="alert alert-error">'.$hint_database.'</div>';

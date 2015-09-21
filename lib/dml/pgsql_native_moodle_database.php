@@ -115,7 +115,7 @@ class pgsql_native_moodle_database extends moodle_database {
      * @return bool true
      * @throws dml_connection_exception if error
      */
-    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
+    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null, $foreign_keys=false) {
         if ($prefix == '' and !$this->external) {
             //Enforce prefixes for everybody but mysql
             throw new dml_exception('prefixcannotbeempty', $this->get_dbfamily());
@@ -127,7 +127,7 @@ class pgsql_native_moodle_database extends moodle_database {
             throw new dml_exception('dbdriverproblem', $driverstatus);
         }
 
-        $this->store_settings($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
+        $this->store_settings($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions, $foreign_keys);
 
         $pass = addcslashes($this->dbpass, "'\\");
 

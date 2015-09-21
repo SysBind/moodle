@@ -2041,3 +2041,5 @@ $string['yourself'] = 'yourself';
 $string['yourteacher'] = 'your {$a}';
 $string['yourwordforx'] = 'Your word for \'{$a}\'';
 $string['zippingbackup'] = 'Zipping backup';
+$string['foreignkeysupport'] = 'Foreign Key Support';
+$string['experimental'] = 'Experimental';

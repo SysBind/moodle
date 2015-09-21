@@ -412,14 +412,14 @@ class mysqli_native_moodle_database extends moodle_database {
      * @param array $dboptions driver specific options
      * @return bool success
      */
-    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
+    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null, $foreign_keys=false) {
         $driverstatus = $this->driver_installed();
 
         if ($driverstatus !== true) {
             throw new dml_exception('dbdriverproblem', $driverstatus);
         }
 
-        $this->store_settings($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
+        $this->store_settings($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions, $foreign_keys);
 
         // dbsocket is used ONLY if host is NULL or 'localhost',
         // you can not disable it because it is always tried if dbhost is 'localhost'

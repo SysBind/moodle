@@ -84,6 +84,9 @@ abstract class moodle_database {
     /** @var array Database or driver specific options, such as sockets or TCP/IP db connections. */
     protected $dboptions;
 
+    /** @var boolean Weather to enforce foreign keys in databse. */
+    protected $foreign_keys = false;
+
     /** @var bool True means non-moodle external database used.*/
     protected $external;
 
@@ -263,7 +266,7 @@ abstract class moodle_database {
         if ($this->dboptions) {
             $cfg->dboptions = $this->dboptions;
         }
-
+        $cfg->foreign_keys    = $this->foreign_keys;
         return $cfg;
     }
 
@@ -289,7 +292,7 @@ abstract class moodle_database {
      * @return bool true
      * @throws dml_connection_exception if error
      */
-    public abstract function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null);
+    public abstract function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null, $foreign_keys=false);
 
     /**
      * Store various database settings
@@ -301,13 +304,14 @@ abstract class moodle_database {
      * @param array $dboptions driver specific options
      * @return void
      */
-    protected function store_settings($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
+    protected function store_settings($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null, $foreign_keys=false) {
         $this->dbhost    = $dbhost;
         $this->dbuser    = $dbuser;
         $this->dbpass    = $dbpass;
         $this->dbname    = $dbname;
         $this->prefix    = $prefix;
         $this->dboptions = (array)$dboptions;
+        $this->foreign_keys = $foreign_keys;
     }
 
     /**

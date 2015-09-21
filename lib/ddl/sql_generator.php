@@ -85,9 +85,6 @@ abstract class sql_generator {
     /** @var bool True if the generator builds unique keys.*/
     public $unique_keys = false;
 
-    /** @var bool True if the generator builds foreign keys.*/
-    public $foreign_keys = false;
-
     /** @var string Template to drop PKs. 'TABLENAME' and 'KEYNAME' will be replaced from this template.*/
     public $drop_primary_key = 'ALTER TABLE TABLENAME DROP CONSTRAINT KEYNAME';
 
@@ -172,16 +169,25 @@ abstract class sql_generator {
     /** @var Control existing temptables.*/
     protected $temptables;
 
+    /** @var bool True if the generator builds foreign keys.*/
+    protected $foreign_keys = false;
+
     /**
      * Creates a new sql_generator.
      * @param moodle_database $mdb The moodle_database object instance.
+     * @param foreign_keys $foreign_keys weather to enforece database level foreign keys
      * @param moodle_temptables $temptables The optional moodle_temptables instance, null by default.
      */
-    public function __construct($mdb, $temptables = null) {
+    public function __construct($mdb, $foreign_keys, $temptables = null) {
         $this->prefix         = $mdb->get_prefix();
         $this->reserved_words = $this->getReservedWords();
         $this->mdb            = $mdb; // this creates circular reference - the other link must be unset when closing db
         $this->temptables     = $temptables;
+
+        if ( ! is_bool($foreign_keys) )
+            throw new coding_exception('sql_generator __construct called with invalid (non-bool) $foreign_keys parameter');
+        
+        $this->foreign_keys = $foreign_keys;
     }
 
     /**
