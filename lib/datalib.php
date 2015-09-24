@@ -1604,7 +1604,7 @@ function add_to_config_log($name, $oldvalue, $value, $plugin) {
     global $USER, $DB;
 
     $log = new stdClass();
-    $log->userid       = during_initial_install() ? 0 :$USER->id; // 0 as user id during install
+    $log->userid       = during_initial_install() ? NULL :$USER->id; // NULL as user id during install
     $log->timemodified = time();
     $log->name         = $name;
     $log->oldvalue  = $oldvalue;
