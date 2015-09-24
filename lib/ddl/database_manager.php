@@ -400,7 +400,7 @@ class database_manager {
 
     /**
      * This function will re-order the tables array (xmldb_structure->tables)
-     * So that dependant tables apaer before tables that depend on them
+     * So that dependant tables appear before tables that depend on them
      * (Important for e.g : Foreign Key Creation)
      *
      * @param stdClass $tables array object.
@@ -415,18 +415,15 @@ class database_manager {
         /**
          *  Recursive function to add table and tables it depends on, recursively
          */        
-        $add_table = function($table) use ($unordered, &$added, &$ordered)
-        {
-            
-            
-            error_log('database_manager->reorder_tables() : add_table  '.$table->getName());
-            
+        $add_table = function($table) use (&$unordered, &$added, &$ordered, &$add_table)
+        {                        
             if ( array_key_exists($table->getName(), $added) )
                 return;
             
-            foreach ($keys as $key) {
+            foreach ($table->getKeys() as $key) {
                 $reftable = $key->getRefTable();
-                if ( $reftable  && ! array_key_exists($reftable, $added) )
+                if ( $reftable  && ! array_key_exists($reftable, $added)
+                     && $reftable != $table->getName() ) // self-reference (e.g course_category->parent)
                     if ( array_key_exists($reftable, $unordered) ) // otherwise hopefully belongs to another module
                         $add_table( $unordered[$reftable] );
             }
@@ -442,8 +439,6 @@ class database_manager {
         foreach ($unordered as $name => $table)
             $add_table($table);
 
-        xdebug_break();
-            
         return $ordered;
     }
 
@@ -455,12 +450,11 @@ class database_manager {
      * @return void
      */
     public function install_from_xmldb_structure($xmldb_structure) {
-        $tables = $xmldb_structure->getTables();
 
-        $tables = $this->reorder_tables($tables);
+        // Reorder tables by dependency order (if needed):
+        if ($this->generator->foreign_keys)
+            $xmldb_structure->setTables( $this->reorder_tables($xmldb_structure->getTables()) );
 
-        xdebug_break();
-        
         if (!$sqlarr = $this->generator->getCreateStructureSQL($xmldb_structure)) {
             return; // nothing to do
         }
