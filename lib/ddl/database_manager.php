@@ -397,6 +397,56 @@ class database_manager {
         $this->install_from_xmldb_structure($tempstructure);
     }
 
+
+    /**
+     * This function will re-order the tables array (xmldb_structure->tables)
+     * So that dependant tables apaer before tables that depend on them
+     * (Important for e.g : Foreign Key Creation)
+     *
+     * @param stdClass $tables array object.
+     * @return array of ordered tables
+     */    
+    public function reorder_tables($tables)
+    {
+        $unordered = [];
+        $added = [];
+        $ordered = [];
+
+        /**
+         *  Recursive function to add table and tables it depends on, recursively
+         */        
+        $add_table = function($table) use ($unordered, &$added, &$ordered)
+        {
+            
+            
+            error_log('database_manager->reorder_tables() : add_table  '.$table->getName());
+            
+            if ( array_key_exists($table->getName(), $added) )
+                return;
+            
+            foreach ($keys as $key) {
+                $reftable = $key->getRefTable();
+                if ( $reftable  && ! array_key_exists($reftable, $added) )
+                    if ( array_key_exists($reftable, $unordered) ) // otherwise hopefully belongs to another module
+                        $add_table( $unordered[$reftable] );
+            }
+
+            $added[$table->getName()] = 1;
+            $ordered[] = $table;
+        };
+            
+            
+        foreach ($tables as $table)
+            $unordered[$table->getName()] = $table;
+
+        foreach ($unordered as $name => $table)
+            $add_table($table);
+
+        xdebug_break();
+            
+        return $ordered;
+    }
+
     /**
      * This function will generate all the needed SQL statements, specific for each
      * RDBMS type and, finally, it will execute all those statements against the DB.
@@ -405,10 +455,16 @@ class database_manager {
      * @return void
      */
     public function install_from_xmldb_structure($xmldb_structure) {
+        $tables = $xmldb_structure->getTables();
 
+        $tables = $this->reorder_tables($tables);
+
+        xdebug_break();
+        
         if (!$sqlarr = $this->generator->getCreateStructureSQL($xmldb_structure)) {
             return; // nothing to do
         }
+
         $this->execute_sql_arr($sqlarr);
     }
 
