@@ -458,7 +458,6 @@ class database_manager {
         if (!$sqlarr = $this->generator->getCreateStructureSQL($xmldb_structure)) {
             return; // nothing to do
         }
-
         $this->execute_sql_arr($sqlarr);
     }
 
