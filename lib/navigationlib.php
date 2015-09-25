@@ -1635,7 +1635,7 @@ class global_navigation extends navigation_node {
             // on the database server!
         } else if ($categoryid == self::LOAD_ROOT_CATEGORIES) { // can be 0
             // We are going to load all of the first level categories (categories without parents)
-            $sqlwhere .= " AND cc.parent = 0";
+            $sqlwhere .= " AND cc.parent IS NULL";
         } else if (array_key_exists($categoryid, $this->addedcategories)) {
             // The category itself has been loaded already so we just need to ensure its subcategories
             // have been loaded
@@ -1644,8 +1644,8 @@ class global_navigation extends navigation_node {
             if (count($addedcategories) > 0) {
                 list($sql, $params) = $DB->get_in_or_equal(array_keys($addedcategories), SQL_PARAMS_NAMED, 'parent', false);
                 if ($showbasecategories) {
-                    // We need to include categories with parent = 0 as well
-                    $sqlwhere .= " AND (cc.parent = :categoryid OR cc.parent = 0) AND cc.parent {$sql}";
+                    // We need to include categories with parent = NULL as well
+                    $sqlwhere .= " AND (cc.parent = :categoryid OR cc.parent IS NULL) AND cc.parent {$sql}";
                 } else {
                     // All we need is categories that match the parent
                     $sqlwhere .= " AND cc.parent = :categoryid AND cc.parent {$sql}";
@@ -1672,7 +1672,7 @@ class global_navigation extends navigation_node {
             context_helper::preload_from_record($category);
             if (array_key_exists($category->id, $this->addedcategories)) {
                 // Do nothing, its already been added.
-            } else if ($category->parent == '0') {
+            } else if ($category->parent == NULL) {
                 // This is a root category lets add it immediately
                 $this->add_category($category, $this->rootnodes['courses']);
             } else if (array_key_exists($category->parent, $this->addedcategories)) {
@@ -1689,7 +1689,7 @@ class global_navigation extends navigation_node {
             $category = reset($categories);
             if (array_key_exists($category->id, $this->addedcategories)) {
                 // Do nothing
-            } else if ($category->parent == '0') {
+            } else if ($category->parent == NULL) {
                 $this->add_category($category, $this->rootnodes['courses']);
             } else if (array_key_exists($category->parent, $this->addedcategories)) {
                 $this->add_category($category, $this->addedcategories[$category->parent]);
@@ -1701,7 +1701,7 @@ class global_navigation extends navigation_node {
                     if (!array_key_exists($catid, $this->addedcategories)) {
                         // This category isn't in the navigation yet so add it.
                         $subcategory = $categories[$catid];
-                        if ($subcategory->parent == '0') {
+                        if ($subcategory->parent == NULL) {
                             // Yay we have a root category - this likely means we will now be able
                             // to add categories without problems.
                             $this->add_category($subcategory, $this->rootnodes['courses']);
@@ -2772,7 +2772,7 @@ class global_navigation extends navigation_node {
 
             // Now we load the base categories.
             list($sql, $params) = $DB->get_in_or_equal($categoryids);
-            $categories = $DB->get_recordset_select('course_categories', 'id '.$sql.' AND parent = 0', $params, 'sortorder, id');
+            $categories = $DB->get_recordset_select('course_categories', 'id '.$sql.' AND parent IS NULL', $params, 'sortorder, id');
             foreach ($categories as $category) {
                 $this->add_category($category, $this->rootnodes['mycourses'], self::TYPE_MY_CATEGORY);
             }
