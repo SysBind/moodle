@@ -397,7 +397,7 @@ class manager {
             self::add_session_record($user->id);
         } else {
             self::init_empty_session();
-            self::add_session_record(0);
+            self::add_session_record(NULL);
         }
 
         if ($timedout) {
