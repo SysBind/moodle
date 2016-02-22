@@ -381,7 +381,7 @@ class view {
         }
 
         // Build the where clause.
-        $tests = array('q.parent = 0');
+        $tests = array('q.parent IS NULL');
         $this->sqlparams = array();
         foreach ($this->searchconditions as $searchcondition) {
             if ($searchcondition->where()) {

@@ -65,7 +65,11 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
         $newcm->idnumber         = $moduleinfo->cmidnumber;
     }
     $newcm->groupmode        = $moduleinfo->groupmode;
-    $newcm->groupingid       = $moduleinfo->groupingid;
+    if ($moduleinfo->groupingid != 0) {
+        $newcm->groupingid = $moduleinfo->groupingid;
+    } else {
+        $newcm->groupingid = null;
+    }
     $completion = new completion_info($course);
     if ($completion->is_enabled()) {
         $newcm->completion                = $moduleinfo->completion;
@@ -471,7 +475,7 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
     // Update course module first.
     $cm->groupmode = $moduleinfo->groupmode;
     if (isset($moduleinfo->groupingid)) {
-        $cm->groupingid = $moduleinfo->groupingid;
+        $cm->groupingid = ($moduleinfo->groupingid == 0) ? null : $moduleinfo->groupingid;
     }
 
     $completion = new completion_info($course);

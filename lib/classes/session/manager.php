@@ -397,7 +397,7 @@ class manager {
             self::add_session_record($user->id);
         } else {
             self::init_empty_session();
-            self::add_session_record(0);
+            self::add_session_record(null);
         }
 
         if ($timedout) {
@@ -416,7 +416,7 @@ class manager {
         $record->state       = 0;
         $record->sid         = session_id();
         $record->sessdata    = null;
-        $record->userid      = $userid;
+        $record->userid      = ($userid == 0) ? null :  $userid;
         $record->timecreated = $record->timemodified = time();
         $record->firstip     = $record->lastip = getremoteaddr();
 

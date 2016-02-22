@@ -180,6 +180,8 @@ abstract class sql_generator {
     public function __construct($mdb, $temptables = null) {
         $this->prefix         = $mdb->get_prefix();
         $this->reserved_words = $this->getReservedWords();
+        $dbconfig             = $mdb->export_dbconfig();
+        $this->foreign_keys   = ($dbconfig->dboptions['dbforeignkey'] == 'on');
         $this->mdb            = $mdb; // this creates circular reference - the other link must be unset when closing db
         $this->temptables     = $temptables;
     }
@@ -559,6 +561,10 @@ abstract class sql_generator {
                     $key .= ' FOREIGN KEY (' . implode(', ', $this->getEncQuoted($xmldb_key->getFields())) . ')';
                     $key .= ' REFERENCES ' . $this->getEncQuoted($this->prefix . $xmldb_key->getRefTable());
                     $key .= ' (' . implode(', ', $this->getEncQuoted($xmldb_key->getRefFields())) . ')';
+                    $ondelete = $xmldb_key->getOnDelete();
+                    if (!is_null($ondelete) && $ondelete !== "noaction") {
+                        $key .= ' ON DELETE '.$ondelete;
+                    }
                 }
                 break;
         }

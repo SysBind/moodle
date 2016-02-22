@@ -64,7 +64,7 @@ function get_questions_category( $category, $noparent=false, $recurse=true, $exp
     // Build sql bit for $noparent
     $npsql = '';
     if ($noparent) {
-      $npsql = " and parent='0' ";
+      $npsql = " and parent IS NULL ";
     }
 
     // Get list of categories

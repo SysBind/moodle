@@ -2962,7 +2962,7 @@ function forum_get_discussions_count($cm) {
     $sql = "SELECT COUNT(d.id)
               FROM {forum_discussions} d
                    JOIN {forum_posts} p ON p.discussion = d.id
-             WHERE d.forum = ? AND p.parent = 0
+             WHERE d.forum = ? AND p.parent IS NULL
                    $groupselect $timelimit";
 
     return $DB->get_field_sql($sql, $params);
@@ -4455,8 +4455,9 @@ function forum_add_discussion($discussion, $mform=null, $unused=null, $userid=nu
     $cm    = get_coursemodule_from_instance('forum', $forum->id);
 
     $post = new stdClass();
-    $post->discussion    = 0;
-    $post->parent        = 0;
+    $discussion->id      = $DB->insert_record("forum_discussions", $discussion);
+    $post->discussion    = $discussion->id;
+    $post->parent        = null;
     $post->userid        = $userid;
     $post->created       = $timenow;
     $post->modified      = $timenow;
@@ -4488,11 +4489,8 @@ function forum_add_discussion($discussion, $mform=null, $unused=null, $userid=nu
     $discussion->userid       = $userid;
     $discussion->assessed     = 0;
 
-    $post->discussion = $DB->insert_record("forum_discussions", $discussion);
-
-    // Finally, set the pointer on the post.
-    $DB->set_field("forum_posts", "discussion", $post->discussion, array("id"=>$post->id));
-
+    $DB->update_record('forum_discussions', $discussion);
+    
     if (!empty($cm->id)) {
         forum_add_attachment($post, $forum, $cm, $mform, $unused);
     }

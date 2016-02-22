@@ -130,7 +130,7 @@ if ($mform->is_cancelled()) {
         if (!has_capability('moodle/grade:manage', $systemcontext)) {
             $data->standard = 0;
         }
-        $scale->courseid = !empty($data->standard) ? 0 : $courseid;
+        $scale->courseid = !empty($data->standard) ? null : $courseid;
         $scale->insert();
         $data = file_postupdate_standard_editor($data, 'description', $editoroptions, $systemcontext, 'grade', 'scale', $scale->id);
         $DB->set_field($scale->table, 'description', $data->description, array('id'=>$scale->id));

@@ -383,7 +383,7 @@ class question_category_object {
     public function move_questions($oldcat, $newcat){
         global $DB;
         $questionids = $DB->get_records_select_menu('question',
-                'category = ? AND (parent = 0 OR parent = id)', array($oldcat), '', 'id,1');
+                'category = ? AND (parent IS NULL OR parent = id)', array($oldcat), '', 'id,1');
         question_move_questions_to_category(array_keys($questionids), $newcat);
     }
 

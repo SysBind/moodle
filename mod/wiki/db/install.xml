@@ -62,7 +62,7 @@
     <TABLE NAME="wiki_versions" COMMENT="Stores wiki page history">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="pageid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Page id"/>
+        <FIELD NAME="pageid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Page id"/>
         <FIELD NAME="content" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Not parsed wiki content"/>
         <FIELD NAME="contentformat" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="creole" SEQUENCE="false" COMMENT="Markup used to write content"/>
         <FIELD NAME="version" TYPE="int" LENGTH="5" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Wiki page version"/>

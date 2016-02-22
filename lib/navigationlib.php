@@ -1665,7 +1665,7 @@ class global_navigation extends navigation_node {
             context_helper::preload_from_record($category);
             if (array_key_exists($category->id, $this->addedcategories)) {
                 // Do nothing, its already been added.
-            } else if ($category->parent == '0') {
+            } else if ($category->parent == null) {
                 // This is a root category lets add it immediately
                 $this->add_category($category, $this->rootnodes['courses']);
             } else if (array_key_exists($category->parent, $this->addedcategories)) {
@@ -1682,7 +1682,7 @@ class global_navigation extends navigation_node {
             $category = reset($categories);
             if (array_key_exists($category->id, $this->addedcategories)) {
                 // Do nothing
-            } else if ($category->parent == '0') {
+            } else if ($category->parent == null) {
                 $this->add_category($category, $this->rootnodes['courses']);
             } else if (array_key_exists($category->parent, $this->addedcategories)) {
                 $this->add_category($category, $this->addedcategories[$category->parent]);
@@ -1694,7 +1694,7 @@ class global_navigation extends navigation_node {
                     if (!array_key_exists($catid, $this->addedcategories)) {
                         // This category isn't in the navigation yet so add it.
                         $subcategory = $categories[$catid];
-                        if ($subcategory->parent == '0') {
+                        if ($subcategory->parent == null) {
                             // Yay we have a root category - this likely means we will now be able
                             // to add categories without problems.
                             $this->add_category($subcategory, $this->rootnodes['courses']);

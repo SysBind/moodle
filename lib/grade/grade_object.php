@@ -291,7 +291,7 @@ abstract class grade_object {
                 $data->oldid        = $this->id;
                 $data->source       = $source;
                 $data->timemodified = time();
-                $data->loggeduser   = $USER->id;
+                $data->loggeduser   = ($USER->id == 0 ) ? null : $USER->id;
                 $DB->insert_record($this->table.'_history', $data);
             }
             $this->notify_changed(true);
@@ -353,7 +353,7 @@ abstract class grade_object {
             $data->oldid        = $this->id;
             $data->source       = $source;
             $data->timemodified = time();
-            $data->loggeduser   = $USER->id;
+            $data->loggeduser   = ($USER->id == 0 ) ? null : $USER->id;
             $DB->insert_record($this->table.'_history', $data);
         }
 

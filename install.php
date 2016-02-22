@@ -107,7 +107,7 @@ if (file_exists('install/distrolib.php')) {
 }
 
 $config = new stdClass();
-$config->lang = $lang;
+    $config->lang = $lang;
 
 if (!empty($_POST)) {
     $config->stage = (int)$_POST['stage'];
@@ -124,14 +124,15 @@ if (!empty($_POST)) {
         $config->stage++;
     }
 
-    $config->dbtype   = trim($_POST['dbtype']);
-    $config->dbhost   = trim($_POST['dbhost']);
-    $config->dbuser   = trim($_POST['dbuser']);
-    $config->dbpass   = trim($_POST['dbpass']);
-    $config->dbname   = trim($_POST['dbname']);
-    $config->prefix   = trim($_POST['prefix']);
-    $config->dbport   = (int)trim($_POST['dbport']);
-    $config->dbsocket = trim($_POST['dbsocket']);
+    $config->dbtype       = trim($_POST['dbtype']);
+    $config->dbhost       = trim($_POST['dbhost']);
+    $config->dbuser       = trim($_POST['dbuser']);
+    $config->dbpass       = trim($_POST['dbpass']);
+    $config->dbname       = trim($_POST['dbname']);
+    $config->prefix       = trim($_POST['prefix']);
+    $config->dbport       = (int)trim($_POST['dbport']);
+    $config->dbsocket     = trim($_POST['dbsocket']);
+    $config->dbforeignkey = trim($_POST['dbforeignkey']);
 
     if ($config->dbport <= 0) {
         $config->dbport = '';
@@ -152,7 +153,8 @@ if (!empty($_POST)) {
     $config->prefix   = 'mdl_';
     $config->dbport   = empty($distro->dbport) ? '' : $distro->dbport;
     $config->dbsocket = empty($distro->dbsocket) ? '' : $distro->dbsocket;
-
+    $config->dbforeignkey = empty($distro->dbforeignkey) ? null : $distro->dbforeignkey;
+    
     $config->admin    = 'admin';
 
     $config->dataroot = empty($distro->dataroot) ? null  : $distro->dataroot; // initialised later after including libs or by distro
@@ -288,9 +290,9 @@ if ($config->stage == INSTALL_SAVE) {
         $config->stage = INSTALL_DATABASETYPE;
     } else {
         if (function_exists('distro_pre_create_db')) { // Hook for distros needing to do something before DB creation
-            $distro = distro_pre_create_db($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, array('dbpersist'=>0, 'dbport'=>$config->dbport, 'dbsocket'=>$config->dbsocket), $distro);
+            $distro = distro_pre_create_db($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, array('dbpersist'=>0, 'dbport'=>$config->dbport, 'dbsocket'=>$config->dbsocket, 'dbforeignkey'=> $config->dbforeignkey), $distro);
         }
-        $hint_database = install_db_validate($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, array('dbpersist'=>0, 'dbport'=>$config->dbport, 'dbsocket'=>$config->dbsocket));
+        $hint_database = install_db_validate($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, array('dbpersist'=>0, 'dbport'=>$config->dbport, 'dbsocket'=>$config->dbsocket, 'dbforeignkey'=> $config->dbforeignkey));
 
         if ($hint_database === '') {
             $configphp = install_generate_configphp($database, $CFG);
@@ -425,13 +427,14 @@ if ($config->stage == INSTALL_DATABASE) {
 
     install_print_header($config, get_string('database', 'install'), get_string('databasehead', 'install'), $sub);
 
-    $strdbhost   = get_string('databasehost', 'install');
-    $strdbname   = get_string('databasename', 'install');
-    $strdbuser   = get_string('databaseuser', 'install');
-    $strdbpass   = get_string('databasepass', 'install');
-    $strprefix   = get_string('dbprefix', 'install');
-    $strdbport   = get_string('databaseport', 'install');
-    $strdbsocket = get_string('databasesocket', 'install');
+    $strdbhost       = get_string('databasehost', 'install');
+    $strdbname       = get_string('databasename', 'install');
+    $strdbuser       = get_string('databaseuser', 'install');
+    $strdbpass       = get_string('databasepass', 'install');
+    $strprefix       = get_string('dbprefix', 'install');
+    $strdbport       = get_string('databaseport', 'install');
+    $strdbsocket     = get_string('databasesocket', 'install');
+    $strdbforeignkey = get_string('dbforeignkey', 'install');
 
     echo '<div class="userinput">';
 
@@ -467,6 +470,15 @@ if ($config->stage == INSTALL_DATABASE) {
         echo '<div class="fitemelement"><input id="id_dbsocket" name="dbsocket" type="text" value="'.s($config->dbsocket).'" size="50" /></div>';
         echo '</div>';
     }
+    
+    echo '<div class="fitem"><div class="fitemtitle"><label for="id_foreign_key">' . $strdbforeignkey . '</label></div>';
+    echo '<div class="fitemelement"><input id="id_dbforeignkey" name="dbforeignkey" type="checkbox" ';
+    if (s($config->dbforeignkey)) {
+        echo 'checked="' . s($config->dbforeignkey) . '"';
+    } else {
+        echo '/></div>';
+    }
+    echo '</div>';
 
     if ($hint_database !== '') {
         echo '<div class="alert alert-error">'.$hint_database.'</div>';

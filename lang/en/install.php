@@ -73,6 +73,7 @@ $string['datarootpermission'] = 'Data directories permission';
 $string['datarootpublicerror'] = 'The \'data directory\' you specified is directly accessible via web, you must use different directory.';
 $string['dbconnectionerror'] = 'We could not connect to the database you specified. Please check your database settings.';
 $string['dbcreationerror'] = 'Database creation error. Could not create the given database name with the settings provided';
+$string['dbforeignkey'] = "Enable DB foreign key";
 $string['dbhost'] = 'Host server';
 $string['dbpass'] = 'Password';
 $string['dbport'] = 'Port';

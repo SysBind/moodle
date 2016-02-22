@@ -103,6 +103,10 @@ class restore_forum_activity_structure_step extends restore_activity_structure_s
             $data->parent = $this->get_mappingid('forum_post', $data->parent);
         }
 
+        if ($data->parent == 0) {
+            debugging('Warning : restore_forum_stepslib : tried to insert forum_posts with parent 0, Nulling', DEBUG_DEVELOPER);
+            $data->parent = null;
+        }
         $newitemid = $DB->insert_record('forum_posts', $data);
         $this->set_mapping('forum_post', $oldid, $newitemid, true);
 

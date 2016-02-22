@@ -105,6 +105,7 @@ function xmldb_main_install() {
         throw new moodle_exception('generalexceptionmessage', 'error', '', 'Can not create default course category, categories already exist.');
     }
     $cat = new stdClass();
+    $cat->parent       = null;
     $cat->name         = get_string('miscellaneous');
     $cat->depth        = 1;
     $cat->sortorder    = MAX_COURSES_IN_CATEGORY;
@@ -160,9 +161,6 @@ function xmldb_main_install() {
         $mnethost->ip_address = $_SERVER['SERVER_ADDR'];
     }
 
-    $mnetid = $DB->insert_record('mnet_host', $mnethost);
-    set_config('mnet_localhost_id', $mnetid);
-
     // Initial insert of mnet applications info
     $mnet_app = new stdClass();
     $mnet_app->name              = 'moodle';
@@ -180,6 +178,10 @@ function xmldb_main_install() {
     $mnet_app->sso_jump_url      = '/auth/xmlrpc/jump.php';
     $DB->insert_record('mnet_application', $mnet_app);
 
+    $mnethost->applicationid = $moodleapplicationid;   
+    $mnetid = $DB->insert_record('mnet_host', $mnethost);
+    set_config('mnet_localhost_id', $mnetid);
+    
     // Set up the probably-to-be-removed-soon 'All hosts' record
     $mnetallhosts                     = new stdClass();
     $mnetallhosts->wwwroot            = '';

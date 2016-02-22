@@ -17,8 +17,8 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="id" TYPE="primary" FIELDS="id" COMMENT="primary key"/>
-        <KEY NAME="courseid-id" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
-        <KEY NAME="userid-id" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="courseid-id" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="userid-id" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="roleid-id" TYPE="foreign" FIELDS="roleid" REFTABLE="role" REFFIELDS="id"/>
       </KEYS>
     </TABLE>

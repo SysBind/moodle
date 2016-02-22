@@ -45,7 +45,7 @@
     <TABLE NAME="glossary_entries" COMMENT="all glossary entries">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="glossaryid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="glossaryid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="concept" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="definition" TYPE="text" NOTNULL="true" SEQUENCE="false"/>
@@ -63,7 +63,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="glossaryid" TYPE="foreign" FIELDS="glossaryid" REFTABLE="glossary" REFFIELDS="id"/>
+        <KEY NAME="glossaryid" TYPE="foreign" FIELDS="glossaryid" REFTABLE="glossary" REFFIELDS="id" ONDELETE="set null"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
@@ -78,7 +78,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="entryid" TYPE="foreign" FIELDS="entryid" REFTABLE="glossary_entries" REFFIELDS="id"/>
+        <KEY NAME="entryid" TYPE="foreign" FIELDS="entryid" REFTABLE="glossary_entries" REFFIELDS="id" ONDELETE="set null"/>
       </KEYS>
     </TABLE>
     <TABLE NAME="glossary_categories" COMMENT="all categories for glossary entries">

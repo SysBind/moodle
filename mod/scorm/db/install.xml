@@ -82,7 +82,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="scorm_scoes_data_scoid" TYPE="foreign" FIELDS="scoid" REFTABLE="scorm_scoes" REFFIELDS="id" COMMENT="The relative sco"/>
+        <KEY NAME="scorm_scoes_data_scoid" TYPE="foreign" FIELDS="scoid" REFTABLE="scorm_scoes" REFFIELDS="id" ONDELETE="cascade" ONUPDATE="cascade" COMMENT="The relative sco"/>
       </KEYS>
     </TABLE>
     <TABLE NAME="scorm_scoes_track" COMMENT="to track SCOes">
@@ -98,8 +98,8 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="scormid" TYPE="foreign" FIELDS="scormid" REFTABLE="scorm" REFFIELDS="id"/>
-        <KEY NAME="scoid" TYPE="foreign" FIELDS="scoid" REFTABLE="scorm_scoes" REFFIELDS="id"/>
+        <KEY NAME="scormid" TYPE="foreign" FIELDS="scormid" REFTABLE="scorm" REFFIELDS="id" ONDELETE="cascade" ONUPDATE="cascade"/>
+        <KEY NAME="scoid" TYPE="foreign" FIELDS="scoid" REFTABLE="scorm_scoes" REFFIELDS="id" ONDELETE="cascade" ONUPDATE="cascade"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid-scormid-scoid-attempt-element" UNIQUE="true" FIELDS="userid, scormid, scoid, attempt, element"/>

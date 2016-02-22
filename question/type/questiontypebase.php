@@ -312,7 +312,7 @@ class question_type {
 
         // First, save the basic question itself.
         $question->name = trim($form->name);
-        $question->parent = isset($form->parent) ? $form->parent : 0;
+        $question->parent = isset($form->parent) ? $form->parent : null;
         $question->length = $this->actual_number_of_questions($question);
         $question->penalty = isset($form->penalty) ? $form->penalty : 0;
 

@@ -385,8 +385,8 @@ function quiz_update_effective_access($quiz, $userid) {
 function quiz_delete_all_attempts($quiz) {
     global $CFG, $DB;
     require_once($CFG->dirroot . '/mod/quiz/locallib.php');
-    question_engine::delete_questions_usage_by_activities(new qubaids_for_quiz($quiz->id));
     $DB->delete_records('quiz_attempts', array('quiz' => $quiz->id));
+    question_engine::delete_questions_usage_by_activities(new qubaids_for_quiz($quiz->id));
     $DB->delete_records('quiz_grades', array('quiz' => $quiz->id));
 }
 

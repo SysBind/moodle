@@ -382,7 +382,7 @@ class coursecat implements renderable, cacheable_object, IteratorAggregate {
         } else {
             $parent = self::get($data->parent, MUST_EXIST, true);
         }
-        $newcategory->parent = $parent->id;
+        $newcategory->parent = ($parent->id == 0 ) ? null : $parent->id;
         $newcategory->depth = $parent->depth + 1;
 
         // By default category is visible, unless visible = 0 is specified or parent category is hidden.
@@ -1915,7 +1915,7 @@ class coursecat implements renderable, cacheable_object, IteratorAggregate {
 
         $hidecat = false;
         if (empty($newparentcat->id)) {
-            $DB->set_field('course_categories', 'parent', 0, array('id' => $this->id));
+            $DB->set_field('course_categories', 'parent', null, array('id' => $this->id));
             $newparent = context_system::instance();
         } else {
             if ($newparentcat->id == $this->id || in_array($this->id, $newparentcat->get_parents())) {

@@ -3302,6 +3302,10 @@ class restore_activity_grades_structure_step extends restore_structure_step {
             // TODO: Ask, all the rest of locktime/exported... work with time... to be rolled?
             $data->overridden = $this->apply_date_offset($data->overridden);
 
+            if ($data->rawscaleid== 0) {
+                debugging('Warning : restore_stepslib : tried to insert grade_grades with rawscaleid 0, Nulling', DEBUG_DEVELOPER);
+                $data->rawscaleid = null;
+            }
             $grade = new grade_grade($data, false);
             $grade->insert('restore');
             $this->set_mapping('grade_grades', $oldid, $grade->id);
@@ -3664,6 +3668,10 @@ class restore_module_structure_step extends restore_structure_step {
         }
 
         // course_module record ready, insert it
+        if ($data->groupingid == 0) {
+            debugging('Warning : restore_stepslib : tried to insert course_modules with groupingid 0, Nulling');
+            $data->groupingid = null;
+        }
         $newitemid = $DB->insert_record('course_modules', $data);
         // save mapping
         $this->set_mapping('course_module', $oldid, $newitemid);
@@ -3934,6 +3942,11 @@ class restore_create_categories_and_questions extends restore_structure_step {
         }
         $data->contextid = $mapping->parentitemid;
 
+        if (!$DB->record_exists('question_categories', ['id' => $data->parent])) {
+            debugging('Warning : restore_stepslib tried to insert question_categories with non-existent parent '.$data->parent.', Nulling', DEBUG_DEVELOPER);
+            $data->parent = null;
+        }
+        
         // Let's create the question_category and save mapping
         $newitemid = $DB->insert_record('question_categories', $data);
         $this->set_mapping('question_category', $oldid, $newitemid);
@@ -3978,6 +3991,10 @@ class restore_create_categories_and_questions extends restore_structure_step {
 
         // With newitemid = 0, let's create the question
         if (!$questionmapping->newitemid) {
+            if (!$DB->record_exists('question', ['id' => $data->parent])) {
+                debugging('Warning : restore_stepslib tried to insert question with non-existent parent '.$data->parent.', Nulling', DEBUG_DEVELOPER);
+                $data->parent = null;
+            }
             $newitemid = $DB->insert_record('question', $data);
             $this->set_mapping('question', $oldid, $newitemid);
             // Also annotate them as question_created, we need
@@ -4103,7 +4120,7 @@ class restore_create_categories_and_questions extends restore_structure_step {
             }
             // Here with $newparent empty, problem with contexts or remapping, set it to top cat
             if (!$newparent) {
-                $DB->set_field('question_categories', 'parent', 0, array('id' => $dbcat->id));
+                $DB->set_field('question_categories', 'parent', NULL, array('id' => $dbcat->id));
             }
         }
 

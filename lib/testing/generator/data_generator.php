@@ -412,7 +412,7 @@ EOD;
         }
 
         if (!isset($record['category'])) {
-            $record['category'] = $DB->get_field_select('course_categories', "MIN(id)", "parent=0");
+            $record['category'] = $DB->get_field_select('course_categories', "MIN(id)", "parent IS NULL");
         }
 
         if (isset($record['tags']) && !is_array($record['tags'])) {

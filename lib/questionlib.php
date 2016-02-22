@@ -999,7 +999,7 @@ function question_make_default_categories($contexts) {
             $category->name = get_string('defaultfor', 'question', $contextname);
             $category->info = get_string('defaultinfofor', 'question', $contextname);
             $category->contextid = $context->id;
-            $category->parent = 0;
+            $category->parent = null;
             // By default, all categories get this number, and are sorted alphabetically.
             $category->sortorder = 999;
             $category->stamp = make_unique_id_code();
@@ -1035,7 +1035,7 @@ function get_categories_for_contexts($contexts, $sortorder = 'parent, sortorder,
     global $DB;
     return $DB->get_records_sql("
             SELECT c.*, (SELECT count(1) FROM {question} q
-                        WHERE c.id = q.category AND q.hidden='0' AND q.parent='0') AS questioncount
+                        WHERE c.id = q.category AND q.hidden='0' AND q.parent IS NULL) AS questioncount
               FROM {question_categories} c
              WHERE c.contextid IN ($contexts)
           ORDER BY $sortorder");

@@ -39,6 +39,9 @@ class xmldb_key extends xmldb_object {
 
     /** @var array referenced fields */
     protected $reffields;
+    
+    /** @var string ondelete action */
+    protected $ondelete;
 
     /**
      * Creates one new xmldb_key
@@ -47,14 +50,16 @@ class xmldb_key extends xmldb_object {
      * @param array $fields an array of fieldnames to build the key over
      * @param string $reftable name of the table the FK points to or null
      * @param array $reffields an array of fieldnames in the FK table or null
+     * @param array $ondelete one of :  null,"noaction","cascade","restrict","set null","set default"
      */
-    public function __construct($name, $type=null, $fields=array(), $reftable=null, $reffields=null) {
+    public function __construct($name, $type=null, $fields=array(), $reftable=null, $reffields=null, $ondelete=null) {
         $this->type = null;
         $this->fields = array();
         $this->reftable = null;
         $this->reffields = array();
+        $this->ondelete = null;
         parent::__construct($name);
-        $this->set_attributes($type, $fields, $reftable, $reffields);
+        $this->set_attributes($type, $fields, $reftable, $reffields, $ondelete);
     }
 
     /**
@@ -64,12 +69,14 @@ class xmldb_key extends xmldb_object {
      * @param array $fields an array of fieldnames to build the key over
      * @param string $reftable name of the table the FK points to or null
      * @param array $reffields an array of fieldnames in the FK table or null
+     * @param array $ondelete one of :  null,"noaction","cascade","restrict","set null","set default"
      */
-    public function set_attributes($type, $fields, $reftable=null, $reffields=null) {
+    public function set_attributes($type, $fields, $reftable=null, $reffields=null, $ondelete=null) {
         $this->type = $type;
         $this->fields = $fields;
         $this->reftable = $reftable;
         $this->reffields = empty($reffields) ? array() : $reffields;
+        $this->ondelete = $ondelete;
     }
 
     /**
@@ -136,6 +143,13 @@ class xmldb_key extends xmldb_object {
         return $this->reffields;
     }
 
+    /* Get the key ondelete action
+     * @return string
+     */
+    public function getOnDelete() {
+    	return $this->ondelete;
+    }
+
     /**
      * Load data from XML to the key
      * @param array $xmlarr
@@ -144,7 +158,8 @@ class xmldb_key extends xmldb_object {
     public function arr2xmldb_key($xmlarr) {
 
         $result = true;
-
+        
+        $ondelete = "noaction";
         // Debug the table
         // traverse_xmlize($xmlarr);                   //Debug
         // print_object ($GLOBALS['traverse_array']);  //Debug
@@ -223,6 +238,23 @@ class xmldb_key extends xmldb_object {
             $this->debug($this->errormsg);
             $result = false;
         }
+        
+        if (isset($xmlarr['@']['ONDELETE'])) {
+            if ($this->type == XMLDB_KEY_FOREIGN ||  $this->type == XMLDB_KEY_FOREIGN_UNIQUE) {
+                $ondelete = strtolower(trim($xmlarr['@']['ONDELETE']));
+                if (!(($ondelete == "noaction") || ($ondelete == "cascade") ||
+                    ($ondelete == "restrict") || ($ondelete == "set null") ||
+                    ($ondelete == "set default")) ) {
+                        $this->errormsg = 'Wrong ONDELETE attribute :"'.$ondelete.'"(valid options : "noaction","cascade","restrict","set null","set default")';                       
+                        $this->debug($this->errormsg);
+                        $result = false;
+                }
+            } else {
+            	$this->errormsg = 'Wrong ONDELETE attribute (only FK can have it)';
+                $this->debug($this->errormsg);
+                $result = false;
+            }
+         }
         // Finally, set the reftable
         if ($this->type == XMLDB_KEY_FOREIGN ||
             $this->type == XMLDB_KEY_FOREIGN_UNIQUE) {

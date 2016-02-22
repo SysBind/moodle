@@ -7,7 +7,7 @@
     <TABLE NAME="assignfeedback_editpdf_cmnt" COMMENT="Stores comments added to pdfs">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="gradeid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="gradeid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="x" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" SEQUENCE="false" COMMENT="x-position of the top-left corner of the comment (in pixels - image resolution is set to 100 pixels per inch)"/>
         <FIELD NAME="y" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" SEQUENCE="false" COMMENT="y-position of the top-left corner of the comment (in pixels - image resolution is set to 100 pixels per inch)"/>
         <FIELD NAME="width" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="120" SEQUENCE="false" COMMENT="width, in pixels, of the comment box"/>
@@ -40,7 +40,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="gradeid" TYPE="foreign" FIELDS="gradeid" REFTABLE="assign_grades" REFFIELDS="id"/>
+        <KEY NAME="gradeid" TYPE="foreign" FIELDS="gradeid" REFTABLE="assign_grades" REFFIELDS="id" ONDELETE="set null"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="gradeid_pageno" UNIQUE="false" FIELDS="gradeid, pageno"/>

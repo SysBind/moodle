@@ -139,7 +139,7 @@ if (!empty($forum)) {      // User is starting a new discussion in a forum
     $post->course        = $course->id;
     $post->forum         = $forum->id;
     $post->discussion    = 0;           // ie discussion # not defined yet
-    $post->parent        = 0;
+    $post->parent        = null;
     $post->subject       = '';
     $post->userid        = $USER->id;
     $post->message       = '';
@@ -219,7 +219,7 @@ if (!empty($forum)) {      // User is starting a new discussion in a forum
     $post->course      = $course->id;
     $post->forum       = $forum->id;
     $post->discussion  = $parent->discussion;
-    $post->parent      = $parent->id;
+    $post->parent      = isset($parent->id)? $parent->id : null;
     $post->subject     = $parent->subject;
     $post->userid      = $USER->id;
     $post->message     = '';
@@ -462,7 +462,7 @@ if (!empty($forum)) {      // User is starting a new discussion in a forum
 
         $newpost = new stdClass();
         $newpost->id      = $post->id;
-        $newpost->parent  = 0;
+        $newpost->parent  = null;
         $newpost->subject = $name;
 
         $DB->update_record("forum_posts", $newpost);
@@ -734,7 +734,7 @@ if ($mform_post->is_cancelled()) {
         }
 
         // MDL-11818
-        if (($forum->type == 'single') && ($updatepost->parent == '0')){ // updating first post of single discussion type -> updating forum intro
+        if (($forum->type == 'single') && ($updatepost->parent == 'null')){ // updating first post of single discussion type -> updating forum intro
             $forum->intro = $updatepost->message;
             $forum->timemodified = time();
             $DB->update_record("forum", $forum);
@@ -966,7 +966,7 @@ if ($mform_post->is_cancelled()) {
 // $course, $forum are defined.  $discussion is for edit and reply only.
 
 if ($post->discussion) {
-    if (! $toppost = $DB->get_record("forum_posts", array("discussion" => $post->discussion, "parent" => 0))) {
+    if (! $toppost = $DB->get_record("forum_posts", array("discussion" => $post->discussion, "parent" => null))) {
         print_error('cannotfindparentpost', 'forum', '', $post->id);
     }
 } else {

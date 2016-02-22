@@ -57,7 +57,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" COMMENT="The unique id for this assignment submission."/>
-        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" COMMENT="The instance of mod_assign this submission belongs to."/>
+        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" ONDELETE="cascade" COMMENT="The instance of mod_assign this submission belongs to."/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
@@ -98,7 +98,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" COMMENT="Unique id to identify this plugin setting value."/>
-        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" COMMENT="The assignment instance this config value relates to."/>
+        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" ONDELETE="cascade" COMMENT="The assignment instance this config value relates to."/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="plugin" UNIQUE="false" FIELDS="plugin" COMMENT="The type of this plugin."/>
@@ -114,8 +114,8 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" COMMENT="Unique ID for this user/assignment combination."/>
-        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" COMMENT="The assignment instance"/>
-        <KEY NAME="user" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" COMMENT="The user to map to an id"/>
+        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" ONDELETE="cascade" COMMENT="The assignment instance"/>
+        <KEY NAME="user" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade" COMMENT="The user to map to an id"/>
       </KEYS>
     </TABLE>
     <TABLE NAME="assign_user_flags" COMMENT="List of flags that can be set for a single user in a single assignment.">
@@ -131,8 +131,8 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" COMMENT="The id field of the user table."/>
-        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" COMMENT="The assignment id these flags apply to."/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade" COMMENT="The id field of the user table."/>
+        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="assign" REFFIELDS="id" ONDELETE="cascade" COMMENT="The assignment id these flags apply to."/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="mailed" UNIQUE="false" FIELDS="mailed" COMMENT="Has this user been mailed yet?"/>

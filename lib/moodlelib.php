@@ -4683,9 +4683,9 @@ function delete_course($courseorid, $showfeedback = true) {
     // Delete the course and related context instance.
     context_helper::delete_instance(CONTEXT_COURSE, $courseid);
 
-    $DB->delete_records("course", array("id" => $courseid));
     $DB->delete_records("course_format_options", array("courseid" => $courseid));
-
+    $DB->delete_records("course", array("id" => $courseid));
+    
     // Reset all course related caches here.
     if (class_exists('format_base', false)) {
         format_base::reset_course_cache($courseid);

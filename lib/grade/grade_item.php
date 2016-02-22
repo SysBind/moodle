@@ -1696,8 +1696,8 @@ class grade_item extends grade_object {
         $grade = new grade_grade(array('itemid'=>$this->id, 'userid'=>$userid));
         $grade->grade_item =& $this; // prevent db fetching of this grade_item
 
-        if (empty($usermodified)) {
-            $grade->usermodified = $USER->id;
+        if (empty($usermodified) || $usermodified == 0) {
+            $grade->usermodified = ( $USER->id == 0 ) ? null : $USER->id;
         } else {
             $grade->usermodified = $usermodified;
         }

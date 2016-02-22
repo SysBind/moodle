@@ -4,7 +4,17 @@
     xsi:noNamespaceSchemaLocation="../../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="tool_customlang" COMMENT="Contains the working checkout of all strings and their customization">
+    <TABLE NAME="tool_customlang_components" COMMENT="Contains the list of all installed plugins that provide their own language pack" NEXT="tool_customlang">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The normalized name of the plugin"/>
+        <FIELD NAME="version" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="The checked out version of the plugin, null if the version is unknown"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="tool_customlang" COMMENT="Contains the working checkout of all strings and their customization" PREVIOUS="tool_customlang_components">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="lang" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="The code of the language this string belongs to. Like en, cs or es"/>
@@ -26,15 +36,5 @@
         <INDEX NAME="uq_lang_component_string" UNIQUE="true" FIELDS="lang, componentid, stringid" COMMENT="For a given language and component, string identifiers must be unique"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="tool_customlang_components" COMMENT="Contains the list of all installed plugins that provide their own language pack">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The normalized name of the plugin"/>
-        <FIELD NAME="version" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="The checked out version of the plugin, null if the version is unknown"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-      </KEYS>
-    </TABLE>
-  </TABLES>
+</TABLES>
 </XMLDB>

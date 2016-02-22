@@ -36,7 +36,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="chatid" TYPE="foreign" FIELDS="chatid" REFTABLE="chat" REFFIELDS="id"/>
+        <KEY NAME="chatid" TYPE="foreign" FIELDS="chatid" REFTABLE="chat" REFFIELDS="id" ONDELETE="set null"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>

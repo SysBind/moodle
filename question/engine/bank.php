@@ -537,7 +537,7 @@ class question_finder implements cache_data_source {
                       FROM {question} q
 
                      WHERE q.category {$qcsql}
-                       AND q.parent = 0
+                       AND q.parent IS NULL
                        AND q.hidden = 0
                       {$extraconditions}
 

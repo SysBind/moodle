@@ -258,7 +258,11 @@ function users_search_sql($search, $u = 'u', $searchanywhere = true, array $extr
 
     // Add some additional sensible conditions.
     $tests[] = $u . "id <> :guestid";
+    $tests[] = $u . "id <> :noreplayid";
+    $tests[] = $u . "id <> :supportid";
     $params['guestid'] = $CFG->siteguest;
+    $params['noreplayid'] = core_user::NOREPLY_USER;
+    $params['supportid'] = core_user::SUPPORT_USER;
     $tests[] = $u . 'deleted = 0';
     $tests[] = $u . 'confirmed = 1';
 
@@ -410,8 +414,12 @@ function get_users($get=true, $search='', $confirmed=false, array $exceptions=nu
 
     $fullname  = $DB->sql_fullname();
 
-    $select = " id <> :guestid AND deleted = 0";
-    $params = array('guestid'=>$CFG->siteguest);
+    $select = " id <> :guestid AND id <> :noreplayid AND id <> :supportid AND deleted = 0";
+    $params = array(
+        'guestid'=>$CFG->siteguest,
+        'noreplayid' => core_user::NOREPLY_USER,
+        'supportid'  => core_user::SUPPORT_USER
+    );
 
     if (!empty($search)){
         $search = trim($search);
@@ -476,8 +484,12 @@ function get_users_listing($sort='lastaccess', $dir='ASC', $page=0, $recordsperp
 
     $fullname  = $DB->sql_fullname();
 
-    $select = "deleted <> 1 AND id <> :guestid";
-    $params = array('guestid' => $CFG->siteguest);
+    $select = "deleted <> 1 AND id <> :guestid AND id <> :noreplayid AND id <> :supportid";
+    $params = array(
+        'guestid'    => $CFG->siteguest,
+        'noreplayid' => core_user::NOREPLY_USER,
+        'supportid'  => core_user::SUPPORT_USER
+    );
 
     if (!empty($search)) {
         $search = trim($search);
@@ -1081,7 +1093,7 @@ function _fix_course_cats($children, &$sortorder, $parent, $depth, $path, &$fixc
         $sortorder = $sortorder + MAX_COURSES_IN_CATEGORY;
         $update = false;
         if ($parent != $cat->parent or $depth != $cat->depth or $path.'/'.$cat->id != $cat->path) {
-            $cat->parent = $parent;
+            $cat->parent = ($parent == 0) ? null : $parent;
             $cat->depth  = $depth;
             $cat->path   = $path.'/'.$cat->id;
             $update = true;
@@ -1199,7 +1211,7 @@ function get_scales_menu($courseid=0) {
 
     $sql = "SELECT id, name
               FROM {scale}
-             WHERE courseid = 0 or courseid = ?
+             WHERE courseid = 0 or courseid IS NULL or courseid = ?
           ORDER BY courseid ASC, name ASC";
     $params = array($courseid);
 
@@ -1604,7 +1616,7 @@ function add_to_config_log($name, $oldvalue, $value, $plugin) {
     global $USER, $DB;
 
     $log = new stdClass();
-    $log->userid       = during_initial_install() ? 0 :$USER->id; // 0 as user id during install
+    $log->userid       = during_initial_install() ? null :$USER->id; // 0 as user id during install
     $log->timemodified = time();
     $log->name         = $name;
     $log->oldvalue  = $oldvalue;
