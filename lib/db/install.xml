@@ -116,7 +116,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="set null"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="timemodified" UNIQUE="false" FIELDS="timemodified"/>
@@ -1897,8 +1897,8 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="oldid" TYPE="foreign" FIELDS="oldid" REFTABLE="grade_items" REFFIELDS="id"/>
-        <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
-        <KEY NAME="categoryid" TYPE="foreign" FIELDS="categoryid" REFTABLE="grade_categories" REFFIELDS="id"/>
+        <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="categoryid" TYPE="foreign" FIELDS="categoryid" REFTABLE="grade_categories" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="scaleid" TYPE="foreign" FIELDS="scaleid" REFTABLE="scale" REFFIELDS="id"/>
         <KEY NAME="outcomeid" TYPE="foreign" FIELDS="outcomeid" REFTABLE="grade_outcomes" REFFIELDS="id"/>
         <KEY NAME="loggeduser" TYPE="foreign" FIELDS="loggeduser" REFTABLE="user" REFFIELDS="id"/>
@@ -1936,7 +1936,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="oldid" TYPE="foreign" FIELDS="oldid" REFTABLE="grade_grades" REFFIELDS="id"/>
+        <KEY NAME="oldid" TYPE="foreign" FIELDS="oldid" REFTABLE="grade_grades" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="itemid" TYPE="foreign" FIELDS="itemid" REFTABLE="grade_items" REFFIELDS="id"/>
         <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="rawscaleid" TYPE="foreign" FIELDS="rawscaleid" REFTABLE="scale" REFFIELDS="id"/>
@@ -2148,7 +2148,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="cohortid" TYPE="foreign" FIELDS="cohortid" REFTABLE="cohort" REFFIELDS="id"/>
+        <KEY NAME="cohortid" TYPE="foreign" FIELDS="cohortid" REFTABLE="cohort" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
       </KEYS>
       <INDEXES>
@@ -2853,8 +2853,8 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="fk_courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
-        <KEY NAME="fk_usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
-        <KEY NAME="fk_usercreated" TYPE="foreign" FIELDS="usercreated" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="fk_usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="fk_usercreated" TYPE="foreign" FIELDS="usercreated" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="type" UNIQUE="false" FIELDS="type"/>
@@ -2894,7 +2894,7 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="badgeid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
         <FIELD NAME="uniquehash" TYPE="text" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="dateissued" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="dateexpire" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
@@ -2904,7 +2904,7 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="fk_badgeid" TYPE="foreign" FIELDS="badgeid" REFTABLE="badge" REFFIELDS="id"/>
-        <KEY NAME="fk_userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="fk_userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="badgeuser" UNIQUE="true" FIELDS="badgeid, userid"/>

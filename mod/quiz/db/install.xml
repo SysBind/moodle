@@ -128,7 +128,7 @@
         <FIELD NAME="quiz" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Foreign key reference to the quiz that was attempted."/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Foreign key reference to the user whose attempt this is."/>
         <FIELD NAME="attempt" TYPE="int" LENGTH="6" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Sequentially numbers this student's attempts at this quiz."/>
-        <FIELD NAME="uniqueid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Foreign key reference to the question_usage that holds the details of the the question_attempts that make up this quiz attempt."/>
+        <FIELD NAME="uniqueid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Foreign key reference to the question_usage that holds the details of the the question_attempts that make up this quiz attempt."/>
         <FIELD NAME="layout" TYPE="text" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="currentpage" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="preview" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
@@ -143,7 +143,7 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="quiz" TYPE="foreign" FIELDS="quiz" REFTABLE="quiz" REFFIELDS="id"/>
         <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
-        <KEY NAME="uniqueid" TYPE="foreign-unique" FIELDS="uniqueid" REFTABLE="question_usages" REFFIELDS="id"/>
+        <KEY NAME="uniqueid" TYPE="foreign-unique" FIELDS="uniqueid" REFTABLE="question_usages" REFFIELDS="id" ONDELETE="set null"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="quiz-userid-attempt" UNIQUE="true" FIELDS="quiz, userid, attempt"/>

@@ -217,7 +217,7 @@ class core_accesslib_testcase extends advanced_testcase {
 
         $this->resetAfterTest();
 
-        $USER->id = 0;
+        $USER->id = null;
         $this->assertFalse(isloggedin());
         $USER->id = 1;
         $this->assertTrue(isloggedin());
@@ -2565,7 +2565,7 @@ class core_accesslib_testcase extends advanced_testcase {
         reload_all_capabilities();
         $this->assertFalse(has_capability('moodle/course:update', $coursecontext, $userid));
         $USER = new stdClass();
-        $USER->id = 0;
+        $USER->id = null;
 
         // Now cross check has_capability() with get_users_by_capability(), each using different code paths,
         // they have to be kept in sync, usually only one of them breaks, so we know when something is wrong,
@@ -2656,7 +2656,7 @@ class core_accesslib_testcase extends advanced_testcase {
         }
         // Back to nobody.
         $USER = new stdClass();
-        $USER->id = 0;
+        $USER->id = null;
         unset($contexts);
         unset($userids);
         unset($capabilities);

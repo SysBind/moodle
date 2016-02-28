@@ -259,6 +259,7 @@ class xmldb_key extends xmldb_object {
         if ($this->type == XMLDB_KEY_FOREIGN ||
             $this->type == XMLDB_KEY_FOREIGN_UNIQUE) {
             $this->reftable = $reftable;
+            $this->ondelete = $ondelete;
         }
 
         if (isset($xmlarr['@']['REFFIELDS'])) {

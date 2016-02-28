@@ -51,7 +51,7 @@ class core_question_generator extends component_generator_base {
             'info'       => '',
             'infoformat' => FORMAT_HTML,
             'stamp'      => '',
-            'parent'     => 0,
+            'parent'     => null,
             'sortorder'  => 999,
         );
 

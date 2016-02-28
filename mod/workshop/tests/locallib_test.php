@@ -187,14 +187,15 @@ class mod_workshop_internal_api_testcase extends advanced_testcase {
 
     public function test_aggregate_grading_grades_process_single_grade_new() {
         $this->resetAfterTest(true);
+        $user = $this->getDataGenerator()->create_user();
         // fixture set-up
         $batch = array();
-        $batch[] = (object)array('reviewerid'=>3, 'gradinggrade'=>82.87670, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
+        $batch[] = (object)array('reviewerid'=>$user->id, 'gradinggrade'=>82.87670, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
         // expectation
         $now = time();
         $expected = new stdclass();
         $expected->workshopid = $this->workshop->id;
-        $expected->userid = 3;
+        $expected->userid = $user->id;
         $expected->gradinggrade = 82.87670;
         $expected->timegraded = $now;
         //$DB->expectOnce('insert_record', array('workshop_aggregations', $expected));
@@ -204,6 +205,7 @@ class mod_workshop_internal_api_testcase extends advanced_testcase {
 
     public function test_aggregate_grading_grades_process_single_grade_update() {
         $this->resetAfterTest(true);
+        $user = $this->getDataGenerator()->create_user();
         // fixture set-up
         $batch = array();
         $batch[] = (object)array('reviewerid'=>3, 'gradinggrade'=>90.00000, 'gradinggradeover'=>null, 'aggregationid'=>1, 'aggregatedgrade'=>82.87670);
@@ -215,9 +217,10 @@ class mod_workshop_internal_api_testcase extends advanced_testcase {
 
     public function test_aggregate_grading_grades_process_single_grade_uptodate() {
         $this->resetAfterTest(true);
+        $user = $this->getDataGenerator()->create_user();
         // fixture set-up
         $batch = array();
-        $batch[] = (object)array('reviewerid'=>3, 'gradinggrade'=>90.00000, 'gradinggradeover'=>null, 'aggregationid'=>1, 'aggregatedgrade'=>90.00000);
+        $batch[] = (object)array('reviewerid'=>$user->id, 'gradinggrade'=>90.00000, 'gradinggradeover'=>null, 'aggregationid'=>1, 'aggregatedgrade'=>90.00000);
         // expectation
         //$DB->expectNever('update_record');
         // excersise SUT
@@ -226,9 +229,10 @@ class mod_workshop_internal_api_testcase extends advanced_testcase {
 
     public function test_aggregate_grading_grades_process_single_grade_overridden() {
         $this->resetAfterTest(true);
+        $user = $this->getDataGenerator()->create_user();
         // fixture set-up
         $batch = array();
-        $batch[] = (object)array('reviewerid'=>4, 'gradinggrade'=>91.56700, 'gradinggradeover'=>82.32105, 'aggregationid'=>2, 'aggregatedgrade'=>91.56700);
+        $batch[] = (object)array('reviewerid'=>$user->id, 'gradinggrade'=>91.56700, 'gradinggradeover'=>82.32105, 'aggregationid'=>2, 'aggregatedgrade'=>91.56700);
         // expectation
         //$DB->expectOnce('update_record');
         // excersise SUT
@@ -237,16 +241,17 @@ class mod_workshop_internal_api_testcase extends advanced_testcase {
 
     public function test_aggregate_grading_grades_process_multiple_grades_new() {
         $this->resetAfterTest(true);
+        $user = $this->getDataGenerator()->create_user();
         // fixture set-up
         $batch = array();
-        $batch[] = (object)array('reviewerid'=>5, 'gradinggrade'=>99.45670, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
-        $batch[] = (object)array('reviewerid'=>5, 'gradinggrade'=>87.34311, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
-        $batch[] = (object)array('reviewerid'=>5, 'gradinggrade'=>51.12000, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
+        $batch[] = (object)array('reviewerid'=>$user->id, 'gradinggrade'=>99.45670, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
+        $batch[] = (object)array('reviewerid'=>$user->id, 'gradinggrade'=>87.34311, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
+        $batch[] = (object)array('reviewerid'=>$user->id, 'gradinggrade'=>51.12000, 'gradinggradeover'=>null, 'aggregationid'=>null, 'aggregatedgrade'=>null);
         // expectation
         $now = time();
         $expected = new stdclass();
         $expected->workshopid = $this->workshop->id;
-        $expected->userid = 5;
+        $expected->userid = $user->id;
         $expected->gradinggrade = 79.3066;
         $expected->timegraded = $now;
         //$DB->expectOnce('insert_record', array('workshop_aggregations', $expected));

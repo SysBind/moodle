@@ -390,7 +390,7 @@ function has_capability($capability, context $context, $user = null, $doanything
 
     if (!isset($USER->id)) {
         // should never happen
-        $USER->id = 0;
+        $USER->id = null;
         debugging('Capability check being performed on a user with no ID.', DEBUG_DEVELOPER);
     }
 
@@ -1209,7 +1209,7 @@ function load_all_capabilities() {
 
     if (!isset($USER->id)) {
         // this should not happen
-        $USER->id = 0;
+        $USER->id = null;
     }
 
     unset($USER->access);
@@ -2170,7 +2170,7 @@ function can_access_course(stdClass $course, $user = null, $withcapability = '',
 
     if (!isset($USER->id)) {
         // should never happen
-        $USER->id = 0;
+        $USER->id = null;
         debugging('Course access check being performed on a user with no ID.', DEBUG_DEVELOPER);
     }
 

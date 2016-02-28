@@ -90,7 +90,7 @@ class core_ddl_testcase extends database_driver_testcase {
         $table->add_field('percentfloat', XMLDB_TYPE_FLOAT, '5,2', null, null, null, 99.9);
         $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
-        $table->add_key('course', XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('course'));
+        $table->add_key('course', XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('course'), 'cascade');
         $table->setComment("This is a test'n drop table. You can drop it safely");
 
         $this->tables[$table->getName()] = $table;
@@ -1448,7 +1448,7 @@ class core_ddl_testcase extends database_driver_testcase {
         $this->create_deftable('test_table0');
 
         $key = new xmldb_key('course');
-        $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'));
+        $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'), 'cascade');
         $dbman->add_key($table, $key);
 
         // No easy way to test it, this just makes sure no errors are encountered.
@@ -1462,7 +1462,7 @@ class core_ddl_testcase extends database_driver_testcase {
         $this->create_deftable('test_table0');
 
         $key = new xmldb_key('course');
-        $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'));
+        $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'), 'cascade');
         $dbman->add_key($table, $key);
 
         $dbman->drop_key($table, $key);
@@ -1478,7 +1478,7 @@ class core_ddl_testcase extends database_driver_testcase {
         $this->create_deftable('test_table0');
 
         $key = new xmldb_key('course');
-        $key->set_attributes(XMLDB_KEY_FOREIGN, array('course'), 'test_table0', array('id'));
+        $key->set_attributes(XMLDB_KEY_FOREIGN, array('course'), 'test_table0', array('id'), 'cascade');
         $dbman->add_key($table, $key);
 
         // No easy way to test it, this just makes sure no errors are encountered.
@@ -1492,7 +1492,7 @@ class core_ddl_testcase extends database_driver_testcase {
         $this->create_deftable('test_table0');
 
         $key = new xmldb_key('course');
-        $key->set_attributes(XMLDB_KEY_FOREIGN, array('course'), 'test_table0', array('id'));
+        $key->set_attributes(XMLDB_KEY_FOREIGN, array('course'), 'test_table0', array('id'), 'cascade');
         $dbman->add_key($table, $key);
 
         $dbman->drop_key($table, $key);

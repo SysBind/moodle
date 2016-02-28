@@ -134,7 +134,7 @@ abstract class sql_generator {
     public $rename_table_sql = 'ALTER TABLE OLDNAME RENAME TO NEWNAME';
 
     /** @var string SQL sentence to drop one table where the 'TABLENAME' keyword is dynamically replaced.*/
-    public $drop_table_sql = 'DROP TABLE TABLENAME';
+    public $drop_table_sql = 'DROP TABLE TABLENAME CASCADE';
 
     /** @var string The SQL template to alter columns where the 'TABLENAME' and 'COLUMNSPECS' keywords are dynamically replaced.*/
     public $alter_column_sql = 'ALTER TABLE TABLENAME ALTER COLUMN COLUMNSPECS';

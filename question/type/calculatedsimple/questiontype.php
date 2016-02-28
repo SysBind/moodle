@@ -183,7 +183,7 @@ class qtype_calculatedsimple extends qtype_calculated {
             ksort($question->definition);
             foreach ($question->definition as $key => $defid) {
                 $addeditem = new stdClass();
-                $addeditem->definition = $datasetdefs[$defid]->id;
+                $addeditem->definition = isset($datasetdefs[$defid]->id)? $datasetdefs[$defid]->id : 0;
                 $addeditem->value = $question->number[$i];
                 $addeditem->itemnumber = ceil($i / count($datasetdefs));
                 if (empty($question->makecopy) && $question->itemid[$i]) {
