@@ -28,13 +28,15 @@ env:
 
     # Run unit tests on MySQL
     - DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=true
+    - DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=false
 
     # Run CI Tests without running PHPUnit.
-    - DB=none     PHPUNIT=false   INSTALL=false   CITEST=true
+    - DB=none     PHPUNIT=false   INSTALL=false   CITEST=true  FOREIGNKEY=true
+    - DB=none     PHPUNIT=false   INSTALL=false   CITEST=true  FOREIGNKEY=false
 
     # Run unit tests on Postgres
     - DB=pgsql    PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=true
-
+    - DB=pgsql    PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=false
 matrix:
     # Enable fast finish.
     # This will fail the build if a single job fails (except those in allow_failures).
@@ -44,13 +46,13 @@ matrix:
     exclude:
         # MySQL - it's just too slow.
         # Exclude it on all versions except for 7.0
-        # - env: DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false
+        # - env: DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=true
         #   php: 5.6
         #
-        # - env: DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false
+        # - env: DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=true
         #   php: 5.5
 
-        - env: DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false
+        - env: DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=false
           php: 5.4
 
 cache:
