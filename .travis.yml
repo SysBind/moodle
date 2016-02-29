@@ -27,13 +27,13 @@ env:
     # Postgres is significantly is pretty reasonable in its run-time.
 
     # Run unit tests on MySQL
-    - DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false
+    - DB=mysqli   PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=true
 
     # Run CI Tests without running PHPUnit.
     - DB=none     PHPUNIT=false   INSTALL=false   CITEST=true
 
     # Run unit tests on Postgres
-    - DB=pgsql    PHPUNIT=true    INSTALL=false   CITEST=false
+    - DB=pgsql    PHPUNIT=true    INSTALL=false   CITEST=false FOREIGNKEY=true
 
 matrix:
     # Enable fast finish.
@@ -91,6 +91,13 @@ before_script:
           -e "s%/home/example/moodledata%/home/travis/roots/base%" \
           config.php ;
 
+        if [ "$FOREIGNKEY" = 'true'];
+        then
+          sed -i \
+            -e "s%= 'dbforeignkey' => 'off'%= 'dbforeignkey' => 'on'%" \
+            config.php;
+        fi
+        
         if [ "$DB" = 'pgsql' ];
         then
           # Postgres-specific setup.
@@ -113,7 +120,7 @@ before_script:
           mysql -u root -e 'SET GLOBAL innodb_file_per_table=ON;' ;
           mysql -e 'CREATE DATABASE travis_ci_test DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;' ;
         fi
-
+        
         if [ "$PHPUNIT" = 'true' ];
         then
           # Create a directory for the phpunit dataroot.

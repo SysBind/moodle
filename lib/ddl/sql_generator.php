@@ -181,7 +181,7 @@ abstract class sql_generator {
         $this->prefix         = $mdb->get_prefix();
         $this->reserved_words = $this->getReservedWords();
         $dbconfig             = $mdb->export_dbconfig();
-        $this->foreign_keys   = ($dbconfig->dboptions['dbforeignkey'] == 'on');
+        $this->foreign_keys   = (array_key_exists('dbforeignkey', $dbconfig->dboptions) && $dbconfig->dboptions['dbforeignkey'] == 'on');
         $this->mdb            = $mdb; // this creates circular reference - the other link must be unset when closing db
         $this->temptables     = $temptables;
     }
