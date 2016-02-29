@@ -96,7 +96,11 @@ before_script:
         if [ "$FOREIGNKEY" = 'true'];
         then
           sed -i \
-            -e "s%= 'dbforeignkey' => 'off'%= 'dbforeignkey' => 'on'%" \
+            -e "s%=> 'dbfk'%=> 'on'%" \
+            config.php;
+        else 
+          sed -i \
+            -e "s%=> 'dbfk'%=> 'off'%" \
             config.php;
         fi
         

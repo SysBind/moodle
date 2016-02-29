@@ -59,7 +59,7 @@ $CFG->dboptions = array(
     'dbport'    => '',          // the TCP port number to use when connecting
                                 //  to the server. keep empty string for the
                                 //  default port
-    'dbforeignkey' => 'off',    // set to on if you want to enable use of 
+    'dbforeignkey' => 'dbfk',    // set to on if you want to enable use of 
                                 // DB foreign keys
 );
 
