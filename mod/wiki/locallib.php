@@ -71,7 +71,7 @@ function wiki_get_subwikis($wikiid) {
  * @param int $groupid
  * @return object
  */
-function wiki_get_subwiki_by_group($wikiid, $groupid, $userid = 0) {
+function wiki_get_subwiki_by_group($wikiid, $groupid, $userid = null) {
     global $DB;
     return $DB->get_record('wiki_subwikis', array('wikiid' => $wikiid, 'groupid' => $groupid, 'userid' => $userid));
 }
@@ -93,7 +93,7 @@ function wiki_get_subwiki($subwikiid) {
  * @param int $groupid
  * @return int $insertid
  */
-function wiki_add_subwiki($wikiid, $groupid, $userid = 0) {
+function wiki_add_subwiki($wikiid, $groupid, $userid = null) {
     global $DB;
 
     $record = new StdClass();

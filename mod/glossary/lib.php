@@ -338,7 +338,7 @@ function glossary_user_complete($course, $user, $mod, $glossary) {
  * @param int   $groupid defaults to 0
  * @return void adds items into $activities and increases $index
  */
-function glossary_get_recent_mod_activity(&$activities, &$index, $timestart, $courseid, $cmid, $userid = 0, $groupid = 0) {
+function glossary_get_recent_mod_activity(&$activities, &$index, $timestart, $courseid, $cmid, $userid = null, $groupid = 0) {
     global $COURSE, $USER, $DB;
 
     if ($COURSE->id == $courseid) {

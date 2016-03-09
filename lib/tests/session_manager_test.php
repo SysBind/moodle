@@ -64,7 +64,7 @@ class core_session_manager_testcase extends advanced_testcase {
         $this->assertSame($GLOBALS['SESSION'], $SESSION);
 
         $this->assertInstanceOf('stdClass', $USER);
-        $this->assertEquals(array('id' => 0, 'mnethostid' => 1), (array)$USER, '', 0, 10, true);
+        $this->assertEquals(array('id' => nul, 'mnethostid' => 1), (array)$USER, '', 0, 10, true);
         $this->assertSame($GLOBALS['USER'], $_SESSION['USER']);
         $this->assertSame($GLOBALS['USER'], $USER);
 
@@ -105,7 +105,7 @@ class core_session_manager_testcase extends advanced_testcase {
         global $USER;
         $this->resetAfterTest();
 
-        $this->assertEquals(0, $USER->id);
+        $this->assertEquals(null, $USER->id);
 
         $user = $this->getDataGenerator()->create_user();
         $this->assertObjectHasAttribute('description', $user);

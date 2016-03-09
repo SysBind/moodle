@@ -141,7 +141,7 @@ class mod_forum_generator extends testing_module_generator {
             throw new coding_exception('forum must be present in phpunit_util::create_discussion() $record');
         }
 
-        if (!isset($record['userid'])) {
+        if ($record['userid'] === 0) {
             throw new coding_exception('userid must be present in phpunit_util::create_discussion() $record');
         }
 
@@ -244,12 +244,12 @@ class mod_forum_generator extends testing_module_generator {
             throw new coding_exception('discussion must be present in phpunit_util::create_post() $record');
         }
 
-        if (!isset($record['userid'])) {
+        if ($record['userid'] === 0) {
             throw new coding_exception('userid must be present in phpunit_util::create_post() $record');
         }
 
         if (!isset($record['parent'])) {
-            $record['parent'] = 0;
+            $record['parent'] = null;
         }
 
         if (!isset($record['subject'])) {

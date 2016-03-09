@@ -82,7 +82,7 @@ function report_stats_report($course, $report, $mode, $user, $roleid, $time) {
     if ($user) {
         $userid = $user->id;
     } else {
-        $userid = 0;
+        $userid = null;
     }
 
     $courses = get_courses('all','c.shortname','c.id,c.shortname,c.fullname');

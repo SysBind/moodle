@@ -1324,7 +1324,7 @@ class core_group_external extends external_api {
      * @return array of group objects (id, name, description, format) and possible warnings.
      * @since Moodle 3.0
      */
-    public static function get_activity_allowed_groups($cmid, $userid = 0) {
+    public static function get_activity_allowed_groups($cmid, $userid = null) {
         global $USER;
 
         // Warnings array, it can be empty at the end but is mandatory.

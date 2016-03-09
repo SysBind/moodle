@@ -1498,7 +1498,7 @@ class quiz_attempt {
         $question = new qtype_description_question();
         $question->id = $replacedquestion->id;
         $question->category = null;
-        $question->parent = 0;
+        $question->parent = null;
         $question->qtype = question_bank::get_qtype('description');
         $question->name = '';
         $question->questiontext = get_string('questiondependsonprevious', 'quiz');

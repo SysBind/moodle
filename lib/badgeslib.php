@@ -1003,7 +1003,7 @@ function print_badge_image(badge $badge, stdClass $context, $size = 'small') {
  * @param boolean $pathhash Return file pathhash instead of image url (optional).
  * @return string|url Returns either new file path hash or new file URL
  */
-function badges_bake($hash, $badgeid, $userid = 0, $pathhash = false) {
+function badges_bake($hash, $badgeid, $userid = null, $pathhash = false) {
     global $CFG, $USER;
     require_once(dirname(dirname(__FILE__)) . '/badges/lib/bakerlib.php');
 

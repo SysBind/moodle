@@ -110,7 +110,7 @@ foreach ($glossarys as $glossary) {
             //Calculate the tolltip text
             $tooltiptext = get_string("rsssubscriberss","glossary",format_string($glossary->name));
             if (!isloggedin()) {
-                $userid = 0;
+                $userid = null;
             } else {
                 $userid = $USER->id;
             }

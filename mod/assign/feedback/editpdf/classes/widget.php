@@ -36,7 +36,7 @@ class assignfeedback_editpdf_widget implements renderable {
     /** @var int $assignment - Assignment instance id */
     public $assignment = 0;
     /** @var int $userid - The user id we are grading */
-    public $userid = 0;
+    public $userid = null;
     /** @var mixed $attemptnumber - The attempt number we are grading */
     public $attemptnumber = 0;
     /** @var moodle_url $downloadurl */

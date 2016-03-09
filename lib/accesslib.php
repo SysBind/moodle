@@ -388,7 +388,7 @@ function has_capability($capability, context $context, $user = null, $doanything
         return false;
     }
 
-    if (!isset($USER->id)) {
+    if ($USER->id === 0) {
         // should never happen
         $USER->id = null;
         debugging('Capability check being performed on a user with no ID.', DEBUG_DEVELOPER);
@@ -3288,7 +3288,7 @@ function get_archetype_roles($archetype) {
  * @param string $order defaults to 'c.contextlevel DESC, r.sortorder ASC'
  * @return array
  */
-function get_user_roles(context $context, $userid = 0, $checkparentcontexts = true, $order = 'c.contextlevel DESC, r.sortorder ASC') {
+function get_user_roles(context $context, $userid = null, $checkparentcontexts = true, $order = 'c.contextlevel DESC, r.sortorder ASC') {
     global $USER, $DB;
 
     if (empty($userid)) {
@@ -3328,7 +3328,7 @@ function get_user_roles(context $context, $userid = 0, $checkparentcontexts = tr
  * @param int $userid optional. Defaults to $USER->id
  * @return array of objects with fields ->userid, ->contextid and ->roleid.
  */
-function get_user_roles_with_special(context $context, $userid = 0) {
+function get_user_roles_with_special(context $context, $userid = null) {
     global $CFG, $USER;
 
     if (empty($userid)) {

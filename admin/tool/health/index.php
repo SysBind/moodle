@@ -649,13 +649,13 @@ class problem_000017 extends problem_base {
 
         if (!empty($missingparent)) {
             $solution .= "<pre>UPDATE " . $CFG->prefix . "question_categories\n" .
-                    "        SET parent = 0\n" .
+                    "        SET parent = NULL\n" .
                     "        WHERE id IN (" . implode(',', array_keys($missingparent)) . ");</pre>\n";
         }
 
         if (!empty($loops)) {
             $solution .= "<pre>UPDATE " . $CFG->prefix . "question_categories\n" .
-                    "        SET parent = 0\n" .
+                    "        SET parent = NULL\n" .
                     "        WHERE id IN (" . implode(',', array_keys($loops)) . ");</pre>\n";
         }
 
@@ -756,13 +756,13 @@ class problem_000018 extends problem_base {
 
         if (!empty($missingparent)) {
             $solution .= "<pre>UPDATE " . $CFG->prefix . "course_categories\n" .
-                    "        SET parent = 0, depth = 1, path = CONCAT('/', id)\n" .
+                    "        SET parent = NULL, depth = 1, path = CONCAT('/', id)\n" .
                     "        WHERE id IN (" . implode(',', array_keys($missingparent)) . ");</pre>\n";
         }
 
         if (!empty($loops)) {
             $solution .= "<pre>UPDATE " . $CFG->prefix . "course_categories\n" .
-                    "        SET parent = 0, depth = 1, path = CONCAT('/', id)\n" .
+                    "        SET parent = NULL, depth = 1, path = CONCAT('/', id)\n" .
                     "        WHERE id IN (" . implode(',', array_keys($loops)) . ");</pre>\n";
         }
 

@@ -160,7 +160,7 @@ class manager {
         $GLOBALS['SESSION'] = new \stdClass();
 
         $GLOBALS['USER'] = new \stdClass();
-        $GLOBALS['USER']->id = 0;
+        $GLOBALS['USER']->id = null;
         if (isset($CFG->mnet_localhost_id)) {
             $GLOBALS['USER']->mnethostid = $CFG->mnet_localhost_id;
         } else {

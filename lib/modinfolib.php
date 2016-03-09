@@ -386,7 +386,7 @@ class course_modinfo {
      *     Set to 0 for current user (default). Set to -1 to avoid calculation of dynamic user-depended data.
      * @return course_modinfo
      */
-    public static function instance($courseorid, $userid = 0) {
+    public static function instance($courseorid, $userid = null) {
         global $USER;
         if (is_object($courseorid)) {
             $course = $courseorid;
@@ -1752,7 +1752,7 @@ class cm_info implements IteratorAggregate {
      * @param int $userid Optional userid (default to current)
      * @return cm_info|null Object as cm_info, or null if input was null/false
      */
-    public static function create($cm, $userid = 0) {
+    public static function create($cm, $userid = null) {
         // Null, false, etc. gets passed through as null.
         if (!$cm) {
             return null;
@@ -2018,7 +2018,7 @@ class cm_info implements IteratorAggregate {
  * @return course_modinfo|null Module information for course, or null if resetting
  * @throws moodle_exception when course is not found (nothing is thrown if resetting)
  */
-function get_fast_modinfo($courseorid, $userid = 0, $resetonly = false) {
+function get_fast_modinfo($courseorid, $userid = null, $resetonly = false) {
     // compartibility with syntax prior to 2.4:
     if ($courseorid === 'reset') {
         debugging("Using the string 'reset' as the first argument of get_fast_modinfo() is deprecated. Use get_fast_modinfo(0,0,true) instead.", DEBUG_DEVELOPER);
@@ -2070,7 +2070,7 @@ function get_fast_modinfo($courseorid, $userid = 0, $resetonly = false) {
  * @return array Array with 2 elements $course and $cm
  * @throws moodle_exception If the item doesn't exist or is of wrong module name
  */
-function get_course_and_cm_from_cmid($cmorid, $modulename = '', $courseorid = 0, $userid = 0) {
+function get_course_and_cm_from_cmid($cmorid, $modulename = '', $courseorid = 0, $userid = null) {
     global $DB;
     if (is_object($cmorid)) {
         $cmid = $cmorid->id;
@@ -2146,7 +2146,7 @@ function get_course_and_cm_from_cmid($cmorid, $modulename = '', $courseorid = 0,
  * @return array Array with 2 elements $course and $cm
  * @throws moodle_exception If the item doesn't exist or is of wrong module name
  */
-function get_course_and_cm_from_instance($instanceorid, $modulename, $courseorid = 0, $userid = 0) {
+function get_course_and_cm_from_instance($instanceorid, $modulename, $courseorid = 0, $userid = null) {
     global $DB;
 
     // Get data from parameter.

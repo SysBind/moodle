@@ -28,7 +28,7 @@ if ($_ENV['RECIPIENT'] == $CFG->noreplyaddress) {
         fclose($fd);
     }
 
-    $user->id = 0; // to prevent anything annoying happening
+    $user->id = null; // to prevent anything annoying happening
 
     $from->firstname = null;
     $from->lastname = null;

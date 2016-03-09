@@ -87,7 +87,7 @@ class qtype_random extends question_type {
         // TODO use in_or_equal for $otherquestionsinuse and $this->manualqtypes.
         return $DB->record_exists_select('question',
                 "category {$qcsql}
-                     AND parent = 0
+                     AND parent IS NULL
                      AND hidden = 0
                      AND id NOT IN ($otherquestionsinuse)
                      AND qtype IN ($this->manualqtypes)", $qcparams);

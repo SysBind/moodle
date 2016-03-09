@@ -447,7 +447,7 @@ class tool_uploadcourse_helper {
         $cache = cache::make('tool_uploadcourse', 'helper');
         $cachekey = 'cat_path_' . serialize($path);
         if (($id = $cache->get($cachekey)) === false) {
-            $parent = 0;
+            $parent = null;
             $sql = 'name = :name AND parent = :parent';
             while ($name = array_shift($path)) {
                 $params = array('name' => $name, 'parent' => $parent);

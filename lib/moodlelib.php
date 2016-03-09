@@ -1767,7 +1767,7 @@ function check_user_preferences_loaded(stdClass $user, $cachelifetime = 120) {
     // Static cache, we need to check on each page load, not only every 2 minutes.
     static $loadedusers = array();
 
-    if (!isset($user->id)) {
+    if ($user->id === 0) {
         throw new coding_exception('Invalid $user parameter in check_user_preferences_loaded() call, missing id field');
     }
 
@@ -1999,7 +1999,7 @@ function get_user_preferences($name = null, $default = null, $user = null) {
         throw new coding_exception('Invalid preference name in get_user_preferences() call');
     }
 
-    if (is_null($user)) {
+    if (is_null($user) || is_null($user->id)) {
         $user = $USER;
     } else if (isset($user->id)) {
         // Is a valid object.
@@ -4149,7 +4149,7 @@ function authenticate_user_login($username, $password, $ignorelockout=false, &$f
         // User does not exist.
         $auths = $authsenabled;
         $user = new stdClass();
-        $user->id = 0;
+        $user->id = null;
     }
 
     if ($ignorelockout) {

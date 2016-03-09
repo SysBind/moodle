@@ -1332,7 +1332,7 @@ function scorm_dndupload_handle($uploadinfo) {
  * @param object $scorm object
  * @param int $userid User ID
  * @param int $completionstate Completion state
- * @param array $grades grades array of users with grades - used when $userid = 0
+ * @param array $grades grades array of users with grades - used when $userid = null
  */
 function scorm_set_completion($scorm, $userid, $completionstate = COMPLETION_COMPLETE, $grades = array()) {
     $course = new stdClass();

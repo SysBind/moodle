@@ -352,7 +352,7 @@ abstract class moodle_list {
             if (isset($item->parentlist->parentitem->parentlist->parentitem)) {
                 $newparent = $item->parentlist->parentitem->parentlist->parentitem->id;
             } else {
-                $newparent = 0; // top level item
+                $newparent = null; // top level item
             }
             $DB->set_field($this->table, "parent", $newparent, array("id"=>$item->id));
             $oldparentkey = array_search($item->parentlist->parentitem->id, $newpeers);

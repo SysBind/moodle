@@ -58,7 +58,7 @@ class qtype_multianswer_test extends advanced_testcase {
         $q->name = 'Simple multianswer';
         $q->category = 0;
         $q->contextid = 0;
-        $q->parent = 0;
+        $q->parent = null;
         $q->questiontext =
                 'Complete this opening line of verse: "The {#1} and the {#2} went to sea".';
         $q->questiontextformat = FORMAT_HTML;

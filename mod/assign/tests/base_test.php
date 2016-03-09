@@ -251,7 +251,7 @@ class testable_assign extends assign {
         return parent::update_submission($submission, $userid, $updatetime, $teamsubmission);
     }
 
-    public function testable_process_add_attempt($userid = 0) {
+    public function testable_process_add_attempt($userid = null) {
         return parent::process_add_attempt($userid);
     }
 
@@ -292,7 +292,7 @@ class testable_assign extends assign {
         return parent::process_set_batch_marking_workflow_state();
     }
 
-    public function testable_submissions_open($userid = 0) {
+    public function testable_submissions_open($userid = null) {
         return parent::submissions_open($userid);
     }
 

@@ -129,7 +129,7 @@ function forum_get_user_discussions($courseid, $userid, $groupid=0) {
                                    {forum} f
                              WHERE d.course = ?
                                AND p.discussion = d.id
-                               AND p.parent = 0
+                               AND p.parent IS NULL
                                AND p.userid = u.id
                                AND u.id = ?
                                AND d.forum = f.id $groupselect

@@ -273,7 +273,7 @@ function lesson_random_question_jump($lesson, $pageid) {
                     nmanual => number of manually graded questions
                     manualpoints => point value for manually graded questions }
  */
-function lesson_grade($lesson, $ntries, $userid = 0) {
+function lesson_grade($lesson, $ntries, $userid = null) {
     global $USER, $DB;
 
     if (empty($userid)) {

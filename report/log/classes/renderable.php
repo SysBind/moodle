@@ -111,7 +111,7 @@ class report_log_renderable implements renderable {
      * @param int $perpage (optional) number of records to show per page.
      * @param string $order (optional) sortorder of fetched records
      */
-    public function __construct($logreader = "", $course = 0, $userid = 0, $modid = 0, $action = "", $groupid = 0, $edulevel = -1,
+    public function __construct($logreader = "", $course = 0, $userid = null, $modid = 0, $action = "", $groupid = 0, $edulevel = -1,
             $showcourses = false, $showusers = false, $showreport = true, $showselectorform = true, $url = "", $date = 0,
             $logformat='showashtml', $page = 0, $perpage = 100, $order = "timecreated ASC") {
 

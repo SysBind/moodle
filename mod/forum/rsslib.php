@@ -189,7 +189,7 @@ function forum_rss_feed_discussions_sql($forum, $cm, $newsince=0) {
               FROM {forum_discussions} d
                    JOIN {forum_posts} p ON p.discussion = d.id
                    JOIN {user} u ON p.userid = u.id
-             WHERE d.forum = {$forum->id} AND p.parent = 0
+             WHERE d.forum = {$forum->id} AND p.parent IS NULL
                    $timelimit $groupselect $newsince
           ORDER BY $forumsort";
     return array($sql, $params);

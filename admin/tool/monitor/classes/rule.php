@@ -143,7 +143,7 @@ class rule {
      *
      * @throws \coding_exception
      */
-    public function subscribe_user($courseid, $cmid, $userid = 0) {
+    public function subscribe_user($courseid, $cmid, $userid = null) {
         global $USER;
 
         if ($this->courseid != $courseid && $this->courseid != 0) {

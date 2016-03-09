@@ -1720,7 +1720,7 @@ class cache_session extends cache {
             $new = $_SESSION['USER']->id;
         } else {
             // No user set up yet.
-            $new = 0;
+            $new = null;
         }
         if ($new !== self::$loadeduserid) {
             // The current user doesn't match the tracked userid for this request.

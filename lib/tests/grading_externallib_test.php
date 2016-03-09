@@ -320,7 +320,7 @@ class core_grading_externallib_testcase extends externallib_advanced_testcase {
 
         // Create the teacher.
         $teacher = self::getDataGenerator()->create_user();
-        $USER->id = $teacher->id;
+        $USER->id = ($teacher->id == 0) ? null : $teacher->id;
         $teacherrole = $DB->get_record('role', array('shortname' => 'editingteacher'));
         $this->assignUserCapability('moodle/grade:managegradingforms', $context->id, $teacherrole->id);
         $this->getDataGenerator()->enrol_user($teacher->id,
@@ -559,7 +559,7 @@ class core_grading_externallib_testcase extends externallib_advanced_testcase {
 
         // Create the teacher.
         $teacher = self::getDataGenerator()->create_user();
-        $USER->id = $teacher->id;
+        $USER->id = ($teacher->id == 0) ? null : $teacher->id;
         $teacherrole = $DB->get_record('role', array('shortname' => 'editingteacher'));
         $this->assignUserCapability('moodle/grade:managegradingforms', $context->id, $teacherrole->id);
         $this->getDataGenerator()->enrol_user($teacher->id,

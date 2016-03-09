@@ -881,7 +881,7 @@ class completion_info {
      *   Otherwise the method calls get_fast_modinfo itself.
      * @return object Completion data (record from course_modules_completion)
      */
-    public function get_data($cm, $wholecourse = false, $userid = 0, $modinfo = null) {
+    public function get_data($cm, $wholecourse = false, $userid = null, $modinfo = null) {
         global $USER, $CFG, $DB;
         $completioncache = cache::make('core', 'completion');
 

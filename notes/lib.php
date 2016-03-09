@@ -302,7 +302,7 @@ function note_print_list($notes, $detail = NOTES_SHOW_FULL) {
  * @param string  $state state of the notes (i.e. draft, public, site) ('' means any)
  * @param int     $author id of the user who modified the note last time (0 means any)
  */
-function note_print_notes($header, $addcourseid = 0, $viewnotes = true, $courseid = 0, $userid = 0, $state = '', $author = 0) {
+function note_print_notes($header, $addcourseid = 0, $viewnotes = true, $courseid = 0, $userid = null, $state = '', $author = 0) {
     global $CFG;
 
     if ($header) {

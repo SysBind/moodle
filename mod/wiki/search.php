@@ -61,7 +61,7 @@ if ($subwikiid) {
     if ($wiki->wikimode == 'individual') {
         $userid = $userid ? $userid : $USER->id;
     } else {
-        $userid = 0;
+        $userid = null;
     }
     if (!$subwiki = wiki_get_subwiki_by_group($cm->instance, $gid, $userid)) {
         // Subwiki does not exist yet, redirect to the view page (which will redirect to create page if allowed).

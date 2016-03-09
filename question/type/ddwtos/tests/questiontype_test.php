@@ -66,7 +66,7 @@ class qtype_ddwtos_test extends question_testcase {
         $dd->id = 0;
         $dd->category = 0;
         $dd->contextid = 0;
-        $dd->parent = 0;
+        $dd->parent = null;
         $dd->questiontextformat = FORMAT_HTML;
         $dd->generalfeedbackformat = FORMAT_HTML;
         $dd->defaultmark = 1;

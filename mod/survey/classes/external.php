@@ -276,7 +276,7 @@ class mod_survey_external extends external_api {
         foreach ($mainquestions as $question) {
             if ($question->type >= 0) {
                 // Parent is used in subquestions.
-                $question->parent = 0;
+                $question->parent = null;
                 $questions[] = survey_translate_question($question);
 
                 // Check if the question has subquestions.

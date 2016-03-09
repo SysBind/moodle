@@ -49,7 +49,7 @@ class qformat_xml_test extends question_testcase {
         $q->id = 0;
         $q->contextid = 0;
         $q->category = 0;
-        $q->parent = 0;
+        $q->parent = null;
         $q->questiontextformat = FORMAT_HTML;
         $q->generalfeedbackformat = FORMAT_HTML;
         $q->defaultmark = 1;

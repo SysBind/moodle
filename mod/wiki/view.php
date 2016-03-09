@@ -88,7 +88,7 @@ if ($id) {
     if ($wiki->wikimode == 'individual') {
         $userid = $USER->id;
     } else {
-        $userid = 0;
+        $userid = null;
     }
 
     // Getting subwiki. If it does not exists, redirecting to create page

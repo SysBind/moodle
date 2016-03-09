@@ -45,7 +45,7 @@ class qtype_missing_test extends question_testcase {
         $questiondata->id = 0;
         $questiondata->category = 0;
         $questiondata->contextid = 0;
-        $questiondata->parent = 0;
+        $questiondata->parent = null;
         $questiondata->name = 'Test';
         $questiondata->questiontext = 'This is the question text.';
         $questiondata->questiontextformat = FORMAT_HTML;

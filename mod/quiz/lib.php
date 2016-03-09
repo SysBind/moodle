@@ -598,7 +598,7 @@ function quiz_get_user_attempts($quizid, $userid, $status = 'finished', $include
  * @return array array of grades, false if none. These are raw grades. They should
  * be processed with quiz_format_grade for display.
  */
-function quiz_get_user_grades($quiz, $userid = 0) {
+function quiz_get_user_grades($quiz, $userid = null) {
     global $CFG, $DB;
 
     $params = array($quiz->id);
@@ -675,7 +675,7 @@ function quiz_format_question_grade($quiz, $grade) {
  * @param int $userid specific user only, 0 means all users.
  * @param bool $nullifnone If a single user is specified and $nullifnone is true a grade item with a null rawgrade will be inserted
  */
-function quiz_update_grades($quiz, $userid = 0, $nullifnone = true) {
+function quiz_update_grades($quiz, $userid = null, $nullifnone = true) {
     global $CFG, $DB;
     require_once($CFG->libdir . '/gradelib.php');
 
@@ -849,7 +849,7 @@ function quiz_refresh_events($courseid = 0) {
  * Returns all quiz graded users since a given time for specified quiz
  */
 function quiz_get_recent_mod_activity(&$activities, &$index, $timestart,
-        $courseid, $cmid, $userid = 0, $groupid = 0) {
+        $courseid, $cmid, $userid = null, $groupid = 0) {
     global $CFG, $USER, $DB;
     require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 

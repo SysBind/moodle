@@ -43,7 +43,7 @@ class mock_info extends info {
      * @param \stdClass $course Optional course param (otherwise uses $SITE)
      * @param int $userid Userid for modinfo (if used)
      */
-    public function __construct($course = null, $userid = 0) {
+    public function __construct($course = null, $userid = null) {
         global $SITE;
         if (!$course) {
             $course = $SITE;

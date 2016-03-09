@@ -169,7 +169,7 @@ class test_question_maker {
 
         $q->id = 0;
         $q->category = 0;
-        $q->parent = 0;
+        $q->parent = null;
         $q->questiontextformat = FORMAT_HTML;
         $q->generalfeedbackformat = FORMAT_HTML;
         $q->defaultmark = 1;
@@ -190,7 +190,7 @@ class test_question_maker {
         $qdata->id = 0;
         $qdata->category = 0;
         $qdata->contextid = 0;
-        $qdata->parent = 0;
+        $qdata->parent = null;
         $qdata->questiontextformat = FORMAT_HTML;
         $qdata->generalfeedbackformat = FORMAT_HTML;
         $qdata->defaultmark = 1;

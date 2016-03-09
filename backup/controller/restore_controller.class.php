@@ -429,7 +429,7 @@ class restore_controller extends base_controller {
     /**
      * class method to provide pseudo random unique "correct" tempdir names
      */
-    public static function get_tempdir_name($courseid = 0, $userid = 0) {
+    public static function get_tempdir_name($courseid = 0, $userid = null) {
         // Current epoch time + courseid + userid + random bits
         return md5(time() . '-' . $courseid . '-'. $userid . '-'. random_string(20));
     }

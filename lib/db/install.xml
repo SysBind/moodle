@@ -2852,7 +2852,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="fk_courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+        <KEY NAME="fk_courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" ONDELETE="cascade" />
         <KEY NAME="fk_usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="fk_usercreated" TYPE="foreign" FIELDS="usercreated" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
       </KEYS>
@@ -2871,7 +2871,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="fk_badgeid" TYPE="foreign" FIELDS="badgeid" REFTABLE="badge" REFFIELDS="id"/>
+        <KEY NAME="fk_badgeid" TYPE="foreign" FIELDS="badgeid" REFTABLE="badge" REFFIELDS="id" ONDELETE="cascade" />
       </KEYS>
       <INDEXES>
         <INDEX NAME="criteriatype" UNIQUE="false" FIELDS="criteriatype"/>
@@ -2887,7 +2887,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="fk_critid" TYPE="foreign" FIELDS="critid" REFTABLE="badge_criteria" REFFIELDS="id"/>
+        <KEY NAME="fk_critid" TYPE="foreign" FIELDS="critid" REFTABLE="badge_criteria" REFFIELDS="id" ONDELETE="cascade"/>
       </KEYS>
     </TABLE>
     <TABLE NAME="badge_issued" COMMENT="Defines issued badges">
@@ -2920,9 +2920,9 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="fk_critid" TYPE="foreign" FIELDS="critid" REFTABLE="badge_criteria" REFFIELDS="id"/>
-        <KEY NAME="fk_userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
-        <KEY NAME="fk_issuedid" TYPE="foreign" FIELDS="issuedid" REFTABLE="badge_issued" REFFIELDS="id"/>
+        <KEY NAME="fk_critid" TYPE="foreign" FIELDS="critid" REFTABLE="badge_criteria" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="fk_userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="fk_issuedid" TYPE="foreign" FIELDS="issuedid" REFTABLE="badge_issued" REFFIELDS="id" ONDELETE="cascade"/>
       </KEYS>
     </TABLE>
     <TABLE NAME="badge_manual_award" COMMENT="Track manual award criteria for badges">

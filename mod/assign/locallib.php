@@ -4612,7 +4612,7 @@ class assign {
      * @param stdClass $gradinginfo - Pre-fetched user gradinginfo record (or false to fetch it)
      * @return bool
      */
-    public function submissions_open($userid = 0,
+    public function submissions_open($userid = null,
                                      $skipenrolled = false,
                                      $submission = false,
                                      $flags = false,
@@ -6569,7 +6569,7 @@ class assign {
      * @param int $userid
      * @return boolean
      */
-    protected function process_revert_to_draft($userid = 0) {
+    protected function process_revert_to_draft($userid = null) {
         require_sesskey();
 
         if (!$userid) {
@@ -6735,7 +6735,7 @@ class assign {
      * @param int $userid
      * @return void
      */
-    protected function process_lock_submission($userid = 0) {
+    protected function process_lock_submission($userid = null) {
 
         require_sesskey();
 
@@ -6784,7 +6784,7 @@ class assign {
      * @param int $userid
      * @return bool
      */
-    protected function process_unlock_submission($userid = 0) {
+    protected function process_unlock_submission($userid = null) {
 
         require_sesskey();
 

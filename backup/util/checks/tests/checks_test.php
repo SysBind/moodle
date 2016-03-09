@@ -106,7 +106,7 @@ class backup_check_testcase extends advanced_testcase {
         }
 
         // Test non-existing user
-        $userid = 0;
+        $userid = null;
         try {
             backup_check::check_user($userid);
             $this->assertTrue(false, 'backup_controller_exception expected');

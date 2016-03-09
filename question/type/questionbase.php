@@ -68,7 +68,7 @@ abstract class question_definition {
     public $contextid;
 
     /** @var integer parent question id. */
-    public $parent = 0;
+    public $parent = null;
 
     /** @var question_type the question type this question is. */
     public $qtype;

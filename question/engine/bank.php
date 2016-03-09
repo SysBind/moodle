@@ -500,7 +500,7 @@ class question_finder implements cache_data_source {
 
         return $DB->get_records_select_menu('question',
                 "category {$qcsql}
-                 AND parent = 0
+                 AND parent IS NULL
                  AND hidden = 0
                  {$extraconditions}", $qcparams + $extraparams, '', 'id,id AS id2');
     }

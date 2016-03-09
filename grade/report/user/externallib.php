@@ -61,7 +61,7 @@ class gradereport_user_external extends external_api {
      * @return array the grades tables
      * @since Moodle 2.9
      */
-    public static function get_grades_table($courseid, $userid = 0) {
+    public static function get_grades_table($courseid, $userid = null) {
         global $CFG, $USER;
 
         $warnings = array();
@@ -282,7 +282,7 @@ class gradereport_user_external extends external_api {
      * @since Moodle 2.9
      * @throws moodle_exception
      */
-    public static function view_grade_report($courseid, $userid = 0) {
+    public static function view_grade_report($courseid, $userid = null) {
         global $CFG, $USER;
         require_once($CFG->dirroot . "/grade/lib.php");
         require_once($CFG->dirroot . "/grade/report/user/lib.php");

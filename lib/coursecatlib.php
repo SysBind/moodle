@@ -86,7 +86,7 @@ class coursecat implements renderable, cacheable_object, IteratorAggregate {
     protected $descriptionformat = false;
 
     /** @var int */
-    protected $parent = 0;
+    protected $parent = null;
 
     /** @var int */
     protected $sortorder = 0;

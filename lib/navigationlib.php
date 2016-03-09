@@ -1007,8 +1007,8 @@ class global_navigation extends navigation_node {
     /** @var cache_session A cache that stores information on expanded courses */
     protected $cacheexpandcourse = null;
 
-    /** Used when loading categories to load all top level categories [parent = 0] **/
-    const LOAD_ROOT_CATEGORIES = 0;
+    /** Used when loading categories to load all top level categories [parent = null] **/
+    const LOAD_ROOT_CATEGORIES = null;
     /** Used when loading categories to load all categories **/
     const LOAD_ALL_CATEGORIES = -1;
 
@@ -1628,7 +1628,7 @@ class global_navigation extends navigation_node {
             // on the database server!
         } else if ($categoryid == self::LOAD_ROOT_CATEGORIES) { // can be 0
             // We are going to load all of the first level categories (categories without parents)
-            $sqlwhere .= " AND cc.parent = 0";
+            $sqlwhere .= " AND cc.parent IS NULL";
         } else if (array_key_exists($categoryid, $this->addedcategories)) {
             // The category itself has been loaded already so we just need to ensure its subcategories
             // have been loaded
@@ -1637,8 +1637,8 @@ class global_navigation extends navigation_node {
             if (count($addedcategories) > 0) {
                 list($sql, $params) = $DB->get_in_or_equal(array_keys($addedcategories), SQL_PARAMS_NAMED, 'parent', false);
                 if ($showbasecategories) {
-                    // We need to include categories with parent = 0 as well
-                    $sqlwhere .= " AND (cc.parent = :categoryid OR cc.parent = 0) AND cc.parent {$sql}";
+                    // We need to include categories with parent = null as well
+                    $sqlwhere .= " AND (cc.parent = :categoryid OR cc.parent IS NULL) AND cc.parent {$sql}";
                 } else {
                     // All we need is categories that match the parent
                     $sqlwhere .= " AND cc.parent = :categoryid AND cc.parent {$sql}";
@@ -2785,7 +2785,7 @@ class global_navigation extends navigation_node {
 
             // Now we load the base categories.
             list($sql, $params) = $DB->get_in_or_equal($categoryids);
-            $categories = $DB->get_recordset_select('course_categories', 'id '.$sql.' AND parent = 0', $params, 'sortorder, id');
+            $categories = $DB->get_recordset_select('course_categories', 'id '.$sql.' AND parent IS NULL', $params, 'sortorder, id');
             foreach ($categories as $category) {
                 $this->add_category($category, $this->rootnodes['mycourses'], self::TYPE_MY_CATEGORY);
             }

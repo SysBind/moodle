@@ -106,7 +106,7 @@ function question_is_only_toplevel_category_in_context($categoryid) {
                    {question_categories} c2
              WHERE c2.id = ?
                AND c1.contextid = c2.contextid
-               AND c1.parent = 0 AND c2.parent = 0", array($categoryid));
+               AND c1.parent IS NULL AND c2.parent IS NULL", array($categoryid));
 }
 
 /**

@@ -487,7 +487,7 @@ class qformat_default {
     protected function create_category_path($catpath) {
         global $DB;
         $catnames = $this->split_category_path($catpath);
-        $parent = 0;
+        $parent = null;
         $category = null;
 
         // check for context id in path, it might not be there in pre 1.9 exports

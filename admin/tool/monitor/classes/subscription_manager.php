@@ -45,7 +45,7 @@ class subscription_manager {
      *
      * @return bool|int returns id of the created subscription.
      */
-    public static function create_subscription($ruleid, $courseid, $cmid, $userid = 0) {
+    public static function create_subscription($ruleid, $courseid, $cmid, $userid = null) {
         global $DB, $USER;
 
         $subscription = new \stdClass();
@@ -249,7 +249,7 @@ class subscription_manager {
      *
      * @return array list of subscriptions
      */
-    public static function get_user_subscriptions_for_course($courseid, $limitfrom = 0, $limitto = 0, $userid = 0,
+    public static function get_user_subscriptions_for_course($courseid, $limitfrom = 0, $limitto = 0, $userid = null,
             $order = 's.timecreated DESC' ) {
         global $DB, $USER;
         if ($userid == 0) {
@@ -270,7 +270,7 @@ class subscription_manager {
      *
      * @return int number of subscriptions
      */
-    public static function count_user_subscriptions_for_course($courseid, $userid = 0) {
+    public static function count_user_subscriptions_for_course($courseid, $userid = null) {
         global $DB, $USER;
         if ($userid == 0) {
             $userid = $USER->id;
@@ -291,7 +291,7 @@ class subscription_manager {
      *
      * @return array list of subscriptions
      */
-    public static function get_user_subscriptions($limitfrom = 0, $limitto = 0, $userid = 0,
+    public static function get_user_subscriptions($limitfrom = 0, $limitto = 0, $userid = null,
                                                              $order = 's.courseid ASC, r.name' ) {
         global $DB, $USER;
         if ($userid == 0) {
@@ -310,7 +310,7 @@ class subscription_manager {
      *
      * @return int number of subscriptions
      */
-    public static function count_user_subscriptions($userid = 0) {
+    public static function count_user_subscriptions($userid = null) {
         global $DB, $USER;;
         if ($userid == 0) {
             $userid = $USER->id;

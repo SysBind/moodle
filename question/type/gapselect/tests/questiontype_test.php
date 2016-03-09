@@ -70,7 +70,7 @@ class qtype_gapselect_test extends question_testcase {
         $gapselect->id = 0;
         $gapselect->category = 0;
         $gapselect->contextid = 0;
-        $gapselect->parent = 0;
+        $gapselect->parent = null;
         $gapselect->questiontextformat = FORMAT_HTML;
         $gapselect->generalfeedbackformat = FORMAT_HTML;
         $gapselect->defaultmark = 1;

@@ -476,7 +476,7 @@ function wiki_extend_navigation(navigation_node $navref, $course, $module, $cm) 
 
     $context = context_module::instance($cm->id);
     $url = $PAGE->url;
-    $userid = 0;
+    $userid = null;
     if ($module->wikimode == 'individual') {
         $userid = $USER->id;
     }

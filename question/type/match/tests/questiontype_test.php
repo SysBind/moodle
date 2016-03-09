@@ -57,7 +57,7 @@ class qtype_match_test extends advanced_testcase {
         $q->name = 'Matching question';
         $q->category = 0;
         $q->contextid = 0;
-        $q->parent = 0;
+        $q->parent = null;
         $q->questiontext = 'Classify the animals.';
         $q->questiontextformat = FORMAT_HTML;
         $q->generalfeedback = 'General feedback.';

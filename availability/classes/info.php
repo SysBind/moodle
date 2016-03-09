@@ -170,7 +170,7 @@ abstract class info {
      *   calling recursively from inside get_fast_modinfo()
      * @return bool True if this item is available to the user, false otherwise
      */
-    public function is_available(&$information, $grabthelot = false, $userid = 0,
+    public function is_available(&$information, $grabthelot = false, $userid = null,
             \course_modinfo $modinfo = null) {
         global $USER;
 

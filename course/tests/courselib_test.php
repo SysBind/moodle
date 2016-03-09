@@ -644,7 +644,7 @@ class core_course_courselib_testcase extends advanced_testcase {
 
         $this->resetAfterTest();
 
-        $defaultcategory = $DB->get_field_select('course_categories', 'MIN(id)', 'parent = 0');
+        $defaultcategory = $DB->get_field_select('course_categories', 'MIN(id)', 'parent IS NULL');
 
         $course = new stdClass();
         $course->fullname = 'Apu loves Unit Təsts';

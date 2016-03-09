@@ -65,7 +65,7 @@ class qtype_missingtype extends question_type {
         $question = new qtype_missingtype_question();
         $question->id = $questionid;
         $question->category = null;
-        $question->parent = 0;
+        $question->parent = null;
         $question->qtype = question_bank::get_qtype('missingtype');
         $question->name = get_string('deletedquestion', 'qtype_missingtype');
         $question->questiontext = get_string('deletedquestiontext', 'qtype_missingtype');

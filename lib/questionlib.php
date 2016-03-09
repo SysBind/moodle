@@ -175,7 +175,7 @@ function question_context_has_any_questions($context) {
     return $DB->record_exists_sql("SELECT *
                                      FROM {question} q
                                      JOIN {question_categories} qc ON qc.id = q.category
-                                    WHERE qc.contextid = ? AND q.parent = 0", array($contextid));
+                                    WHERE qc.contextid = ? AND q.parent IS NULL", array($contextid));
 }
 
 /**
@@ -468,7 +468,7 @@ function question_save_from_deletion($questionids, $newcontextid, $oldplace,
     // Make a category in the parent context to move the questions to.
     if (is_null($newcategory)) {
         $newcategory = new stdClass();
-        $newcategory->parent = 0;
+        $newcategory->parent = null;
         $newcategory->contextid = $newcontextid;
         $newcategory->name = get_string('questionsrescuedfrom', 'question', $oldplace);
         $newcategory->info = get_string('questionsrescuedfrominfo', 'question', $oldplace);

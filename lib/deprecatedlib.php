@@ -2888,7 +2888,7 @@ function tag_add($tags, $type="default") {
  * @param int|null $contextid the context id of where this tag was assigned
  * @return bool true on success, false otherwise
  */
-function tag_assign($record_type, $record_id, $tagid, $ordering, $userid = 0, $component = null, $contextid = null) {
+function tag_assign($record_type, $record_id, $tagid, $ordering, $userid = null, $component = null, $contextid = null) {
     global $DB;
     $message = 'Function tag_assign() is deprecated. Use core_tag_tag::set_item_tags() or core_tag_tag::add_item_tag() instead. ' .
         'Tag instance ordering should not be set manually';

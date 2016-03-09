@@ -412,7 +412,7 @@ function profile_load_data($user) {
  * @param moodleform $mform instance of the moodleform class
  * @param int $userid id of user whose profile is being edited.
  */
-function profile_definition($mform, $userid = 0) {
+function profile_definition($mform, $userid = null) {
     global $CFG, $DB;
 
     // If user is "admin" fields are displayed regardless.

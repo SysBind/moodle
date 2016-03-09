@@ -4103,7 +4103,7 @@ class restore_create_categories_and_questions extends restore_structure_step {
                      'backupid' => $this->get_restoreid(),
                      'itemname' => 'question_category_created'));
         foreach ($qcats as $qcat) {
-            $newparent = 0;
+            $newparent = null;
             $dbcat = $DB->get_record('question_categories', array('id' => $qcat->newitemid));
             // Get new parent (mapped or created, so we look in quesiton_category mappings)
             if ($newparent = $DB->get_field('backup_ids_temp', 'newitemid', array(
@@ -4115,7 +4115,7 @@ class restore_create_categories_and_questions extends restore_structure_step {
                 if ($dbcat->contextid == $newparentctxid) {
                     $DB->set_field('question_categories', 'parent', $newparent, array('id' => $dbcat->id));
                 } else {
-                    $newparent = 0; // No ctx match for both cats, no parent relationship
+                    $newparent = null; // No ctx match for both cats, no parent relationship
                 }
             }
             // Here with $newparent empty, problem with contexts or remapping, set it to top cat
@@ -4129,7 +4129,7 @@ class restore_create_categories_and_questions extends restore_structure_step {
                   'backupid' => $this->get_restoreid(),
                   'itemname' => 'question_created'));
         foreach ($qs as $q) {
-            $newparent = 0;
+            $newparent = null;
             $dbq = $DB->get_record('question', array('id' => $q->newitemid));
             // Get new parent (mapped or created, so we look in question mappings)
             if ($newparent = $DB->get_field('backup_ids_temp', 'newitemid', array(

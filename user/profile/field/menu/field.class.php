@@ -44,7 +44,7 @@ class profile_field_menu extends profile_field_base {
      * @param int $fieldid
      * @param int $userid
      */
-    public function __construct($fieldid = 0, $userid = 0) {
+    public function __construct($fieldid = 0, $userid = null) {
         // First call parent constructor.
         parent::__construct($fieldid, $userid);
 

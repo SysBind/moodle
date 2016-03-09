@@ -163,7 +163,7 @@ class info_module extends info {
      * @return bool True if the activity is visible to the specified user
      * @throws \moodle_exception If the cmid doesn't exist
      */
-    public static function is_user_visible($cmorid, $userid = 0, $checkcourse = true) {
+    public static function is_user_visible($cmorid, $userid = null, $checkcourse = true) {
         global $USER, $DB, $CFG;
 
         // Evaluate user id.

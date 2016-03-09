@@ -70,7 +70,7 @@ class core_role_existing_role_holders extends core_role_assign_user_selector_bas
         // array, to trigger output of the last group.
         $dummyuser = new stdClass;
         $dummyuser->contextid = 0;
-        $dummyuser->id = 0;
+        $dummyuser->id = null;
         $dummyuser->component = '';
         $contextusers[] = $dummyuser;
         $results = array(); // The results array we are building up.

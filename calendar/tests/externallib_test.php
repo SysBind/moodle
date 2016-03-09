@@ -61,7 +61,7 @@ class core_calendar_externallib_testcase extends externallib_advanced_testcase {
      * @since Moodle 2.5
      */
 
-    public static function create_calendar_event($name, $userid = 0, $type = 'user', $repeats = 0, $timestart  = null, $prop = null) {
+    public static function create_calendar_event($name, $userid = null, $type = 'user', $repeats = 0, $timestart  = null, $prop = null) {
         global $CFG, $DB, $USER, $SITE;
 
         require_once("$CFG->dirroot/calendar/lib.php");

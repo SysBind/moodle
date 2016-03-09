@@ -203,6 +203,8 @@ class core_ddl_testcase extends database_driver_testcase {
         $dbman = $this->tdb->get_manager();
 
         // Create table.
+        $dbman->create_table($this->tables['test_table0']);
+        
         $table = $this->tables['test_table1'];
 
         $dbman->create_table($table);
@@ -245,6 +247,12 @@ class core_ddl_testcase extends database_driver_testcase {
         $this->assertSame('course', $courseindex['columns'][0]);
 
         // Check sequence returns 1 for first insert.
+        $rec = (object)array(
+            'course' => 10,
+            'intro'  => 'not important',
+        );
+        $this->assertSame(1, $DB->insert_record('test_table0', $rec));
+        
         $rec = (object)array(
             'course'     => 10,
             'secondname' => 'not important',
@@ -634,17 +642,24 @@ class core_ddl_testcase extends database_driver_testcase {
     public function test_rename_table() {
         $DB = $this->tdb; // Do not use global $DB!
         $dbman = $this->tdb->get_manager();
-
+        
+        $this->create_deftable('test_table0');
         $table = $this->create_deftable('test_table1');
 
         // Fill the table with some records before renaming it.
+        $this->fill_deftable('test_table0');
         $insertedrows = $this->fill_deftable('test_table1');
 
         $this->assertFalse($dbman->table_exists('test_table_cust1'));
         $dbman->rename_table($table, 'test_table_cust1');
         $this->assertTrue($dbman->table_exists('test_table_cust1'));
 
-        // Check sequence returns $insertedrows + 1 for this insert (after rename).
+        // Check sequence returns $insertedrows + 1 for this insert (after rename)
+        $rec = (object)array(
+            'course' => 20,
+            'intro'  => 'not important'
+        );
+        $this->assertSame(3,$DB->insert_record('test_table0', $rec));
         $rec = (object)array(
             'course'     => 20,
             'secondname' => 'not important',
@@ -733,10 +748,12 @@ class core_ddl_testcase extends database_driver_testcase {
     public function test_add_field() {
         $DB = $this->tdb; // Do not use global $DB!
         $dbman = $this->tdb->get_manager();
-
+        
+        $this->create_deftable('test_table0');
         $table = $this->create_deftable('test_table1');
 
         // Fill the table with some records before adding fields.
+        $this->fill_deftable('test_table0');
         $this->fill_deftable('test_table1');
 
         // Add one not null field without specifying default value (throws ddl_exception).
@@ -1115,10 +1132,12 @@ class core_ddl_testcase extends database_driver_testcase {
     public function test_change_field_precision() {
         $DB = $this->tdb; // Do not use global $DB!
         $dbman = $this->tdb->get_manager();
-
+        
+        $this->create_deftable('test_table0');
         $table = $this->create_deftable('test_table1');
 
         // Fill the table with some records before dropping fields.
+        $this->fill_deftable('test_table0');
         $this->fill_deftable('test_table1');
 
         // Change text field from medium to big.
@@ -1180,8 +1199,9 @@ class core_ddl_testcase extends database_driver_testcase {
         // Insert one record with 6-digit field.
         $record = new stdClass();
         $record->course = 10;
-        $record->secondname  = 'third record';
         $record->intro  = 'third record';
+        $DB->insert_record('test_table0', $record);
+        $record->secondname  = 'third record';
         $record->userid = 123456;
         $DB->insert_record('test_table1', $record);
         // Change integer field from 6 to 2, contents are bigger, must throw exception.
@@ -1327,7 +1347,8 @@ class core_ddl_testcase extends database_driver_testcase {
 
     public function testAddNonUniqueIndex() {
         $dbman = $this->tdb->get_manager();
-
+        
+        $this->create_deftable('test_table0');
         $table = $this->create_deftable('test_table1');
         $index = new xmldb_index('secondname');
         $index->set_attributes(XMLDB_INDEX_NOTUNIQUE, array('course', 'name'));
@@ -1383,6 +1404,7 @@ class core_ddl_testcase extends database_driver_testcase {
     public function testFindIndexName() {
         $dbman = $this->tdb->get_manager();
 
+        $this->create_deftable('test_table0');
         $table = $this->create_deftable('test_table1');
         $index = new xmldb_index('secondname');
         $index->set_attributes(XMLDB_INDEX_NOTUNIQUE, array('course', 'name'));
@@ -1402,6 +1424,7 @@ class core_ddl_testcase extends database_driver_testcase {
 
         $dbman = $this->tdb->get_manager();
 
+        $this->create_deftable('test_table0');
         $table = $this->create_deftable('test_table1');
         $index = new xmldb_index('secondname');
         $index->set_attributes(XMLDB_INDEX_NOTUNIQUE, array('course', 'name'));
@@ -1432,6 +1455,7 @@ class core_ddl_testcase extends database_driver_testcase {
     public function testAddUniqueKey() {
         $dbman = $this->tdb->get_manager();
 
+        $this->create_deftable('test_table0');
         $table = $this->create_deftable('test_table1');
         $key = new xmldb_key('id-course-grade');
         $key->set_attributes(XMLDB_KEY_UNIQUE, array('id', 'course', 'grade'));
@@ -1444,8 +1468,8 @@ class core_ddl_testcase extends database_driver_testcase {
     public function testAddForeignUniqueKey() {
         $dbman = $this->tdb->get_manager();
 
-        $table = $this->create_deftable('test_table1');
         $this->create_deftable('test_table0');
+        $table = $this->create_deftable('test_table1');
 
         $key = new xmldb_key('course');
         $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'), 'cascade');
@@ -1458,13 +1482,16 @@ class core_ddl_testcase extends database_driver_testcase {
     public function testDropKey() {
         $dbman = $this->tdb->get_manager();
 
-        $table = $this->create_deftable('test_table1');
         $this->create_deftable('test_table0');
-
-        $key = new xmldb_key('course');
-        $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'), 'cascade');
-        $dbman->add_key($table, $key);
-
+        $table = $this->create_deftable('test_table1');
+        
+        $key = $table->getKey('course');
+        if(empty($key)){
+            $key = new xmldb_key('course');
+            $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'), 'cascade');
+            $dman->add_key($table, $key);
+        }
+                
         $dbman->drop_key($table, $key);
 
         // No easy way to test it, this just makes sure no errors are encountered.
@@ -1474,8 +1501,8 @@ class core_ddl_testcase extends database_driver_testcase {
     public function testAddForeignKey() {
         $dbman = $this->tdb->get_manager();
 
-        $table = $this->create_deftable('test_table1');
         $this->create_deftable('test_table0');
+        $table = $this->create_deftable('test_table1');
 
         $key = new xmldb_key('course');
         $key->set_attributes(XMLDB_KEY_FOREIGN, array('course'), 'test_table0', array('id'), 'cascade');
@@ -1488,12 +1515,15 @@ class core_ddl_testcase extends database_driver_testcase {
     public function testDropForeignKey() {
         $dbman = $this->tdb->get_manager();
 
-        $table = $this->create_deftable('test_table1');
         $this->create_deftable('test_table0');
+        $table = $this->create_deftable('test_table1');
 
-        $key = new xmldb_key('course');
-        $key->set_attributes(XMLDB_KEY_FOREIGN, array('course'), 'test_table0', array('id'), 'cascade');
-        $dbman->add_key($table, $key);
+        $key = $table->getKey('course');
+        if(empty($key)){
+            $key = new xmldb_key('course');
+            $key->set_attributes(XMLDB_KEY_FOREIGN_UNIQUE, array('course'), 'test_table0', array('id'), 'cascade');
+            $dman->add_key($table, $key);
+        }
 
         $dbman->drop_key($table, $key);
 
@@ -1535,6 +1565,7 @@ class core_ddl_testcase extends database_driver_testcase {
     public function testDeleteTablesFromXmldbFile() {
         $dbman = $this->tdb->get_manager();
 
+        $this->create_deftable('test_table0');
         $this->create_deftable('test_table1');
 
         $this->assertTrue($dbman->table_exists('test_table1'));
@@ -1636,6 +1667,7 @@ class core_ddl_testcase extends database_driver_testcase {
         $this->assertEquals('Moodle', $columns['name']->default_value);
 
         // Insert some records.
+        $this->fill_deftable('test_table0');
         $inserted = $this->fill_deftable('test_table1');
         $records = $DB->get_records('test_table1');
         $this->assertCount($inserted, $records);
@@ -1719,18 +1751,27 @@ class core_ddl_testcase extends database_driver_testcase {
         // Define 2 records.
         $record1 = (object)array(
             'course'     =>  1,
-            'secondname' => '11 important',
             'intro'      => '111 important');
         $record2 = (object)array(
+            'course'     =>  2,
+            'intro'      => '222 important');
+        $record3 = (object)array(
+            'course'     =>  1,
+            'secondname' => '11 important',
+            'intro'      => '111 important');
+        $record4 = (object)array(
             'course'     =>  2,
             'secondname' => '22 important',
             'intro'      => '222 important');
 
         // Create temp table1 and insert 1 record (in DB).
+        $table = $this->tables['test_table0'];
+        $dbman->create_temp_table($table);
+        $DB->insert_record('test_table0', $record1);
         $table = $this->tables['test_table1'];
         $dbman->create_temp_table($table);
         $this->assertTrue($dbman->table_exists('test_table1'));
-        $inserted = $DB->insert_record('test_table1', $record1);
+        $inserted = $DB->insert_record('test_table1', $record3);
 
         // Switch to new connection.
         $cfg = $DB->export_dbconfig();
@@ -1743,15 +1784,21 @@ class core_ddl_testcase extends database_driver_testcase {
         $this->assertFalse($dbman2->table_exists('test_table1')); // Temp table not exists in DB2.
 
         // Create temp table1 and insert 1 record (in DB2).
+        $table = $this->tables['test_table0'];
+        $dbman2->create_temp_table($table);
+        $DB2->insert_record('test_table0', $record2);
         $table = $this->tables['test_table1'];
         $dbman2->create_temp_table($table);
         $this->assertTrue($dbman2->table_exists('test_table1'));
-        $inserted = $DB2->insert_record('test_table1', $record2);
+        $inserted = $DB2->insert_record('test_table1', $record4);
 
         $dbman2->drop_table($table); // Drop temp table before closing DB2.
+        $table = $this->tables['test_table0'];
+        $dbman2->drop_table($table);
         $this->assertFalse($dbman2->table_exists('test_table1'));
         $DB2->dispose(); // Close DB2.
 
+        $table = $this->tables['test_table1'];
         $this->assertTrue($dbman->table_exists('test_table1')); // Check table continues existing for DB.
         $dbman->drop_table($table); // Drop temp table.
         $this->assertFalse($dbman->table_exists('test_table1'));

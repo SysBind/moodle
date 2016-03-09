@@ -507,7 +507,7 @@ class core_notes_external extends external_api {
      * @since Moodle 2.9
      * @throws moodle_exception
      */
-    public static function get_course_notes($courseid, $userid = 0) {
+    public static function get_course_notes($courseid, $userid = null) {
         global $CFG, $USER;
 
         if (empty($CFG->enablenotes)) {
@@ -649,7 +649,7 @@ class core_notes_external extends external_api {
      * @since Moodle 2.9
      * @throws moodle_exception
      */
-    public static function view_notes($courseid, $userid = 0) {
+    public static function view_notes($courseid, $userid = null) {
         global $CFG;
         require_once($CFG->dirroot . "/notes/lib.php");
 

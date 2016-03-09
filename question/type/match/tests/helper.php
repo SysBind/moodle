@@ -52,7 +52,7 @@ class qtype_match_test_helper extends question_test_helper {
         test_question_maker::initialise_question_data($q);
         $q->name = 'Matching question';
         $q->qtype = 'match';
-        $q->parent = 0;
+        $q->parent = null;
         $q->questiontext = 'Classify the animals.';
         $q->questiontextformat = FORMAT_HTML;
         $q->generalfeedback = 'General feedback.';

@@ -1640,7 +1640,7 @@ function forum_print_recent_activity($course, $viewfullnames, $timestart) {
  * @param int $userid optional user id, 0 means all users
  * @return array array of grades, false if none
  */
-function forum_get_user_grades($forum, $userid = 0) {
+function forum_get_user_grades($forum, $userid = null) {
     global $CFG;
 
     require_once($CFG->dirroot.'/rating/lib.php');
@@ -2027,9 +2027,9 @@ function forum_search_posts($searchterms, $courseid=0, $limitfrom=0, $limitnum=5
             if (!empty($forum->onlydiscussions)) {
                 list($discussionid_sql, $discussionid_params) = $DB->get_in_or_equal($forum->onlydiscussions, SQL_PARAMS_NAMED, 'qanda'.$forumid.'_');
                 $params = array_merge($params, $discussionid_params);
-                $select[] = "(d.id $discussionid_sql OR p.parent = 0)";
+                $select[] = "(d.id $discussionid_sql OR p.parent IS NULL)";
             } else {
-                $select[] = "p.parent = 0";
+                $select[] = "p.parent IS NULL";
             }
         }
 
@@ -2636,7 +2636,7 @@ function forum_get_discussions($cm, $forumsort="", $fullpost=true, $unused=-1, $
                    JOIN {forum_posts} p ON p.discussion = d.id
                    JOIN {user} u ON p.userid = u.id
                    $umtable
-             WHERE d.forum = ? AND p.parent = 0
+             WHERE d.forum = ? AND p.parent IS NULL
                    $timelimit $groupselect
           ORDER BY $forumsort, d.id DESC";
     return $DB->get_records_sql($sql, $params, $limitfrom, $limitnum);
@@ -4828,7 +4828,7 @@ function forum_user_has_posted_discussion($forumid, $userid) {
 
     $sql = "SELECT 'x'
               FROM {forum_discussions} d, {forum_posts} p
-             WHERE d.forum = ? AND p.discussion = d.id AND p.parent = 0 and p.userid = ?";
+             WHERE d.forum = ? AND p.discussion = d.id AND p.parent IS NULL and p.userid = ?";
 
     return $DB->record_exists_sql($sql, array($forumid, $userid));
 }
@@ -6896,8 +6896,8 @@ function forum_reset_userdata($data) {
         $DB->delete_records_select('forum_queue', "discussionid IN ($discussionssql)", $params);
 
         // all posts - initial posts must be kept in single simple discussion forums
-        $DB->delete_records_select('forum_posts', "discussion IN ($discussionssql) AND parent <> 0", $params); // first all children
-        $DB->delete_records_select('forum_posts', "discussion IN ($discussionssql AND f.type <> 'single') AND parent = 0", $params); // now the initial posts for non single simple
+        $DB->delete_records_select('forum_posts', "discussion IN ($discussionssql) AND parent IS NOT NULL", $params); // first all children
+        $DB->delete_records_select('forum_posts', "discussion IN ($discussionssql AND f.type <> 'single') AND parent IS NULL", $params); // now the initial posts for non single simple
 
         // finally all discussions except single simple forums
         $DB->delete_records_select('forum_discussions', "forum IN ($forumssql AND f.type <> 'single')", $params);
@@ -7559,9 +7559,9 @@ function forum_get_posts_by_user($user, array $courses, $musthaveaccess = false,
                         }
                         list($discussionid_sql, $discussionid_params) = $DB->get_in_or_equal($forumonlydiscussions, SQL_PARAMS_NAMED, 'qanda'.$forumid.'_');
                         $forumsearchparams = array_merge($forumsearchparams, $discussionid_params);
-                        $forumsearchselect[] = "(d.id $discussionid_sql OR p.parent = 0)";
+                        $forumsearchselect[] = "(d.id $discussionid_sql OR p.parent IS NULL)";
                     } else {
-                        $forumsearchselect[] = "p.parent = 0";
+                        $forumsearchselect[] = "p.parent IS NULL";
                     }
 
                 }
@@ -7602,9 +7602,9 @@ function forum_get_posts_by_user($user, array $courses, $musthaveaccess = false,
 
     if ($discussionsonly) {
         if ($wheresql == '') {
-            $wheresql = 'p.parent = 0';
+            $wheresql = 'p.parent IS NULL';
         } else {
-            $wheresql = 'p.parent = 0 AND ('.$wheresql.')';
+            $wheresql = 'p.parent IS NULL AND ('.$wheresql.')';
         }
     }
 
