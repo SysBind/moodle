@@ -34,7 +34,7 @@ require_once($CFG->dirroot.'/lib/csslib.php');
 $themename = optional_param('theme', 'standard', PARAM_SAFEDIR);
 $type      = optional_param('type', '', PARAM_SAFEDIR);
 $subtype   = optional_param('subtype', '', PARAM_SAFEDIR);
-$sheet     = optional_param('sheet', '', PARAM_SAFEDIR);
+$sheet     = optional_param('sheet', '', PARAM_PATH);
 $usesvg    = optional_param('svg', 1, PARAM_BOOL);
 $chunk     = optional_param('chunk', null, PARAM_INT);
 
