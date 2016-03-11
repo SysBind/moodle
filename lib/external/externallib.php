@@ -385,6 +385,7 @@ class core_external extends external_api {
         if (!$tmpl || !($tmpl instanceof \core\output\inplace_editable)) {
             throw new \moodle_exception('inplaceeditableerror');
         }
+        $PAGE->set_context(null); // To prevent warning if context was not set in the callback.
         return $tmpl->export_for_template($PAGE->get_renderer('core'));
     }
 
@@ -404,7 +405,64 @@ class core_external extends external_api {
                 'itemid' => new external_value(PARAM_RAW, 'identifier of the updated item', VALUE_OPTIONAL),
                 'edithint' => new external_value(PARAM_NOTAGS, 'hint for editing element', VALUE_OPTIONAL),
                 'editlabel' => new external_value(PARAM_NOTAGS, 'label for editing element', VALUE_OPTIONAL),
+                'type' => new external_value(PARAM_ALPHA, 'type of the element (text, toggle, select)', VALUE_OPTIONAL),
+                'options' => new external_value(PARAM_RAW, 'options of the element, format depends on type', VALUE_OPTIONAL),
+                'linkeverything' => new external_value(PARAM_INT, 'Should everything be wrapped in the edit link or link displayed separately', VALUE_OPTIONAL),
             )
         );
+    }
+
+    /**
+     * Returns description of fetch_notifications() parameters.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function fetch_notifications_parameters() {
+        return new external_function_parameters(
+            array(
+                'contextid' => new external_value(PARAM_INT, 'Context ID', VALUE_REQUIRED),
+            ));
+    }
+
+    /**
+     * Returns description of fetch_notifications() result value.
+     *
+     * @return external_description
+     * @since Moodle 3.1
+     */
+    public static function fetch_notifications_returns() {
+        return new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'template'      => new external_value(PARAM_RAW, 'Name of the template'),
+                    'variables'     => new external_single_structure(array(
+                        'message'       => new external_value(PARAM_RAW, 'HTML content of the Notification'),
+                        'extraclasses'  => new external_value(PARAM_RAW, 'Extra classes to provide to the tmeplate'),
+                        'announce'      => new external_value(PARAM_RAW, 'Whether to announce'),
+                        'closebutton'   => new external_value(PARAM_RAW, 'Whether to close'),
+                    )),
+                )
+            )
+        );
+    }
+
+    /**
+     * Returns the list of notifications against the current session.
+     *
+     * @return array
+     * @since Moodle 3.1
+     */
+    public static function fetch_notifications($contextid) {
+        global $PAGE;
+
+        self::validate_parameters(self::fetch_notifications_parameters(), [
+                'contextid' => $contextid,
+            ]);
+
+        $context = \context::instance_by_id($contextid);
+        $PAGE->set_context($context);
+
+        return \core\notification::fetch_as_array($PAGE->get_renderer('core'));
     }
 }

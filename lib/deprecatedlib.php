@@ -912,14 +912,14 @@ function print_container_end($return=false) {
  * @param bool $return whether to return an output string or echo now
  * @return string|bool Depending on $result
  */
-function notify($message, $classes = 'notifyproblem', $align = 'center', $return = false) {
+function notify($message, $classes = 'error', $align = 'center', $return = false) {
     global $OUTPUT;
 
     debugging('notify() is deprecated, please use $OUTPUT->notification() instead', DEBUG_DEVELOPER);
 
     if ($classes == 'green') {
-        debugging('Use of deprecated class name "green" in notify. Please change to "notifysuccess".', DEBUG_DEVELOPER);
-        $classes = 'notifysuccess'; // Backward compatible with old color system
+        debugging('Use of deprecated class name "green" in notify. Please change to "success".', DEBUG_DEVELOPER);
+        $classes = 'success'; // Backward compatible with old color system.
     }
 
     $output = $OUTPUT->notification($message, $classes);
@@ -4379,4 +4379,32 @@ function events_pending_count($eventname) {
              WHERE h.eventname = ?";
 
     return $DB->count_records_sql($sql, array($eventname));
+}
+
+/**
+ * Emails admins about a clam outcome
+ *
+ * @deprecated since Moodle 3.0 - this is a part of clamav plugin now.
+ * @param string $notice The body of the email to be sent.
+ * @return void
+ */
+function clam_message_admins($notice) {
+    debugging('clam_message_admins() is deprecated, please use message_admins() method of \antivirus_clamav\scanner class.', DEBUG_DEVELOPER);
+
+    $antivirus = \core\antivirus\manager::get_antivirus('clamav');
+    $antivirus->message_admins($notice);
+}
+
+/**
+ * Returns the string equivalent of a numeric clam error code
+ *
+ * @deprecated since Moodle 3.0 - this is a part of clamav plugin now.
+ * @param int $returncode The numeric error code in question.
+ * @return string The definition of the error code
+ */
+function get_clam_error_code($returncode) {
+    debugging('get_clam_error_code() is deprecated, please use get_clam_error_code() method of \antivirus_clamav\scanner class.', DEBUG_DEVELOPER);
+
+    $antivirus = \core\antivirus\manager::get_antivirus('clamav');
+    return $antivirus->get_clam_error_code($returncode);
 }

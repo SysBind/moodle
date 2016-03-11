@@ -131,6 +131,7 @@ function xmldb_main_install() {
         'stringfilters'         => '', // These two are managed in a strange way by the filters
         'filterall'             => 0, // setting page, so have to be initialised here.
         'texteditors'           => 'atto,tinymce,textarea',
+        'antiviruses'           => '',
         'upgrade_minmaxgradestepignored' => 1, // New installs should not run this upgrade step.
         'upgrade_extracreditweightsstepignored' => 1, // New installs should not run this upgrade step.
         'upgrade_calculatedgradeitemsignored' => 1, // New installs should not run this upgrade step.

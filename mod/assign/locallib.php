@@ -406,6 +406,7 @@ class assign {
      * @return string - The page output.
      */
     public function view($action='') {
+        global $PAGE;
 
         $o = '';
         $mform = null;
@@ -529,6 +530,10 @@ class assign {
                               'useridlistid' => optional_param('useridlistid', $this->get_useridlist_key_id(), PARAM_ALPHANUM));
         $this->register_return_link($action, $returnparams);
 
+        // Include any page action as part of the body tag CSS id.
+        if (!empty($action)) {
+            $PAGE->set_pagetype('mod-assign-' . $action);
+        }
         // Now show the right view page.
         if ($action == 'redirect') {
             $nextpageurl = new moodle_url('/mod/assign/view.php', $nextpageparams);
@@ -2722,26 +2727,35 @@ class assign {
 
                 if ($this->is_blind_marking()) {
                     $prefix = str_replace('_', ' ', $groupname . get_string('participant', 'assign'));
-                    $prefix = clean_filename($prefix . '_' . $this->get_uniqueid_for_user($userid) . '_');
+                    $prefix = clean_filename($prefix . '_' . $this->get_uniqueid_for_user($userid));
                 } else {
                     $prefix = str_replace('_', ' ', $groupname . fullname($student));
-                    $prefix = clean_filename($prefix . '_' . $this->get_uniqueid_for_user($userid) . '_');
+                    $prefix = clean_filename($prefix . '_' . $this->get_uniqueid_for_user($userid));
                 }
 
                 if ($submission) {
                     foreach ($this->submissionplugins as $plugin) {
                         if ($plugin->is_enabled() && $plugin->is_visible()) {
                             $pluginfiles = $plugin->get_files($submission, $student);
-                            foreach ($pluginfiles as $zipfilename => $file) {
+                            foreach ($pluginfiles as $zipfilepath => $file) {
                                 $subtype = $plugin->get_subtype();
                                 $type = $plugin->get_type();
+                                $zipfilename = basename($zipfilepath);
                                 $prefixedfilename = clean_filename($prefix .
+                                                                   '_' .
                                                                    $subtype .
                                                                    '_' .
                                                                    $type .
-                                                                   '_' .
-                                                                   $zipfilename);
-                                $filesforzipping[$prefixedfilename] = $file;
+                                                                   '_');
+                                if ($type == 'file') {
+                                    $pathfilename = $prefixedfilename . $file->get_filepath() . $zipfilename;
+                                } else if ($type == 'onlinetext') {
+                                    $pathfilename = $prefixedfilename . '/' . $zipfilename;
+                                } else {
+                                    $pathfilename = $prefixedfilename . '/' . $zipfilename;
+                                }
+                                $pathfilename = clean_param($pathfilename, PARAM_PATH);
+                                $filesforzipping[$pathfilename] = $file;
                             }
                         }
                     }
@@ -6838,12 +6852,19 @@ class assign {
         $adminconfig = $this->get_admin_config();
         $gradebookplugin = $adminconfig->feedback_plugin_for_gradebook;
 
+        $feedbackmodified = false;
+
         // Call save in plugins.
         foreach ($this->feedbackplugins as $plugin) {
             if ($plugin->is_enabled() && $plugin->is_visible()) {
-                if (!$plugin->save($grade, $formdata)) {
-                    $result = false;
-                    print_error($plugin->get_error());
+                $gradingmodified = $plugin->is_feedback_modified($grade, $formdata);
+                if ($gradingmodified) {
+                    if (!$plugin->save($grade, $formdata)) {
+                        $result = false;
+                        print_error($plugin->get_error());
+                    }
+                    // If $feedbackmodified is true, keep it true.
+                    $feedbackmodified = $feedbackmodified || $gradingmodified;
                 }
                 if (('assignfeedback_' . $plugin->get_type()) == $gradebookplugin) {
                     // This is the feedback plugin chose to push comments to the gradebook.
@@ -6852,10 +6873,12 @@ class assign {
                 }
             }
         }
+
         // We do not want to update the timemodified if no grade was added.
         if (!empty($formdata->addattempt) ||
                 ($originalgrade !== null && $originalgrade != -1) ||
-                ($grade->grade !== null && $grade->grade != -1)) {
+                ($grade->grade !== null && $grade->grade != -1) ||
+                $feedbackmodified) {
             $this->update_grade($grade, !empty($formdata->addattempt));
         }
         // Note the default if not provided for this option is true (e.g. webservices).
