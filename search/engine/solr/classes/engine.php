@@ -309,6 +309,10 @@ class engine extends \core_search\engine {
             $result = $this->get_search_client()->addDocument($solrdoc, true, static::AUTOCOMMIT_WITHIN);
         } catch (\SolrClientException $e) {
             debugging('Solr client error adding document with id ' . $doc['id'] . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+        } catch (\SolrServerException $e) {
+            // We only use the first line of the message, as it's a fully java stacktrace behind it.
+            $msg = strtok($e->getMessage(), "\n");
+            debugging('Solr server error adding document with id ' . $doc['id'] . ': ' . $msg, DEBUG_DEVELOPER);
         }
     }
 
@@ -317,8 +321,24 @@ class engine extends \core_search\engine {
      *
      * @return void
      */
-    public function commit() {
+    protected function commit() {
         $this->get_search_client()->commit();
+    }
+
+    /**
+     * Do any area cleanup needed, and do anything to confirm contents.
+     *
+     * Return false to prevent the search area completed time and stats from being updated.
+     *
+     * @param \core_search\area\base $searcharea The search area that was complete
+     * @param int $numdocs The number of documents that were added to the index
+     * @param bool $fullindex True if a full index is being performed
+     * @return bool True means that data is considered indexed
+     */
+    public function area_index_complete($searcharea, $numdocs = 0, $fullindex = false) {
+        $this->commit();
+
+        return true;
     }
 
     /**
@@ -327,7 +347,7 @@ class engine extends \core_search\engine {
      * @return void
      */
     public function optimize() {
-        $this->get_search_client()->optimize();
+        $this->get_search_client()->optimize(1, true, false);
     }
 
     /**
@@ -338,6 +358,7 @@ class engine extends \core_search\engine {
      */
     public function delete_by_id($id) {
         $this->get_search_client()->deleteById($id);
+        $this->commit();
     }
 
     /**
@@ -352,6 +373,7 @@ class engine extends \core_search\engine {
         } else {
             $this->get_search_client()->deleteByQuery('*:*');
         }
+        $this->commit();
     }
 
     /**
@@ -424,6 +446,7 @@ class engine extends \core_search\engine {
             'ssl_password' => !empty($this->config->ssl_keypassword) ? $this->config->ssl_keypassword : '',
             'ssl_cainfo' => !empty($this->config->ssl_cainfo) ? $this->config->ssl_cainfo : '',
             'ssl_capath' => !empty($this->config->ssl_capath) ? $this->config->ssl_capath : '',
+            'timeout' => !empty($this->config->server_timeout) ? $this->config->server_timeout : '30'
         );
 
         $this->client = new \SolrClient($options);

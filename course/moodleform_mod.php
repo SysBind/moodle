@@ -597,6 +597,16 @@ abstract class moodleform_mod extends moodleform {
             $mform->disabledIf('completionexpected', 'completion', 'eq', COMPLETION_TRACKING_NONE);
         }
 
+        // Populate module tags.
+        if (core_tag_tag::is_enabled('core', 'course_modules')) {
+            $mform->addElement('header', 'tagshdr', get_string('tags', 'tag'));
+            $mform->addElement('tags', 'tags', get_string('tags'), array('itemtype' => 'course_modules', 'component' => 'core'));
+            if ($this->_cm) {
+                $tags = core_tag_tag::get_item_tags_array('core', 'course_modules', $this->_cm->id);
+                $mform->setDefault('tags', $tags);
+            }
+        }
+
         $this->standard_hidden_coursemodule_elements();
     }
 

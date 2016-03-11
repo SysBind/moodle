@@ -34,7 +34,8 @@ $functions = array(
         'description'   => 'Returns a list of quizzes in a provided list of courses,
                             if no list is provided all quizzes that the user can view will be returned.',
         'type'          => 'read',
-        'capabilities'  => 'mod/quiz:view'
+        'capabilities'  => 'mod/quiz:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
     ),
 
     'mod_quiz_view_quiz' => array(
@@ -42,6 +43,34 @@ $functions = array(
         'methodname'    => 'view_quiz',
         'description'   => 'Trigger the course module viewed event and update the module completion status.',
         'type'          => 'write',
-        'capabilities'  => 'mod/quiz:view'
+        'capabilities'  => 'mod/quiz:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+
+    'mod_quiz_get_user_attempts' => array(
+        'classname'     => 'mod_quiz_external',
+        'methodname'    => 'get_user_attempts',
+        'description'   => 'Return a list of attempts for the given quiz and user.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/quiz:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+
+    'mod_quiz_get_user_best_grade' => array(
+        'classname'     => 'mod_quiz_external',
+        'methodname'    => 'get_user_best_grade',
+        'description'   => 'Get the best current grade for the given user on a quiz.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/quiz:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+
+    'mod_quiz_get_combined_review_options' => array(
+        'classname'     => 'mod_quiz_external',
+        'methodname'    => 'get_combined_review_options',
+        'description'   => 'Combines the review options from a number of different quiz attempts.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/quiz:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
     ),
 );
