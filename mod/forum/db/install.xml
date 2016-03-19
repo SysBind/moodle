@@ -56,7 +56,7 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id"/>
+        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id" ONDELETE="cascade"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
@@ -111,7 +111,7 @@
     <TABLE NAME="forum_subscriptions" COMMENT="Keeps track of who is subscribed to what forum">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="forum" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
@@ -125,21 +125,21 @@
     <TABLE NAME="forum_digests" COMMENT="Keeps track of user mail delivery preferences for each forum">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="forum" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="maildigest" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="-1" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
-        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="forumdigest" TYPE="unique" FIELDS="forum, userid, maildigest"/>
       </KEYS>
     </TABLE>
     <TABLE NAME="forum_read" COMMENT="Tracks each users read posts">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="forumid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="discussionid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="postid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
@@ -158,7 +158,7 @@
     <TABLE NAME="forum_track_prefs" COMMENT="Tracks each users untracked forums">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="forumid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
@@ -172,15 +172,15 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="forum" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="discussion" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="preference" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id"/>
-        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
-        <KEY NAME="discussion" TYPE="foreign" FIELDS="discussion" REFTABLE="forum_discussions" REFFIELDS="id"/>
+        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
+        <KEY NAME="discussion" TYPE="foreign" FIELDS="discussion" REFTABLE="forum_discussions" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="user_discussions" TYPE="unique" FIELDS="userid, discussion" COMMENT="Users may only have one discussion preferences per discussion"/>
       </KEYS>
     </TABLE>

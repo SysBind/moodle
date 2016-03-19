@@ -7,7 +7,7 @@
     <TABLE NAME="block_community" COMMENT="Community block">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="coursename" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="coursedescription" TYPE="text" LENGTH="big" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="courseurl" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>

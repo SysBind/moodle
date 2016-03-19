@@ -7,7 +7,7 @@
     <TABLE NAME="block_rss_client" COMMENT="Remote news feed information. Contains the news feed id, the userid of the user who added the feed, the title of the feed itself and a description of the feed contents along with the url used to access the remote feed. Preferredtitle is a field for future use - intended to allow for custom titles rather than those found in the feed">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="title" TYPE="text" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="preferredtitle" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="description" TYPE="text" NOTNULL="true" SEQUENCE="false"/>

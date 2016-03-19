@@ -10,7 +10,7 @@
         <FIELD NAME="elementid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="The unique id for the text editor in the form."/>
         <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="The contextid that the form was loaded with."/>
         <FIELD NAME="pagehash" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="The HTML DOM id of the page that loaded the form."/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="The id of the user that loaded the form."/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="The id of the user that loaded the form."/>
         <FIELD NAME="drafttext" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="The draft text"/>
         <FIELD NAME="draftid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Optional draft area id containing draft files."/>
         <FIELD NAME="pageinstance" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="The browser tab instance that last saved the draft text. This is to prevent multiple tabs from the same user saving different text alternately."/>

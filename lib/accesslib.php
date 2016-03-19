@@ -2168,7 +2168,7 @@ function can_access_course(stdClass $course, $user = null, $withcapability = '',
         $coursecontext = context_course::instance($course->id);
     }
 
-    if (!isset($USER->id)) {
+    if ($USER->id === 0) {
         // should never happen
         $USER->id = null;
         debugging('Course access check being performed on a user with no ID.', DEBUG_DEVELOPER);

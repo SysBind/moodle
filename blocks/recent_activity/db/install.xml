@@ -10,7 +10,7 @@
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Course id"/>
         <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Course module id"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="User performing the action"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="User performing the action"/>
         <FIELD NAME="action" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false" COMMENT="0 created, 1 updated, 2 deleted"/>
         <FIELD NAME="modname" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" COMMENT="module type name (for delete action)"/>
       </FIELDS>
