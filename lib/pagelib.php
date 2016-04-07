@@ -443,10 +443,15 @@ class moodle_page {
      * @return context the main context to which this page belongs.
      */
     protected function magic_get_context() {
+        global $CFG;
         if (is_null($this->_context)) {
             if (CLI_SCRIPT or NO_MOODLE_COOKIES) {
                 // Cli scripts work in system context, do not annoy devs with debug info.
                 // Very few scripts do not use cookies, we can safely use system as default context there.
+            } else if (AJAX_SCRIPT && $CFG->debugdeveloper) {
+                // Throw exception inside AJAX script in developer mode, otherwise the debugging message may be missed.
+                throw new coding_exception('$PAGE->context was not set. You may have forgotten '
+                    .'to call require_login() or $PAGE->set_context()');
             } else {
                 debugging('Coding problem: $PAGE->context was not set. You may have forgotten '
                     .'to call require_login() or $PAGE->set_context(). The page may not display '
@@ -1756,7 +1761,7 @@ class moodle_page {
             $this->add_body_class('notloggedin');
         }
 
-        if (!empty($USER->editing)) {
+        if ($this->user_is_editing()) {
             $this->add_body_class('editing');
             if (optional_param('bui_moveid', false, PARAM_INT)) {
                 $this->add_body_class('blocks-moving');

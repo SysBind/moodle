@@ -28,12 +28,8 @@
 require_once(__DIR__ . '/../../../lib/behat/behat_base.php');
 require_once(__DIR__ . '/../../../lib/behat/behat_field_manager.php');
 
-use Behat\Behat\Context\Step\Given as Given,
-    Behat\Behat\Context\Step\When as When,
-    Behat\Behat\Context\Step\Then as Then,
-    Behat\Gherkin\Node\TableNode as TableNode,
+use Behat\Gherkin\Node\TableNode as TableNode,
     Behat\Gherkin\Node\PyStringNode as PyStringNode,
-    Behat\Mink\Element\NodeElement as NodeElement,
     Behat\Mink\Exception\ExpectationException as ExpectationException,
     Behat\Mink\Exception\ElementNotFoundException as ElementNotFoundException;
 
@@ -467,9 +463,8 @@ class behat_forms extends behat_base {
      * @Given /^I select "(?P<singleselect_option_string>(?:[^"]|\\")*)" from the "(?P<singleselect_name_string>(?:[^"]|\\")*)" singleselect$/
      */
     public function i_select_from_the_singleselect($option, $singleselect) {
-        $actions = array(
-            new Given('I set the field "' . $this->escape($singleselect) . '" to "' . $this->escape($option) . '"'),
-        );
+
+        $this->execute('behat_forms::i_set_the_field_to', array($this->escape($singleselect), $this->escape($option)));
 
         if (!$this->running_javascript()) {
             // Press button in the specified select container.
@@ -481,11 +476,10 @@ class behat_forms extends behat_base {
                     "or .//select[(./@name='" . $singleselect . "' or ./@id='". $singleselect . "')]" .
                 ")]";
 
-            $actions[] = new Given('I click on "' . get_string('go') . '" "button" in the "' . $containerxpath .
-                '" "xpath_element"');
+            $this->execute('behat_general::i_click_on_in_the',
+                array(get_string('go'), "button", $containerxpath, "xpath_element")
+            );
         }
-
-        return $actions;
     }
 
 }
