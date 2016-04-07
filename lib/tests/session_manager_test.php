@@ -490,7 +490,7 @@ class core_session_manager_testcase extends advanced_testcase {
         $adminid = $USER->id;
         $this->setGuestUser();
         $guestid = $USER->id;
-        $this->setUser(0);
+        $this->setUser(null);
 
         $CFG->sessiontimeout = 60*10;
 

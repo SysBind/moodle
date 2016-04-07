@@ -219,7 +219,7 @@ class core_enrollib_testcase extends advanced_testcase {
         $this->setGuestUser();
         $this->assertFalse(enrol_user_sees_own_courses());
 
-        $this->setUser(0);
+        $this->setUser(null);
         $this->assertFalse(enrol_user_sees_own_courses());
 
         $this->setUser($user1);

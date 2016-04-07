@@ -67,7 +67,7 @@ class logstore_standard_store_testcase extends advanced_testcase {
 
         $this->setCurrentTimeStart();
 
-        $this->setUser(0);
+        $this->setUser(null);
         $event1 = \logstore_standard\event\unittest_executed::create(
             array('context' => context_module::instance($module1->cmid), 'other' => array('sample' => 5, 'xx' => 10)));
         $event1->trigger();

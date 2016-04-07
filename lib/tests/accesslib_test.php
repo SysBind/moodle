@@ -127,7 +127,7 @@ class core_accesslib_testcase extends advanced_testcase {
         $users = $DB->get_records('user');
 
         foreach ($users as $user) {
-            $this->setUser(0);
+            $this->setUser(null);
             if ($user->username === 'admin') {
                 $this->assertTrue(is_siteadmin($user));
                 $this->assertTrue(is_siteadmin($user->id));
@@ -232,7 +232,7 @@ class core_accesslib_testcase extends advanced_testcase {
         $this->resetAfterTest();
 
         $guest = $DB->get_record('user', array('username'=>'guest'));
-        $this->setUser(0);
+        $this->setUser(null);
         $this->assertFalse(isguestuser());
         $this->setAdminUser();
         $this->assertFalse(isguestuser());
@@ -391,7 +391,7 @@ class core_accesslib_testcase extends advanced_testcase {
         $this->assertEquals(CAP_ALLOW, $permission->permission);
         $this->assertEquals($user->id, $permission->modifierid);
 
-        $this->setUser(0);
+        $this->setUser(null);
         $result = assign_capability('moodle/backup:backupcourse', CAP_PROHIBIT, $student->id, $frontcontext->id, false);
         $this->assertTrue($result);
         $permission = $DB->get_record('role_capabilities', array('contextid'=>$frontcontext->id, 'roleid'=>$student->id, 'capability'=>'moodle/backup:backupcourse'));
@@ -480,7 +480,7 @@ class core_accesslib_testcase extends advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $role = $DB->get_record('role', array('shortname'=>'student'));
 
-        $this->setUser(0);
+        $this->setUser(null);
         $context = context_system::instance();
         $this->assertFalse($DB->record_exists('role_assignments', array('userid'=>$user->id, 'roleid'=>$role->id, 'contextid'=>$context->id)));
         role_assign($role->id, $user->id, $context->id);
@@ -1085,7 +1085,7 @@ class core_accesslib_testcase extends advanced_testcase {
         }
 
         // Not-logged-in user.
-        $this->setUser(0);
+        $this->setUser(null);
         foreach ($contexts as $contextid => $unused) {
             $context = context_helper::instance_by_id($contextid);
             $roles = get_assignable_roles($context, ROLENAME_SHORT);
@@ -1093,7 +1093,7 @@ class core_accesslib_testcase extends advanced_testcase {
         }
 
         // Test current user.
-        $this->setUser(0);
+        $this->setUser(null);
         $admin = $DB->get_record('user', array('username'=>'admin'), '*', MUST_EXIST);
         $roles1 = get_assignable_roles($coursecontext, ROLENAME_SHORT, false, $admin);
         $roles2 = get_assignable_roles($coursecontext, ROLENAME_SHORT, false, $admin->id);
@@ -1578,7 +1578,7 @@ class core_accesslib_testcase extends advanced_testcase {
         $sca = array('moodle/backup:backupsection', 'moodle/backup:backupcourse', 'moodle/site:approvecourse');
         $sc = array('moodle/backup:backupsection', 'moodle/backup:backupcourse');
 
-        $this->setUser(0);
+        $this->setUser(null);
         $this->assertFalse(has_capability('moodle/backup:backupsection', $coursecontext));
         $this->assertFalse(has_capability('moodle/backup:backupcourse', $coursecontext));
         $this->assertFalse(has_capability('moodle/site:approvecourse', $coursecontext));
@@ -1688,7 +1688,7 @@ class core_accesslib_testcase extends advanced_testcase {
         $this->assertTrue(has_capability('moodle/course:visibility', $coursecontext));
         $this->assertTrue(guess_if_creator_will_have_course_capability('moodle/course:visibility', $categorycontext));
         $this->assertTrue(guess_if_creator_will_have_course_capability('moodle/course:visibility', $coursecontext));
-        $this->setUser(0);
+        $this->setUser(null);
 
         role_assign($creatorrole->id, $creator->id, $categorycontext);
 
@@ -1704,7 +1704,7 @@ class core_accesslib_testcase extends advanced_testcase {
         $this->assertFalse(has_capability('moodle/course:visibility', $coursecontext, null));
         $this->assertTrue(guess_if_creator_will_have_course_capability('moodle/course:visibility', $categorycontext, null));
         $this->assertTrue(guess_if_creator_will_have_course_capability('moodle/course:visibility', $coursecontext, null));
-        $this->setUser(0);
+        $this->setUser(null);
 
         set_config('creatornewroleid', $studentrole->id);
 
@@ -1762,7 +1762,7 @@ class core_accesslib_testcase extends advanced_testcase {
 
         $syscontext = context_system::instance();
 
-        $this->setUser(0);
+        $this->setUser(null);
         $this->assertFalse(has_capability('moodle/site:config', $syscontext));
         try {
             require_capability('moodle/site:config', $syscontext);

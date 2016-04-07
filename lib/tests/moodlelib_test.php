@@ -2580,7 +2580,7 @@ class core_moodlelib_testcase extends advanced_testcase {
 
         $this->resetAfterTest();
         $user = $this->getDataGenerator()->create_user();
-        $this->setUser(0);
+        $this->setUser(null);
 
         $sink = $this->redirectEvents();
         $loginuser = clone($user);
