@@ -1999,7 +1999,7 @@ function get_user_preferences($name = null, $default = null, $user = null) {
         throw new coding_exception('Invalid preference name in get_user_preferences() call');
     }
 
-    if (is_null($user) || is_null($user->id)) {
+    if (is_null($user) || (($user instanceof stdClass) && is_null($user->id))) {
         $user = $USER;
     } else if (isset($user->id)) {
         // Is a valid object.

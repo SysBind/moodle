@@ -257,8 +257,8 @@ function enrol_sharing_course($user1, $user2) {
 function enrol_get_shared_courses($user1, $user2, $preloadcontexts = false, $checkexistsonly = false) {
     global $DB, $CFG;
 
-    $user1 = isset($user1->id) ? $user1->id : $user1;
-    $user2 = isset($user2->id) ? $user2->id : $user2;
+    $user1 = ($user1 instanceof  stdClass && ($user1->id !==0)) ? $user1->id : $user1;
+    $user2 = ($user2 instanceof  stdClass && ($user2->id !==0)) ? $user2->id : $user2;
 
     if (empty($user1) or empty($user2)) {
         return false;
