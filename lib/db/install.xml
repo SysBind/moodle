@@ -1118,7 +1118,7 @@
         <KEY NAME="roleid" TYPE="foreign" FIELDS="roleid" REFTABLE="role" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="contextid" TYPE="foreign" FIELDS="contextid" REFTABLE="context" REFFIELDS="id" ONDELETE="cascade"/>
         <KEY NAME="modifierid" TYPE="foreign" FIELDS="modifierid" REFTABLE="user" REFFIELDS="id" ONDELETE="cascade"/>
-        <KEY NAME="capability" TYPE="foreign" FIELDS="capability" REFTABLE="capabilities" REFFIELDS="name" ONDELETE="cascade"/>
+        <KEY NAME="capability" TYPE="foreign" FIELDS="capability" REFTABLE="capabilities" REFFIELDS="name" ONDELETE="cascade" ONUPDATE="cascade"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="roleid-contextid-capability" UNIQUE="true" FIELDS="roleid, contextid, capability"/>

@@ -564,8 +564,12 @@ abstract class sql_generator {
                     $key .= ' REFERENCES ' . $this->getEncQuoted($this->prefix . $xmldb_key->getRefTable());
                     $key .= ' (' . implode(', ', $this->getEncQuoted($xmldb_key->getRefFields())) . ')';
                     $ondelete = $xmldb_key->getOnDelete();
+                    $onupdate = $xmldb_key->getOnUpdate();
                     if (!is_null($ondelete) && $ondelete !== "noaction") {
                         $key .= ' ON DELETE '.$ondelete;
+                    }
+                    if (!is_null($onupdate) && $onupdate !== "noaction") {
+                        $key .= ' ON UPDATE '.$onupdate;
                     }
                 }
                 break;
