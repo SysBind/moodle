@@ -386,7 +386,6 @@ class core_external extends external_api {
         if (!$tmpl || !($tmpl instanceof \core\output\inplace_editable)) {
             throw new \moodle_exception('inplaceeditableerror');
         }
-        $PAGE->set_context(null); // To prevent warning if context was not set in the callback.
         return $tmpl->export_for_template($PAGE->get_renderer('core'));
     }
 
@@ -462,7 +461,7 @@ class core_external extends external_api {
             ]);
 
         $context = \context::instance_by_id($contextid);
-        $PAGE->set_context($context);
+        self::validate_context($context);
 
         return \core\notification::fetch_as_array($PAGE->get_renderer('core'));
     }
