@@ -271,6 +271,9 @@ class block_manager {
      * @return boolean true if this region exists on this page.
      */
     public function is_known_region($region) {
+        if (empty($region)) {
+            return false;
+        }
         return array_key_exists($region, $this->regions);
     }
 
@@ -2269,6 +2272,6 @@ function blocks_add_default_system_blocks() {
     }
 
     $newblocks = array('private_files', 'online_users', 'badges', 'calendar_month', 'calendar_upcoming');
-    $newcontent = array('course_overview');
+    $newcontent = array('lp', 'course_overview');
     $page->blocks->add_blocks(array(BLOCK_POS_RIGHT => $newblocks, 'content' => $newcontent), 'my-index', $subpagepattern);
 }

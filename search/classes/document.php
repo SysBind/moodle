@@ -276,8 +276,8 @@ class document implements \renderable, \templatable {
         if ($fielddata['type'] === 'int' || $fielddata['type'] === 'tdate') {
             $this->data[$fieldname] = intval($value);
         } else {
-            // Clean up line breaks and extra spaces.
-            $this->data[$fieldname] = preg_replace("/\s+/", ' ', trim($value, "\r\n"));
+            // Replace all groups of line breaks and spaces by single spaces.
+            $this->data[$fieldname] = preg_replace("/\s+/", " ", $value);
         }
 
         return $this->data[$fieldname];
@@ -563,7 +563,7 @@ class document implements \renderable, \templatable {
 
         $title = $this->is_set('title') ? $this->format_text($this->get('title')) : '';
         $data = [
-            'courseurl' => new \moodle_url('/course/view.php?id=' . $this->get('courseid')),
+            'courseurl' => course_get_url($this->get('courseid')),
             'coursefullname' => format_string($this->get('coursefullname'), true, array('context' => $this->get('contextid'))),
             'modified' => userdate($this->get('modified')),
             'title' => ($title !== '') ? $title : get_string('notitle', 'search'),

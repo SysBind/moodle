@@ -16,10 +16,6 @@ Feature: Exporting and importing feedbacks
       | user     | course | role           |
       | teacher | C1     | editingteacher |
       | teacher | C1     | editingteacher |
-    And I log in as "admin"
-    And I navigate to "Manage activities" node in "Site administration > Plugins > Activity modules"
-    And I click on "Show" "link" in the "Feedback" "table_row"
-    And I log out
     And the following "activities" exist:
       | activity   | name                | course | idnumber    |
       | feedback   | Learning experience | C1     | feedback0   |
@@ -32,7 +28,7 @@ Feature: Exporting and importing feedbacks
     And I add a "Information" question to the feedback with:
       | Question         | this is an information question |
       | Label            | info                            |
-      | Information-Type | Course                          |
+      | Information type | Course                          |
     And I add a "Label" question to the feedback with:
       | Contents | label text |
     And I add a "Longer text answer" question to the feedback with:

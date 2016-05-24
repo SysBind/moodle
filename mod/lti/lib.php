@@ -97,6 +97,8 @@ function lti_add_instance($lti, $mform) {
         $lti->toolurl = '';
     }
 
+    lti_load_tool_if_cartridge($lti);
+
     $lti->timecreated = time();
     $lti->timemodified = $lti->timecreated;
     $lti->servicesalt = uniqid('', true);
@@ -136,6 +138,8 @@ function lti_add_instance($lti, $mform) {
 function lti_update_instance($lti, $mform) {
     global $DB, $CFG;
     require_once($CFG->dirroot.'/mod/lti/locallib.php');
+
+    lti_load_tool_if_cartridge($lti);
 
     $lti->timemodified = time();
     $lti->id = $lti->instance;
@@ -202,7 +206,8 @@ function lti_delete_instance($id) {
  *
  * @param stdClass $defaultitem default item that would be added to the activity chooser if this callback was not present.
  *     It has properties: archetype, name, title, help, icon, link
- * @return array An array of aliases for this activity. Each element is an object with same list of properties as $defaultitem.
+ * @return array An array of aliases for this activity. Each element is an object with same list of properties as $defaultitem,
+ *     plus an additional property, helplink.
  *     Properties title and link are required
  **/
 function lti_get_shortcuts($defaultitem) {
@@ -445,7 +450,20 @@ function lti_uninstall() {
 function lti_get_lti_types() {
     global $DB;
 
-    return $DB->get_records('lti_types');
+    return $DB->get_records('lti_types', null, 'state DESC, timemodified DESC');
+}
+
+/**
+ * Returns available Basic LTI types that match the given
+ * tool proxy id
+ *
+ * @param int $toolproxyid Tool proxy id
+ * @return array of basicLTI types
+ */
+function lti_get_lti_types_from_proxy_id($toolproxyid) {
+    global $DB;
+
+    return $DB->get_records('lti_types', array('toolproxyid' => $toolproxyid), 'state DESC, timemodified DESC');
 }
 
 /**

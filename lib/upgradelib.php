@@ -1237,7 +1237,7 @@ function external_update_descriptions($component) {
 }
 
 /**
- * Allow plugins to add external functions to other plugins or core services.
+ * Allow plugins and subsystems to add external functions to other plugins or built-in services.
  * This function is executed just after all the plugins have been updated.
  */
 function external_update_services() {
@@ -1526,7 +1526,9 @@ function print_upgrade_part_end($plugin, $installation, $verbose) {
         }
     }
     if ($verbose) {
-        echo $OUTPUT->notification(get_string('success'), 'notifysuccess');
+        $notification = new \core\output\notification(get_string('success'), \core\output\notification::NOTIFY_SUCCESS);
+        $notification->set_show_closebutton(false);
+        echo $OUTPUT->render($notification);
         print_upgrade_separator();
     }
 }
@@ -1739,7 +1741,8 @@ function upgrade_noncore($verbose) {
         foreach ($plugintypes as $type=>$location) {
             upgrade_plugins($type, 'print_upgrade_part_start', 'print_upgrade_part_end', $verbose);
         }
-        // Upgrade services. This function gives plugins a chance to add functions to existing core or non-core services.
+        // Upgrade services.
+        // This function gives plugins and subsystems a chance to add functions to existing built-in services.
         external_update_services();
 
         // Update cache definitions. Involves scanning each plugin for any changes.
@@ -2280,4 +2283,28 @@ function upgrade_install_plugins(array $installable, $confirmed, $heading='', $c
         echo $output->footer();
         die();
     }
+}
+/**
+ * Method used to check the installed unoconv version.
+ *
+ * @param environment_results $result object to update, if relevant.
+ * @return environment_results|null updated results or null if unoconv path is not executable.
+ */
+function check_unoconv_version(environment_results $result) {
+    global $CFG;
+
+    if (!during_initial_install() && !empty($CFG->pathtounoconv) && file_is_executable(trim($CFG->pathtounoconv))) {
+        $unoconvbin = \escapeshellarg($CFG->pathtounoconv);
+        $command = "$unoconvbin --version";
+        exec($command, $output);
+        preg_match('/([0-9]+\.[0-9]+)/', $output[0], $matches);
+        $currentversion = (float)$matches[0];
+        $supportedversion = 0.7;
+        if ($currentversion < $supportedversion) {
+            $result->setInfo('unoconv version not supported');
+            $result->setStatus(false);
+            return $result;
+        }
+    }
+    return null;
 }

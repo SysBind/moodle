@@ -1289,6 +1289,14 @@ function get_module_metadata($course, $modnames, $sectionreturn = null) {
                 // otherwise append the link url to the module name.
                 $item->name = (count($items) == 1 &&
                     $item->link->out() === $defaultmodule->link->out()) ? $modname : $modname . ':' . $item->link;
+
+                // If the module provides the helptext property, append it to the help text to match the look and feel
+                // of the default course modules.
+                if (isset($item->help) && isset($item->helplink)) {
+                    $linktext = get_string('morehelp');
+                    $item->help .= html_writer::tag('div',
+                        $OUTPUT->doc_link($item->helplink, $linktext, true), array('class' => 'helpdoclink'));
+                }
                 $modlist[$course->id][$modname][$item->name] = $item;
             }
             $return += $modlist[$course->id][$modname];
@@ -1769,6 +1777,9 @@ function course_delete_module($cmid) {
     // Delete all tag instances associated with the instance of this module.
     core_tag_tag::delete_instances('mod_' . $modulename, null, $modcontext->id);
     core_tag_tag::remove_all_item_tags('core', 'course_modules', $cm->id);
+
+    // Notify the competency subsystem.
+    \core_competency\api::hook_course_module_deleted($cm);
 
     // Delete the context.
     context_helper::delete_instance(CONTEXT_MODULE, $cm->id);
@@ -3206,6 +3217,7 @@ class course_request {
         $data->visible            = $courseconfig->visible;
         $data->visibleold         = $data->visible;
         $data->lang               = $courseconfig->lang;
+        $data->enablecompletion   = $courseconfig->enablecompletion;
 
         $course = create_course($data);
         $context = context_course::instance($course->id, MUST_EXIST);

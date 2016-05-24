@@ -493,6 +493,8 @@ class restore_gradebook_structure_step extends restore_structure_step {
         $gradebookcalculationsfreeze = get_config('core', 'gradebook_calculations_freeze_' . $this->get_courseid());
         preg_match('/(\d{8})/', $this->get_task()->get_info()->moodle_release, $matches);
         $backupbuild = (int)$matches[1];
+        // The function floatval will return a float even if there is text mixed with the release number.
+        $backuprelease = floatval($this->get_task()->get_info()->backup_release);
 
         // Extra credits need adjustments only for backups made between 2.8 release (20141110) and the fix release (20150619).
         if (!$gradebookcalculationsfreeze && $backupbuild >= 20141110 && $backupbuild < 20150619) {
@@ -504,6 +506,14 @@ class restore_gradebook_structure_step extends restore_structure_step {
             require_once($CFG->libdir . '/db/upgradelib.php');
             upgrade_calculated_grade_items($this->get_courseid());
         }
+        // Courses from before 3.1 (20160518) may have a letter boundary problem and should be checked for this issue.
+        // Backups from before and including 2.9 could have a build number that is greater than 20160518 and should
+        // be checked for this problem.
+        if (!$gradebookcalculationsfreeze && ($backupbuild < 20160518 || $backuprelease <= 2.9)) {
+            require_once($CFG->libdir . '/db/upgradelib.php');
+            upgrade_course_letter_boundary($this->get_courseid());
+        }
+
     }
 
     /**
@@ -1689,6 +1699,9 @@ class restore_course_structure_step extends restore_structure_step {
         // Apply for local plugins optional paths at course level
         $this->add_plugin_structure('local', $course);
 
+        // Apply for admin tool plugins optional paths at course level.
+        $this->add_plugin_structure('tool', $course);
+
         return array($course, $category, $tag, $allowed_module);
     }
 
@@ -1700,27 +1713,54 @@ class restore_course_structure_step extends restore_structure_step {
      */
     public function process_course($data) {
         global $CFG, $DB;
+        $context = context::instance_by_id($this->task->get_contextid());
+        $userid = $this->task->get_userid();
+        $target = $this->get_task()->get_target();
+        $isnewcourse = $target != backup::TARGET_CURRENT_ADDING && $target != backup::TARGET_EXISTING_ADDING;
+
+        // When restoring to a new course we can set all the things except for the ID number.
+        $canchangeidnumber = $isnewcourse || has_capability('moodle/course:changeidnumber', $context, $userid);
+        $canchangeshortname = $isnewcourse || has_capability('moodle/course:changeshortname', $context, $userid);
+        $canchangefullname = $isnewcourse || has_capability('moodle/course:changefullname', $context, $userid);
+        $canchangesummary = $isnewcourse || has_capability('moodle/course:changesummary', $context, $userid);
 
         $data = (object)$data;
+        $data->id = $this->get_courseid();
 
         $fullname  = $this->get_setting_value('course_fullname');
         $shortname = $this->get_setting_value('course_shortname');
         $startdate = $this->get_setting_value('course_startdate');
 
-        // Calculate final course names, to avoid dupes
+        // Calculate final course names, to avoid dupes.
         list($fullname, $shortname) = restore_dbops::calculate_course_names($this->get_courseid(), $fullname, $shortname);
 
-        // Need to change some fields before updating the course record
-        $data->id = $this->get_courseid();
-        $data->fullname = $fullname;
-        $data->shortname= $shortname;
+        if ($canchangefullname) {
+            $data->fullname = $fullname;
+        } else {
+            unset($data->fullname);
+        }
+
+        if ($canchangeshortname) {
+            $data->shortname = $shortname;
+        } else {
+            unset($data->shortname);
+        }
+
+        if (!$canchangesummary) {
+            unset($data->summary);
+            unset($data->summaryformat);
+        }
 
         // Only allow the idnumber to be set if the user has permission and the idnumber is not already in use by
         // another course on this site.
-        $context = context::instance_by_id($this->task->get_contextid());
-        if (!empty($data->idnumber) && has_capability('moodle/course:changeidnumber', $context, $this->task->get_userid()) &&
-                $this->task->is_samesite() && !$DB->record_exists('course', array('idnumber' => $data->idnumber))) {
+        if (!empty($data->idnumber) && $canchangeidnumber && $this->task->is_samesite()
+                && !$DB->record_exists('course', array('idnumber' => $data->idnumber))) {
             // Do not reset idnumber.
+
+        } else if (!$isnewcourse) {
+            // Prevent override when restoring as merge.
+            unset($data->idnumber);
+
         } else {
             $data->idnumber = '';
         }
@@ -3052,6 +3092,227 @@ class restore_course_logstores_structure_step extends restore_structure_step {
 class restore_activity_logstores_structure_step extends restore_course_logstores_structure_step {
 }
 
+/**
+ * Restore course competencies structure step.
+ */
+class restore_course_competencies_structure_step extends restore_structure_step {
+
+    /**
+     * Returns the structure.
+     *
+     * @return array
+     */
+    protected function define_structure() {
+        $userinfo = $this->get_setting_value('users');
+        $paths = array(
+            new restore_path_element('course_competency', '/course_competencies/competencies/competency'),
+            new restore_path_element('course_competency_settings', '/course_competencies/settings'),
+        );
+        if ($userinfo) {
+            $paths[] = new restore_path_element('user_competency_course',
+                '/course_competencies/user_competencies/user_competency');
+        }
+        return $paths;
+    }
+
+    /**
+     * Process a course competency settings.
+     *
+     * @param array $data The data.
+     */
+    public function process_course_competency_settings($data) {
+        global $DB;
+        $data = (object) $data;
+
+        // We do not restore the course settings during merge.
+        $target = $this->get_task()->get_target();
+        if ($target == backup::TARGET_CURRENT_ADDING || $target == backup::TARGET_EXISTING_ADDING) {
+            return;
+        }
+
+        $courseid = $this->task->get_courseid();
+        $exists = \core_competency\course_competency_settings::record_exists_select('courseid = :courseid',
+            array('courseid' => $courseid));
+
+        // Strangely the course settings already exist, let's just leave them as is then.
+        if ($exists) {
+            $this->log('Course competency settings not restored, existing settings have been found.', backup::LOG_WARNING);
+            return;
+        }
+
+        $data = (object) array('courseid' => $courseid, 'pushratingstouserplans' => $data->pushratingstouserplans);
+        $settings = new \core_competency\course_competency_settings(0, $data);
+        $settings->create();
+    }
+
+    /**
+     * Process a course competency.
+     *
+     * @param array $data The data.
+     */
+    public function process_course_competency($data) {
+        $data = (object) $data;
+
+        // Mapping the competency by ID numbers.
+        $framework = \core_competency\competency_framework::get_record(array('idnumber' => $data->frameworkidnumber));
+        if (!$framework) {
+            return;
+        }
+        $competency = \core_competency\competency::get_record(array('idnumber' => $data->idnumber,
+            'competencyframeworkid' => $framework->get_id()));
+        if (!$competency) {
+            return;
+        }
+        $this->set_mapping(\core_competency\competency::TABLE, $data->id, $competency->get_id());
+
+        $params = array(
+            'competencyid' => $competency->get_id(),
+            'courseid' => $this->task->get_courseid()
+        );
+        $query = 'competencyid = :competencyid AND courseid = :courseid';
+        $existing = \core_competency\course_competency::record_exists_select($query, $params);
+
+        if (!$existing) {
+            // Sortorder is ignored by precaution, anyway we should walk through the records in the right order.
+            $record = (object) $params;
+            $record->ruleoutcome = $data->ruleoutcome;
+            $coursecompetency = new \core_competency\course_competency(0, $record);
+            $coursecompetency->create();
+        }
+    }
+
+    /**
+     * Process the user competency course.
+     *
+     * @param array $data The data.
+     */
+    public function process_user_competency_course($data) {
+        global $USER, $DB;
+        $data = (object) $data;
+
+        $data->competencyid = $this->get_mappingid(\core_competency\competency::TABLE, $data->competencyid);
+        if (!$data->competencyid) {
+            // This is strange, the competency does not belong to the course.
+            return;
+        } else if ($data->grade === null) {
+            // We do not need to do anything when there is no grade.
+            return;
+        }
+
+        $data->userid = $this->get_mappingid('user', $data->userid);
+        $shortname = $DB->get_field('course', 'shortname', array('id' => $this->task->get_courseid()), MUST_EXIST);
+
+        // The method add_evidence also sets the course rating.
+        \core_competency\api::add_evidence($data->userid,
+                                           $data->competencyid,
+                                           $this->task->get_contextid(),
+                                           \core_competency\evidence::ACTION_OVERRIDE,
+                                           'evidence_courserestored',
+                                           'core_competency',
+                                           $shortname,
+                                           false,
+                                           null,
+                                           $data->grade,
+                                           $USER->id);
+    }
+
+    /**
+     * Execute conditions.
+     *
+     * @return bool
+     */
+    protected function execute_condition() {
+
+        // Do not execute if competencies are not included.
+        if (!$this->get_setting_value('competencies')) {
+            return false;
+        }
+
+        // Do not execute if the competencies XML file is not found.
+        $fullpath = $this->task->get_taskbasepath();
+        $fullpath = rtrim($fullpath, '/') . '/' . $this->filename;
+        if (!file_exists($fullpath)) {
+            return false;
+        }
+
+        return true;
+    }
+}
+
+/**
+ * Restore activity competencies structure step.
+ */
+class restore_activity_competencies_structure_step extends restore_structure_step {
+
+    /**
+     * Defines the structure.
+     *
+     * @return array
+     */
+    protected function define_structure() {
+        $paths = array(
+            new restore_path_element('course_module_competency', '/course_module_competencies/competencies/competency')
+        );
+        return $paths;
+    }
+
+    /**
+     * Process a course module competency.
+     *
+     * @param array $data The data.
+     */
+    public function process_course_module_competency($data) {
+        $data = (object) $data;
+
+        // Mapping the competency by ID numbers.
+        $framework = \core_competency\competency_framework::get_record(array('idnumber' => $data->frameworkidnumber));
+        if (!$framework) {
+            return;
+        }
+        $competency = \core_competency\competency::get_record(array('idnumber' => $data->idnumber,
+            'competencyframeworkid' => $framework->get_id()));
+        if (!$competency) {
+            return;
+        }
+
+        $params = array(
+            'competencyid' => $competency->get_id(),
+            'cmid' => $this->task->get_moduleid()
+        );
+        $query = 'competencyid = :competencyid AND cmid = :cmid';
+        $existing = \core_competency\course_module_competency::record_exists_select($query, $params);
+
+        if (!$existing) {
+            // Sortorder is ignored by precaution, anyway we should walk through the records in the right order.
+            $record = (object) $params;
+            $record->ruleoutcome = $data->ruleoutcome;
+            $coursemodulecompetency = new \core_competency\course_module_competency(0, $record);
+            $coursemodulecompetency->create();
+        }
+    }
+
+    /**
+     * Execute conditions.
+     *
+     * @return bool
+     */
+    protected function execute_condition() {
+
+        // Do not execute if competencies are not included.
+        if (!$this->get_setting_value('competencies')) {
+            return false;
+        }
+
+        // Do not execute if the competencies XML file is not found.
+        $fullpath = $this->task->get_taskbasepath();
+        $fullpath = rtrim($fullpath, '/') . '/' . $this->filename;
+        if (!file_exists($fullpath)) {
+            return false;
+        }
+
+        return true;
+    }
+}
 
 /**
  * Defines the restore step for advanced grading methods attached to the activity module
@@ -3598,6 +3859,9 @@ class restore_module_structure_step extends restore_structure_step {
 
         // Apply for 'local' plugins optional paths at module level
         $this->add_plugin_structure('local', $module);
+
+        // Apply for 'admin tool' plugins optional paths at module level.
+        $this->add_plugin_structure('tool', $module);
 
         return $paths;
     }

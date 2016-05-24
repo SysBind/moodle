@@ -80,27 +80,29 @@ function form_init_date_js() {
         $calendar = \core_calendar\type_factory::get_calendar_instance();
         $module   = 'moodle-form-dateselector';
         $function = 'M.form.dateselector.init_date_selectors';
+        $defaulttimezone = date_default_timezone_get();
+
         $config = array(array(
             'firstdayofweek'    => $calendar->get_starting_weekday(),
-            'mon'               => strftime('%a', strtotime("Monday")),
-            'tue'               => strftime('%a', strtotime("Tuesday")),
-            'wed'               => strftime('%a', strtotime("Wednesday")),
-            'thu'               => strftime('%a', strtotime("Thursday")),
-            'fri'               => strftime('%a', strtotime("Friday")),
-            'sat'               => strftime('%a', strtotime("Saturday")),
-            'sun'               => strftime('%a', strtotime("Sunday")),
-            'january'           => strftime('%B', strtotime("January 1")),
-            'february'          => strftime('%B', strtotime("February 1")),
-            'march'             => strftime('%B', strtotime("March 1")),
-            'april'             => strftime('%B', strtotime("April 1")),
-            'may'               => strftime('%B', strtotime("May 1")),
-            'june'              => strftime('%B', strtotime("June 1")),
-            'july'              => strftime('%B', strtotime("July 1")),
-            'august'            => strftime('%B', strtotime("August 1")),
-            'september'         => strftime('%B', strtotime("September 1")),
-            'october'           => strftime('%B', strtotime("October 1")),
-            'november'          => strftime('%B', strtotime("November 1")),
-            'december'          => strftime('%B', strtotime("December 1"))
+            'mon'               => date_format_string(strtotime("Monday"), '%a', $defaulttimezone),
+            'tue'               => date_format_string(strtotime("Tuesday"), '%a', $defaulttimezone),
+            'wed'               => date_format_string(strtotime("Wednesday"), '%a', $defaulttimezone),
+            'thu'               => date_format_string(strtotime("Thursday"), '%a', $defaulttimezone),
+            'fri'               => date_format_string(strtotime("Friday"), '%a', $defaulttimezone),
+            'sat'               => date_format_string(strtotime("Saturday"), '%a', $defaulttimezone),
+            'sun'               => date_format_string(strtotime("Sunday"), '%a', $defaulttimezone),
+            'january'           => date_format_string(strtotime("January 1"), '%B', $defaulttimezone),
+            'february'          => date_format_string(strtotime("February 1"), '%B', $defaulttimezone),
+            'march'             => date_format_string(strtotime("March 1"), '%B', $defaulttimezone),
+            'april'             => date_format_string(strtotime("April 1"), '%B', $defaulttimezone),
+            'may'               => date_format_string(strtotime("May 1"), '%B', $defaulttimezone),
+            'june'              => date_format_string(strtotime("June 1"), '%B', $defaulttimezone),
+            'july'              => date_format_string(strtotime("July 1"), '%B', $defaulttimezone),
+            'august'            => date_format_string(strtotime("August 1"), '%B', $defaulttimezone),
+            'september'         => date_format_string(strtotime("September 1"), '%B', $defaulttimezone),
+            'october'           => date_format_string(strtotime("October 1"), '%B', $defaulttimezone),
+            'november'          => date_format_string(strtotime("November 1"), '%B', $defaulttimezone),
+            'december'          => date_format_string(strtotime("December 1"), '%B', $defaulttimezone)
         ));
         $PAGE->requires->yui_module($module, $function, $config);
         $done = true;
@@ -2314,6 +2316,9 @@ var skipClientValidation = false;
         } catch(e) {
             return true;
         }
+        if (typeof window.tinyMCE !== \'undefined\') {
+            window.tinyMCE.triggerSave();
+        }
         if (!myValidator()) {
             ev.preventDefault();
         }
@@ -2652,15 +2657,15 @@ class MoodleQuickForm_Renderer extends HTML_QuickForm_Renderer_Tableless{
         // switch next two lines for ol li containers for form items.
         //        $this->_elementTemplates=array('default'=>"\n\t\t".'<li class="fitem"><label>{label}{help}<!-- BEGIN required -->{req}<!-- END required --></label><div class="qfelement<!-- BEGIN error --> error<!-- END error --> {type}"><!-- BEGIN error --><span class="error">{error}</span><br /><!-- END error -->{element}</div></li>');
         $this->_elementTemplates = array(
-        'default'=>"\n\t\t".'<div id="{id}" class="fitem {advanced}<!-- BEGIN required --> required<!-- END required --> fitem_{type} {emptylabel}" {aria-live}><div class="fitemtitle"><label>{label}<!-- BEGIN required -->{req}<!-- END required -->{advancedimg} </label>{help}</div><div class="felement {type}<!-- BEGIN error --> error<!-- END error -->"><!-- BEGIN error --><span class="error" tabindex="0">{error}</span><br /><!-- END error -->{element}</div></div>',
+        'default'=>"\n\t\t".'<div id="{id}" class="fitem {advanced}<!-- BEGIN required --> required<!-- END required --> fitem_{type} {emptylabel} {class}" {aria-live}><div class="fitemtitle"><label>{label}<!-- BEGIN required -->{req}<!-- END required -->{advancedimg} </label>{help}</div><div class="felement {type}<!-- BEGIN error --> error<!-- END error -->"><!-- BEGIN error --><span class="error" tabindex="0">{error}</span><br /><!-- END error -->{element}</div></div>',
 
-        'actionbuttons'=>"\n\t\t".'<div id="{id}" class="fitem fitem_actionbuttons fitem_{type}"><div class="felement {type}">{element}</div></div>',
+        'actionbuttons'=>"\n\t\t".'<div id="{id}" class="fitem fitem_actionbuttons fitem_{type} {class}"><div class="felement {type}">{element}</div></div>',
 
         'fieldset'=>"\n\t\t".'<div id="{id}" class="fitem {advanced} {class}<!-- BEGIN required --> required<!-- END required --> fitem_{type} {emptylabel}"><div class="fitemtitle"><div class="fgrouplabel"><label>{label}<!-- BEGIN required -->{req}<!-- END required -->{advancedimg} </label>{help}</div></div><fieldset class="felement {type}<!-- BEGIN error --> error<!-- END error -->"><!-- BEGIN error --><span class="error" tabindex="0">{error}</span><br /><!-- END error -->{element}</fieldset></div>',
 
-        'static'=>"\n\t\t".'<div class="fitem {advanced} {emptylabel}"><div class="fitemtitle"><div class="fstaticlabel">{label}<!-- BEGIN required -->{req}<!-- END required -->{advancedimg} {help}</div></div><div class="felement fstatic <!-- BEGIN error --> error<!-- END error -->"><!-- BEGIN error --><span class="error" tabindex="0">{error}</span><br /><!-- END error -->{element}</div></div>',
+        'static'=>"\n\t\t".'<div id="{id}" class="fitem {advanced} {emptylabel} {class}"><div class="fitemtitle"><div class="fstaticlabel">{label}<!-- BEGIN required -->{req}<!-- END required -->{advancedimg} {help}</div></div><div class="felement fstatic <!-- BEGIN error --> error<!-- END error -->"><!-- BEGIN error --><span class="error" tabindex="0">{error}</span><br /><!-- END error -->{element}</div></div>',
 
-        'warning'=>"\n\t\t".'<div class="fitem {advanced} {emptylabel}">{element}</div>',
+        'warning'=>"\n\t\t".'<div id="{id}" class="fitem {advanced} {emptylabel} {class}">{element}</div>',
 
         'nodisplay'=>'');
 
@@ -2743,13 +2748,19 @@ class MoodleQuickForm_Renderer extends HTML_QuickForm_Renderer_Tableless{
     /**
      * Create advance group of elements
      *
-     * @param object $group Passed by reference
+     * @param MoodleQuickForm_group $group Passed by reference
      * @param bool $required if input is required field
      * @param string $error error message to display
      */
     function startGroup(&$group, $required, $error){
         // Make sure the element has an id.
         $group->_generateId();
+
+        // Prepend 'fgroup_' to the ID we generated.
+        $groupid = 'fgroup_' . $group->getAttribute('id');
+
+        // Update the ID.
+        $group->updateAttributes(array('id' => $groupid));
 
         if (method_exists($group, 'getElementTemplateType')){
             $html = $this->_elementTemplates[$group->getElementTemplateType()];
@@ -2770,7 +2781,7 @@ class MoodleQuickForm_Renderer extends HTML_QuickForm_Renderer_Tableless{
         }else{
             $html =str_replace('{help}', '', $html);
         }
-        $html =str_replace('{id}', 'fgroup_' . $group->getAttribute('id'), $html);
+        $html = str_replace('{id}', $group->getAttribute('id'), $html);
         $html =str_replace('{name}', $group->getName(), $html);
         $html =str_replace('{type}', 'fgroup', $html);
         $html =str_replace('{class}', $group->getAttribute('class'), $html);
@@ -2830,6 +2841,7 @@ class MoodleQuickForm_Renderer extends HTML_QuickForm_Renderer_Tableless{
         $html =str_replace('{id}', 'fitem_' . $element->getAttribute('id'), $html);
         $html =str_replace('{type}', 'f'.$element->getType(), $html);
         $html =str_replace('{name}', $element->getName(), $html);
+        $html =str_replace('{class}', $element->getAttribute('class'), $html);
         $emptylabel = '';
         if ($element->getLabel() == '') {
             $emptylabel = 'femptylabel';

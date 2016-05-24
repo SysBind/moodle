@@ -336,10 +336,10 @@ class mod_assign_renderer extends plugin_renderer_base {
 
         // Link to the grading page.
         $o .= '<center>';
-        $o .= $this->output->container_start('submissionlinks btn-group');
+        $o .= $this->output->container_start('submissionlinks');
         $urlparams = array('id' => $summary->coursemoduleid, 'action' => 'grading');
         $url = new moodle_url('/mod/assign/view.php', $urlparams);
-        $o .= '<a href="' . $url . '" class="btn">' . get_string('viewgrading', 'mod_assign') . '</a>';
+        $o .= '<a href="' . $url . '" class="btn">' . get_string('viewgrading', 'mod_assign') . '</a> ';
         $urlparams = array('id' => $summary->coursemoduleid, 'action' => 'grader');
         $url = new moodle_url('/mod/assign/view.php', $urlparams);
         $o .= '<a href="' . $url . '" class="btn btn-primary">' . get_string('grade') . '</a>';
@@ -870,7 +870,13 @@ class mod_assign_renderer extends plugin_renderer_base {
         if ($submission) {
             $row = new html_table_row();
             $cell1 = new html_table_cell(get_string('timemodified', 'assign'));
-            $cell2 = new html_table_cell(userdate($submission->timemodified));
+
+            if ($submission->status != ASSIGN_SUBMISSION_STATUS_NEW) {
+                $cell2 = new html_table_cell(userdate($submission->timemodified));
+            } else {
+                $cell2 = new html_table_cell('-');
+            }
+
             $row->cells = array($cell1, $cell2);
             $t->data[] = $row;
 
@@ -1216,6 +1222,7 @@ class mod_assign_renderer extends plugin_renderer_base {
         $this->page->requires->string_for_js('batchoperationconfirmreverttodraft', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmunlock', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmaddattempt', 'assign');
+        $this->page->requires->string_for_js('batchoperationconfirmdownloadselected', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmsetmarkingworkflowstate', 'assign');
         $this->page->requires->string_for_js('batchoperationconfirmsetmarkingallocation', 'assign');
         $this->page->requires->string_for_js('editaction', 'assign');

@@ -259,12 +259,21 @@ class grade_scale extends grade_object {
     }
 
     /**
+     * Checks if this is the last scale on the site.
+     *
+     * @return bool
+     */
+    public function is_last_global_scale() {
+        return ($this->courseid == 0) && (count(self::fetch_all_global()) == 1);
+    }
+
+    /**
      * Checks if scale can be deleted.
      *
      * @return bool
      */
     public function can_delete() {
-        return !$this->is_used();
+        return !$this->is_used() && !$this->is_last_global_scale();
     }
 
     /**
@@ -286,6 +295,11 @@ class grade_scale extends grade_object {
         // count outcomes
         $sql = "SELECT COUNT(id) FROM {grade_outcomes} WHERE scaleid = ?";
         if ($DB->count_records_sql($sql, $params)) {
+            return true;
+        }
+
+        // Ask the competency subsystem.
+        if (\core_competency\api::is_scale_used_anywhere($this->id)) {
             return true;
         }
 

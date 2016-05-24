@@ -4815,6 +4815,9 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
                     if ($cm = get_coursemodule_from_instance($modname, $instance->id, $course->id)) {
                         // Delete activity context questions and question categories.
                         question_delete_activity($cm,  $showfeedback);
+
+                        // Notify the competency subsystem.
+                        \core_competency\api::hook_course_module_deleted($cm);
                     }
                     if (function_exists($moddelete)) {
                         // This purges all module data in related tables, extra user prefs, settings, etc.
@@ -4931,6 +4934,9 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
 
     // Delete course tags.
     core_tag_tag::remove_all_item_tags('core', 'course', $course->id);
+
+    // Notify the competency subsystem.
+    \core_competency\api::hook_course_deleted($course);
 
     // Delete calendar events.
     $DB->delete_records('event', array('courseid' => $course->id));
@@ -5116,6 +5122,12 @@ function reset_course_userdata($data) {
         $cc->delete_all_completion_data();
         $status[] = array('component' => $componentstr,
                 'item' => get_string('deletecompletiondata', 'completion'), 'error' => false);
+    }
+
+    if (!empty($data->reset_competency_ratings)) {
+        \core_competency\api::hook_course_reset_competency_ratings($data->courseid);
+        $status[] = array('component' => $componentstr,
+            'item' => get_string('deletecompetencyratings', 'core_competency'), 'error' => false);
     }
 
     $componentstr = get_string('roles');
@@ -6224,53 +6236,65 @@ function valid_uploaded_file($newfile) {
 /**
  * Returns the maximum size for uploading files.
  *
- * There are seven possible upload limits:
- * 1. in Apache using LimitRequestBody (no way of checking or changing this)
- * 2. in php.ini for 'upload_max_filesize' (can not be changed inside PHP)
- * 3. in .htaccess for 'upload_max_filesize' (can not be changed inside PHP)
- * 4. in php.ini for 'post_max_size' (can not be changed inside PHP)
- * 5. by the Moodle admin in $CFG->maxbytes
- * 6. by the teacher in the current course $course->maxbytes
- * 7. by the teacher for the current module, eg $assignment->maxbytes
+ * There are eight possible upload limits:
+ * 1. No limit, if the upload isn't using a post request and the user has permission to ignore limits.
+ * 2. in Apache using LimitRequestBody (no way of checking or changing this)
+ * 3. in php.ini for 'upload_max_filesize' (can not be changed inside PHP)
+ * 4. in .htaccess for 'upload_max_filesize' (can not be changed inside PHP)
+ * 5. in php.ini for 'post_max_size' (can not be changed inside PHP)
+ * 6. by the Moodle admin in $CFG->maxbytes
+ * 7. by the teacher in the current course $course->maxbytes
+ * 8. by the teacher for the current module, eg $assignment->maxbytes
  *
  * These last two are passed to this function as arguments (in bytes).
  * Anything defined as 0 is ignored.
  * The smallest of all the non-zero numbers is returned.
  *
- * @todo Finish documenting this function
+ * The php.ini settings are only used if $usespost is true. This allows repositories that do not use post requests, such as
+ * repository_filesystem, to copy in files that are larger than post_max_size if the user has permission.
  *
  * @param int $sitebytes Set maximum size
  * @param int $coursebytes Current course $course->maxbytes (in bytes)
  * @param int $modulebytes Current module ->maxbytes (in bytes)
+ * @param bool $usespost Does the upload we're getting the max size for use a post request?
  * @return int The maximum size for uploading files.
  */
-function get_max_upload_file_size($sitebytes=0, $coursebytes=0, $modulebytes=0) {
+function get_max_upload_file_size($sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $usespost = true) {
+    $sizes = array();
 
-    if (! $filesize = ini_get('upload_max_filesize')) {
-        $filesize = '5M';
-    }
-    $minimumsize = get_real_size($filesize);
+    if ($usespost) {
+        if (!$filesize = ini_get('upload_max_filesize')) {
+            $filesize = '5M';
+        }
+        $sizes[] = get_real_size($filesize);
 
-    if ($postsize = ini_get('post_max_size')) {
-        $postsize = get_real_size($postsize);
-        if ($postsize < $minimumsize) {
-            $minimumsize = $postsize;
+        if ($postsize = ini_get('post_max_size')) {
+            $sizes[] = get_real_size($postsize);
+        }
+
+        if ($sitebytes > 0) {
+            $sizes[] = $sitebytes;
+        }
+    } else {
+        if ($sitebytes != 0) {
+            // It's for possible that $sitebytes == USER_CAN_IGNORE_FILE_SIZE_LIMITS (-1).
+            $sizes[] = $sitebytes;
         }
     }
 
-    if (($sitebytes > 0) and ($sitebytes < $minimumsize)) {
-        $minimumsize = $sitebytes;
+    if ($coursebytes > 0) {
+        $sizes[] = $coursebytes;
     }
 
-    if (($coursebytes > 0) and ($coursebytes < $minimumsize)) {
-        $minimumsize = $coursebytes;
+    if ($modulebytes > 0) {
+        $sizes[] = $modulebytes;
     }
 
-    if (($modulebytes > 0) and ($modulebytes < $minimumsize)) {
-        $minimumsize = $modulebytes;
+    if (empty($sizes)) {
+        throw new coding_exception('You must specify at least one filesize limit.');
     }
 
-    return $minimumsize;
+    return min($sizes);
 }
 
 /**
@@ -6283,9 +6307,11 @@ function get_max_upload_file_size($sitebytes=0, $coursebytes=0, $modulebytes=0) 
  * @param int $coursebytes Current course $course->maxbytes (in bytes)
  * @param int $modulebytes Current module ->maxbytes (in bytes)
  * @param stdClass $user The user
+ * @param bool $usespost Does the upload we're getting the max size for use a post request?
  * @return int The maximum size for uploading files.
  */
-function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $user = null) {
+function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $user = null,
+        $usespost = true) {
     global $USER;
 
     if (empty($user)) {
@@ -6293,10 +6319,10 @@ function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 
     }
 
     if (has_capability('moodle/course:ignorefilesizelimits', $context, $user)) {
-        return get_max_upload_file_size(USER_CAN_IGNORE_FILE_SIZE_LIMITS);
+        return get_max_upload_file_size(USER_CAN_IGNORE_FILE_SIZE_LIMITS, 0, 0, $usespost);
     }
 
-    return get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes);
+    return get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes, $usespost);
 }
 
 /**
