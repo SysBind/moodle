@@ -300,7 +300,7 @@ class manager {
         }
         unset($sid);
 
-        if (isset($_SESSION['USER']->id)) {
+        if (isset($_SESSION['USER']->id) || array_key_exists('USER',$_SESSION)) {
             if (!empty($_SESSION['USER']->realuser)) {
                 $userid = $_SESSION['USER']->realuser;
             } else {
