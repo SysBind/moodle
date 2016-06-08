@@ -86,7 +86,8 @@ if (!empty($course)) {
     $coursemaxbytes = $course->maxbytes;
 }
 // Make sure maxbytes passed is within site filesize limits.
-$maxbytes = get_user_max_upload_file_size($context, $CFG->maxbytes, $coursemaxbytes, $maxbytes);
+$maxbytes = get_user_max_upload_file_size($context, $CFG->maxbytes, $coursemaxbytes, $maxbytes,
+        null, $repo->uses_post_requests());
 
 // Wait as long as it takes for this script to finish
 core_php_time_limit::raise();
@@ -283,7 +284,9 @@ switch ($action) {
 
                 // Check if exceed maxbytes.
                 if ($maxbytes != -1 && filesize($downloadedfile['path']) > $maxbytes) {
-                    throw new file_exception('maxbytes');
+                    $maxbytesdisplay = display_size($maxbytes);
+                    throw new file_exception('maxbytesfile', (object) array('file' => $record->filename,
+                                                                            'size' => $maxbytesdisplay));
                 }
 
                 // Check if we exceed the max bytes of the area.

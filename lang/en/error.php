@@ -352,6 +352,7 @@ $string['invalidurl'] = 'Invalid URL';
 $string['invaliduser'] = 'Invalid user';
 $string['invaliduserid'] = 'Invalid user id';
 $string['invaliduserfield'] = 'Invalid user field: {$a}';
+$string['invaliduserdata'] = 'Invalid user data: {$a}';
 $string['invalidusername'] = 'The given username contains invalid characters';
 $string['invalidxmlfile'] = '"{$a}" is not a valid XML file';
 $string['iplookupfailed'] = 'Cannot find geo information about this IP address {$a}';
@@ -368,7 +369,7 @@ $string['listupdatefail'] = 'DB operation failed when editing list hierarchy';
 $string['logfilenotavailable'] = 'Logs not available';
 $string['loginasnoenrol'] = 'You cannot use enrol or unenrol when in course "Login as" session';
 $string['loginasonecourse'] = 'You cannot enter this course.<br /> You have to terminate the "Login as" session before entering any other course.';
-$string['maxbytes'] = 'The file is larger than the maximum size allowed.';
+$string['maxbytesfile'] = 'The file {$a->file} is too large. The maximum size you can upload is {$a->size}.';
 $string['maxareabytes'] = 'The file is larger than the space remaining in this area.';
 $string['messagingdisable'] = 'Messaging is disabled on this site';
 $string['mimetexisnotexist'] = 'Your system is not configured to run mimeTeX. You need to download the appropriate executable for you PHP_OS platform from <a href="http://moodle.org/download/mimetex/">http://moodle.org/download/mimetex/</a>, or obtain the C source from <a href="http://www.forkosh.com/mimetex.zip"> http://www.forkosh.com/mimetex.zip</a>, compile it and put the executable into your moodle/filter/tex/ directory.';
@@ -454,6 +455,7 @@ $string['prefixcannotbeempty'] = '<p>Error: database table prefix cannot be empt
 <p>The site administrator must fix this problem.</p>';
 $string['prefixtoolong'] = '<p>Error: database table prefix is too long ({$a->dbfamily})</p>
 <p>The site administrator must fix this problem. Maximum length for table prefixes in {$a->dbfamily} is {$a->maxlength} characters.</p>';
+$string['privatefilesupload'] = 'Uploading directly to user private files area is no longer supported. Upload to a draft area and then move the files with core_user::add_user_private_files';
 $string['processingstops'] = 'Processing stops here. Remaining records ignored.';
 $string['querystringcannotbeempty'] = 'The query string cannot be empty.';
 $string['redirecterrordetected'] = 'Unsupported redirect detected, script execution terminated';
@@ -578,3 +580,6 @@ $string['xmldberror'] = 'XMLDB error!';
 $string['alreadyloggedin'] = 'You are already logged in as {$a}, you need to log out before logging in as different user.';
 $string['youcannotdeletecategory'] = 'You cannot delete category \'{$a}\' because you can neither delete the contents, nor move them elsewhere.';
 $string['protected_cc_not_supported'] = 'Protected cartridges not supported.';
+
+// Deprecated since Moodle 3.1.
+$string['maxbytes'] = 'The file is larger than the maximum size allowed.';

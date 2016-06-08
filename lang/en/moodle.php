@@ -39,6 +39,7 @@ $string['activityreport'] = 'Activity report';
 $string['activityreports'] = 'Activity reports';
 $string['activityselect'] = 'Select this activity to be moved elsewhere';
 $string['activitysince'] = 'Activity since {$a}';
+$string['activitytypetitle'] = '{$a->activity} - {$a->type}';
 $string['activityweighted'] = 'Activity per user';
 $string['add'] = 'Add';
 $string['addactivity'] = 'Add an activity...';
@@ -430,6 +431,7 @@ $string['databaseupgradeblocks'] = 'Blocks version is now {$a}';
 $string['databaseupgradegroups'] = 'Groups version is now {$a}';
 $string['databaseupgradelocal'] = 'Local database customisations version is now {$a}';
 $string['databaseupgrades'] = 'Upgrading database';
+$string['dataformats'] = 'Data formats';
 $string['date'] = 'Date';
 $string['datechanged'] = 'Date changed';
 $string['datemostrecentfirst'] = 'Date - most recent first';
@@ -439,6 +441,10 @@ $string['days'] = 'days';
 $string['decodinginternallinks'] = 'Decoding internal links';
 $string['default'] = 'Default';
 $string['defaulteditor'] = 'Default editor';
+$string['defaultcompetencescale'] = 'Default competence scale';
+$string['defaultcompetencescaledesc'] = 'A binary rating scale that provides no further information beyond whether someone has demonstrated proficiency or not.';
+$string['defaultcompetencescalenotproficient'] = 'Not yet competent';
+$string['defaultcompetencescaleproficient'] = 'Competent';
 $string['defaultcoursestudent'] = 'Student';
 $string['defaultcoursestudentdescription'] = 'Students generally have fewer privileges within a course.';
 $string['defaultcoursestudents'] = 'Students';
@@ -556,7 +562,10 @@ $string['edituser'] = 'Edit user accounts';
 $string['edulevelother'] = 'Other';
 $string['edulevelteacher'] = 'Teaching';
 $string['edulevelparticipating'] = 'Participating';
-$string['edulevel'] = 'Educational level';
+$string['edulevel'] = 'All events';
+$string['edulevel_help'] = '* Teaching - actions performed by a teacher, e.g. updating a resource
+* Participating - actions performed by a student, e.g. posting in a forum
+* Other - actions performed by a user with a role other than teacher or student';
 $string['email'] = 'Email address';
 $string['emailalreadysent'] = 'A password reset email has already been sent. Please check your email.';
 $string['emailactive'] = 'Email activated';
@@ -1048,24 +1057,7 @@ $string['loginaspasswordexplain'] = '<p>You must enter the special "loginas pass
 $string['login_failure_logs'] = 'Login failure logs';
 $string['loginguest'] = 'Log in as a guest';
 $string['loginsite'] = 'Log in to the site';
-$string['loginsteps'] = 'Hi! For full access to courses you\'ll need to take
-   a minute to create a new account for yourself on this web site.
-   Each of the individual courses may also have a one-time
-   "enrolment key", which you won\'t need until later. Here are
-   the steps:
-   <ol>
-   <li>Fill out the <a href="{$a}">New Account</a> form with your details.</li>
-   <li>An email will be immediately sent to your email address.</li>
-   <li>Read your email, and click on the web link it contains.</li>
-   <li>Your account will be confirmed and you will be logged in.</li>
-   <li>Now, select the course you want to participate in.</li>
-   <li>If you are prompted for an "enrolment key" - use the one
-   that your teacher has given you. This will "enrol" you in the
-   course.</li>
-   <li>You can now access the full course. From now on you will only need
-   to enter your personal username and password (in the form on this page)
-   to log in and access any course you have enrolled in.</li>
-   </ol>';
+$string['loginsteps'] = 'For full access to this site, you first need to create an account.';
 $string['loginstepsnone'] = '<p>Hi!</p>
 <p>For full access to courses you\'ll need to create yourself an account.</p>
 <p>All you need to do is make up a username and password and use it in the form on this page!</p>
@@ -1087,6 +1079,7 @@ $string['makethismyhome'] = 'Make this my default home page';
 $string['manageblocks'] = 'Blocks';
 $string['managecategorythis'] = 'Manage this category';
 $string['managecourses'] = 'Manage courses';
+$string['managedataformats'] = 'Manage data formats';
 $string['managedatabase'] = 'Database';
 $string['manageeditorfiles'] = 'Manage files used by editor';
 $string['managefilters'] = 'Filters';
@@ -1096,7 +1089,6 @@ $string['markedthistopic'] = 'This topic is highlighted as the current topic';
 $string['markthistopic'] = 'Highlight this topic as the current topic';
 $string['matchingsearchandrole'] = 'Matching \'{$a->search}\' and {$a->role}';
 $string['maxareabytesreached'] = 'The file (or the total size of several files) is larger than the space remaining in this area.';
-$string['maxbytesforfile'] = 'The file {$a} is larger than the maximum size allowed.';
 $string['maxfilesize'] = 'Maximum size for new files: {$a}';
 $string['maxfilesreached'] = 'You are allowed to attach a maximum of {$a} file(s) to this item';
 $string['maximumchars'] = 'Maximum of {$a} characters';
@@ -1122,6 +1114,8 @@ $string['messageprovider:availableupdate'] = 'Available update notifications';
 $string['messageprovider:backup'] = 'Backup notifications';
 $string['messageprovider:badgecreatornotice'] = 'Badge creator notifications';
 $string['messageprovider:badgerecipientnotice'] = 'Badge recipient notifications';
+$string['messageprovider:competencyplancomment'] = 'Comment posted on a learning plan';
+$string['messageprovider:competencyusercompcomment'] = 'Comment posted on a competency';
 $string['messageprovider:courserequestapproved'] = 'Course creation request approval notification';
 $string['messageprovider:courserequested'] = 'Course creation request notification';
 $string['messageprovider:courserequestrejected'] = 'Course creation request rejection notification';
@@ -1228,6 +1222,7 @@ $string['never'] = 'Never';
 $string['neverdeletelogs'] = 'Never delete logs';
 $string['new'] = 'New';
 $string['newaccount'] = 'New account';
+$string['newactivityname'] = 'New name for activity {$a}';
 $string['newcourse'] = 'New course';
 $string['newpassword'] = 'New password';
 $string['newpassword_help'] = 'Enter a new password or leave blank to keep current password.';
@@ -1644,6 +1639,8 @@ $string['selectagroup'] = 'Select a group';
 $string['selectaregion'] = 'Select a region';
 $string['selctauser'] = 'Select a user';
 $string['selectall'] = 'Select all';
+$string['selectallusersonpage'] = 'Select all users on this page';
+$string['selectalluserswithcount'] = 'Select all {$a} users';
 $string['selectamodule'] = 'Please select an activity module';
 $string['selectanoptions'] = 'Select an option';
 $string['selectdefault'] = 'Select default';
@@ -2029,3 +2026,4 @@ $string['zippingbackup'] = 'Zipping backup';
 
 // Deprecated since Moodle 3.1.
 $string['filetoolarge'] = 'is too large to upload';
+$string['maxbytesforfile'] = 'The file {$a} is larger than the maximum size allowed.';

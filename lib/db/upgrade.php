@@ -1451,5 +1451,626 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2016030103.00);
     }
 
+    if ($oldversion < 2016030400.01) {
+        // Add the new services field.
+        $table = new xmldb_table('external_functions');
+        $field = new xmldb_field('services', XMLDB_TYPE_CHAR, '1333', null, null, null, null, 'capabilities');
+
+        // Conditionally launch add field services.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016030400.01);
+    }
+
+    if ($oldversion < 2016041500.50) {
+
+        // Define table competency to be created.
+        $table = new xmldb_table('competency');
+
+        // Adding fields to table competency.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('shortname', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('descriptionformat', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('idnumber', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('competencyframeworkid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('parentid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('path', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('ruletype', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('ruleoutcome', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('ruleconfig', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('scaleid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('scaleconfiguration', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table competency.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency.
+        $table->add_index('idnumberframework', XMLDB_INDEX_UNIQUE, array('competencyframeworkid', 'idnumber'));
+        $table->add_index('ruleoutcome', XMLDB_INDEX_NOTUNIQUE, array('ruleoutcome'));
+
+        // Conditionally launch create table for competency.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.50);
+    }
+
+    if ($oldversion < 2016041500.51) {
+
+        // Define table competency_coursecompsetting to be created.
+        $table = new xmldb_table('competency_coursecompsetting');
+
+        // Adding fields to table competency_coursecompsetting.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('pushratingstouserplans', XMLDB_TYPE_INTEGER, '2', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table competency_coursecompsetting.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('courseidlink', XMLDB_KEY_FOREIGN_UNIQUE, array('courseid'), 'course', array('id'));
+
+        // Conditionally launch create table for competency_coursecompsetting.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.51);
+    }
+
+    if ($oldversion < 2016041500.52) {
+
+        // Define table competency_framework to be created.
+        $table = new xmldb_table('competency_framework');
+
+        // Adding fields to table competency_framework.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('shortname', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('contextid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('idnumber', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('descriptionformat', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('scaleid', XMLDB_TYPE_INTEGER, '11', null, null, null, null);
+        $table->add_field('scaleconfiguration', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('visible', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('taxonomies', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table competency_framework.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_framework.
+        $table->add_index('idnumber', XMLDB_INDEX_UNIQUE, array('idnumber'));
+
+        // Conditionally launch create table for competency_framework.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.52);
+    }
+
+    if ($oldversion < 2016041500.53) {
+
+        // Define table competency_coursecomp to be created.
+        $table = new xmldb_table('competency_coursecomp');
+
+        // Adding fields to table competency_coursecomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('ruleoutcome', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_coursecomp.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('courseidlink', XMLDB_KEY_FOREIGN, array('courseid'), 'course', array('id'));
+        $table->add_key('competencyid', XMLDB_KEY_FOREIGN, array('competencyid'), 'competency_competency', array('id'));
+
+        // Adding indexes to table competency_coursecomp.
+        $table->add_index('courseidruleoutcome', XMLDB_INDEX_NOTUNIQUE, array('courseid', 'ruleoutcome'));
+        $table->add_index('courseidcompetencyid', XMLDB_INDEX_UNIQUE, array('courseid', 'competencyid'));
+
+        // Conditionally launch create table for competency_coursecomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.53);
+    }
+
+    if ($oldversion < 2016041500.54) {
+
+        // Define table competency_plan to be created.
+        $table = new xmldb_table('competency_plan');
+
+        // Adding fields to table competency_plan.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('descriptionformat', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('origtemplateid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('status', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('duedate', XMLDB_TYPE_INTEGER, '10', null, null, null, '0');
+        $table->add_field('reviewerid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_plan.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_plan.
+        $table->add_index('useridstatus', XMLDB_INDEX_NOTUNIQUE, array('userid', 'status'));
+        $table->add_index('templateid', XMLDB_INDEX_NOTUNIQUE, array('templateid'));
+        $table->add_index('statusduedate', XMLDB_INDEX_NOTUNIQUE, array('status', 'duedate'));
+
+        // Conditionally launch create table for competency_plan.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.54);
+    }
+
+    if ($oldversion < 2016041500.55) {
+
+        // Define table competency_template to be created.
+        $table = new xmldb_table('competency_template');
+
+        // Adding fields to table competency_template.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('shortname', XMLDB_TYPE_CHAR, '100', null, null, null, null);
+        $table->add_field('contextid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('descriptionformat', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('visible', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('duedate', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table competency_template.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Conditionally launch create table for competency_template.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.55);
+    }
+
+    if ($oldversion < 2016041500.56) {
+
+        // Define table competency_templatecomp to be created.
+        $table = new xmldb_table('competency_templatecomp');
+
+        // Adding fields to table competency_templatecomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table competency_templatecomp.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('templateidlink', XMLDB_KEY_FOREIGN, array('templateid'), 'competency_template', array('id'));
+        $table->add_key('competencyid', XMLDB_KEY_FOREIGN, array('competencyid'), 'competency_competency', array('id'));
+
+        // Conditionally launch create table for competency_templatecomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.56);
+    }
+
+    if ($oldversion < 2016041500.57) {
+
+        // Define table competency_templatecohort to be created.
+        $table = new xmldb_table('competency_templatecohort');
+
+        // Adding fields to table competency_templatecohort.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('cohortid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_templatecohort.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_templatecohort.
+        $table->add_index('templateid', XMLDB_INDEX_NOTUNIQUE, array('templateid'));
+        $table->add_index('templatecohortids', XMLDB_INDEX_UNIQUE, array('templateid', 'cohortid'));
+
+        // Conditionally launch create table for competency_templatecohort.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.57);
+    }
+
+    if ($oldversion < 2016041500.58) {
+
+        // Define table competency_relatedcomp to be created.
+        $table = new xmldb_table('competency_relatedcomp');
+
+        // Adding fields to table competency_relatedcomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('relatedcompetencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_relatedcomp.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Conditionally launch create table for competency_relatedcomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.58);
+    }
+
+    if ($oldversion < 2016041500.59) {
+
+        // Define table competency_usercomp to be created.
+        $table = new xmldb_table('competency_usercomp');
+
+        // Adding fields to table competency_usercomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('status', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('reviewerid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('proficiency', XMLDB_TYPE_INTEGER, '2', null, null, null, null);
+        $table->add_field('grade', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_usercomp.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_usercomp.
+        $table->add_index('useridcompetency', XMLDB_INDEX_UNIQUE, array('userid', 'competencyid'));
+
+        // Conditionally launch create table for competency_usercomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.59);
+    }
+
+    if ($oldversion < 2016041500.60) {
+
+        // Define table competency_usercompcourse to be created.
+        $table = new xmldb_table('competency_usercompcourse');
+
+        // Adding fields to table competency_usercompcourse.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('proficiency', XMLDB_TYPE_INTEGER, '2', null, null, null, null);
+        $table->add_field('grade', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_usercompcourse.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_usercompcourse.
+        $table->add_index('useridcoursecomp', XMLDB_INDEX_UNIQUE, array('userid', 'courseid', 'competencyid'));
+
+        // Conditionally launch create table for competency_usercompcourse.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.60);
+    }
+
+    if ($oldversion < 2016041500.61) {
+
+        // Define table competency_usercompplan to be created.
+        $table = new xmldb_table('competency_usercompplan');
+
+        // Adding fields to table competency_usercompplan.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('planid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('proficiency', XMLDB_TYPE_INTEGER, '2', null, null, null, null);
+        $table->add_field('grade', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_usercompplan.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_usercompplan.
+        $table->add_index('usercompetencyplan', XMLDB_INDEX_UNIQUE, array('userid', 'competencyid', 'planid'));
+
+        // Conditionally launch create table for competency_usercompplan.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.61);
+    }
+
+    if ($oldversion < 2016041500.62) {
+
+        // Define table competency_plancomp to be created.
+        $table = new xmldb_table('competency_plancomp');
+
+        // Adding fields to table competency_plancomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('planid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_plancomp.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_plancomp.
+        $table->add_index('planidcompetencyid', XMLDB_INDEX_UNIQUE, array('planid', 'competencyid'));
+
+        // Conditionally launch create table for competency_plancomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.62);
+    }
+
+    if ($oldversion < 2016041500.63) {
+
+        // Define table competency_evidence to be created.
+        $table = new xmldb_table('competency_evidence');
+
+        // Adding fields to table competency_evidence.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('usercompetencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('contextid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('action', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('actionuserid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('descidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('desccomponent', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('desca', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('url', XMLDB_TYPE_CHAR, '255', null, null, null, null);
+        $table->add_field('grade', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('note', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_evidence.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_evidence.
+        $table->add_index('usercompetencyid', XMLDB_INDEX_NOTUNIQUE, array('usercompetencyid'));
+
+        // Conditionally launch create table for competency_evidence.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.63);
+    }
+
+    if ($oldversion < 2016041500.64) {
+
+        // Define table competency_userevidence to be created.
+        $table = new xmldb_table('competency_userevidence');
+
+        // Adding fields to table competency_userevidence.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('descriptionformat', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('url', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_userevidence.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_userevidence.
+        $table->add_index('userid', XMLDB_INDEX_NOTUNIQUE, array('userid'));
+
+        // Conditionally launch create table for competency_userevidence.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.64);
+    }
+
+    if ($oldversion < 2016041500.65) {
+
+        // Define table competency_userevidencecomp to be created.
+        $table = new xmldb_table('competency_userevidencecomp');
+
+        // Adding fields to table competency_userevidencecomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userevidenceid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_userevidencecomp.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Adding indexes to table competency_userevidencecomp.
+        $table->add_index('userevidenceid', XMLDB_INDEX_NOTUNIQUE, array('userevidenceid'));
+        $table->add_index('userevidencecompids', XMLDB_INDEX_UNIQUE, array('userevidenceid', 'competencyid'));
+
+        // Conditionally launch create table for competency_userevidencecomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.65);
+    }
+
+    if ($oldversion < 2016041500.66) {
+
+        // Define table competency_modulecomp to be created.
+        $table = new xmldb_table('competency_modulecomp');
+
+        // Adding fields to table competency_modulecomp.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('competencyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('ruleoutcome', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table competency_modulecomp.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('cmidkey', XMLDB_KEY_FOREIGN, array('cmid'), 'course_modules', array('id'));
+        $table->add_key('competencyidkey', XMLDB_KEY_FOREIGN, array('competencyid'), 'competency_competency', array('id'));
+
+        // Adding indexes to table competency_modulecomp.
+        $table->add_index('cmidruleoutcome', XMLDB_INDEX_NOTUNIQUE, array('cmid', 'ruleoutcome'));
+        $table->add_index('cmidcompetencyid', XMLDB_INDEX_UNIQUE, array('cmid', 'competencyid'));
+
+        // Conditionally launch create table for competency_modulecomp.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016041500.66);
+    }
+
+    if ($oldversion < 2016042100.00) {
+        // Update all countries to upper case.
+        $DB->execute("UPDATE {user} SET country = UPPER(country)");
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016042100.00);
+    }
+
+    if ($oldversion < 2016042600.01) {
+        $deprecatedwebservices = [
+            'moodle_course_create_courses',
+            'moodle_course_get_courses',
+            'moodle_enrol_get_enrolled_users',
+            'moodle_enrol_get_users_courses',
+            'moodle_enrol_manual_enrol_users',
+            'moodle_file_get_files',
+            'moodle_file_upload',
+            'moodle_group_add_groupmembers',
+            'moodle_group_create_groups',
+            'moodle_group_delete_groupmembers',
+            'moodle_group_delete_groups',
+            'moodle_group_get_course_groups',
+            'moodle_group_get_groupmembers',
+            'moodle_group_get_groups',
+            'moodle_message_send_instantmessages',
+            'moodle_notes_create_notes',
+            'moodle_role_assign',
+            'moodle_role_unassign',
+            'moodle_user_create_users',
+            'moodle_user_delete_users',
+            'moodle_user_get_course_participants_by_id',
+            'moodle_user_get_users_by_courseid',
+            'moodle_user_get_users_by_id',
+            'moodle_user_update_users',
+            'core_grade_get_definitions',
+            'core_user_get_users_by_id',
+            'moodle_webservice_get_siteinfo',
+            'mod_forum_get_forum_discussions'
+        ];
+
+        list($insql, $params) = $DB->get_in_or_equal($deprecatedwebservices);
+        $DB->delete_records_select('external_functions', "name $insql", $params);
+        $DB->delete_records_select('external_services_functions', "functionname $insql", $params);
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016042600.01);
+    }
+
+    if ($oldversion < 2016051300.00) {
+        // Add a default competency rating scale.
+        make_competence_scale();
+
+        // Savepoint reached.
+        upgrade_main_savepoint(true, 2016051300.00);
+    }
+
+    if ($oldversion < 2016051700.01) {
+        // This script is included in each major version upgrade process (3.0, 3.1) so make sure we don't run it twice.
+        if (empty($CFG->upgrade_letterboundarycourses)) {
+            // MDL-45390. If a grade is being displayed with letters and the grade boundaries are not being adhered to properly
+            // then this course will also be frozen.
+            // If the changes are accepted then the display of some grades may change.
+            // This is here to freeze the gradebook in affected courses.
+            upgrade_course_letter_boundary();
+
+            // To skip running the same script on the upgrade to the next major version release.
+            set_config('upgrade_letterboundarycourses', 1);
+        }
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2016051700.01);
+    }
+
+    // Moodle v3.1.0 release upgrade line.
+    // Put any upgrade step following this.
+
     return true;
 }

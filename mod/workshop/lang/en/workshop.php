@@ -31,14 +31,10 @@ $string['allocationdone'] = 'Allocation done';
 $string['allocationerror'] = 'Allocation error';
 $string['allocationconfigured'] = 'Allocation configured';
 $string['allowedfiletypesforoverallfeedback'] = 'Feedback attachment allowed file types';
-$string['allowedfiletypesforoverallfeedback_help'] = 'Feedback attachment allowed file types can be restricted by entering a comma-separated list of file extensions, for example \'png, jpg, jpeg, gif\'. If the field is left empty, then all file types are allowed.
-
-Additional supported file extensions can be configured in the server administration';
+$string['allowedfiletypesforoverallfeedback_help'] = 'Feedback attachment allowed file types can be restricted by entering a comma-separated list of file extensions, for example \'mp4, mp3, png, jpg\'. If the field is left empty, then all file types are allowed.';
 $string['allowedfiletypesforoverallfeedback_link'] = 'admin/tool/filetypes/index';
 $string['allowedfiletypesforsubmission'] = 'Submission attachment allowed file types';
-$string['allowedfiletypesforsubmission_help'] = 'Submission attachment allowed file types can be restricted by entering a comma-separated list of file extensions, for example `png, jpg, jpeg, gif`. If the field is left empty, then all file types are allowed.
-
-Additional supported file extensions can be configured in the server administration';
+$string['allowedfiletypesforsubmission_help'] = 'Submission attachment allowed file types can be restricted by entering a comma-separated list of file extensions, for example \'mp4, mp3, png, jpg\'. If the field is left empty, then all file types are allowed.';
 $string['allowedfiletypesforsubmission_link'] = 'admin/tool/filetypes/index';
 $string['allsubmissions'] = 'All submissions ({$a})';
 $string['alreadygraded'] = 'Already graded';
@@ -251,7 +247,7 @@ $string['saveandclose'] = 'Save and close';
 $string['saveandcontinue'] = 'Save and continue editing';
 $string['saveandpreview'] = 'Save and preview';
 $string['saveandshownext'] = 'Save and show next';
-$string['search:activity'] = 'Workshop activities';
+$string['search:activity'] = 'Workshop - activity information';
 $string['selfassessmentdisabled'] = 'Self-assessment disabled';
 $string['showingperpage'] = 'Showing {$a} items per page';
 $string['showingperpagechange'] = 'Change ...';

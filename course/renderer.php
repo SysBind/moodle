@@ -252,14 +252,7 @@ class core_course_renderer extends plugin_renderer_base {
     protected function course_modchooser_module_types($modules) {
         $return = '';
         foreach ($modules as $module) {
-            if (!isset($module->types)) {
-                $return .= $this->course_modchooser_module($module);
-            } else {
-                $return .= $this->course_modchooser_module($module, array('nonoption'));
-                foreach ($module->types as $type) {
-                    $return .= $this->course_modchooser_module($type, array('option', 'subtype'));
-                }
-            }
+            $return .= $this->course_modchooser_module($module);
         }
         return $return;
     }
@@ -443,39 +436,15 @@ class core_course_renderer extends plugin_renderer_base {
         $activities = array(MOD_CLASS_ACTIVITY => array(), MOD_CLASS_RESOURCE => array());
 
         foreach ($modules as $module) {
-            if (isset($module->types)) {
-                // This module has a subtype
-                // NOTE: this is legacy stuff, module subtypes are very strongly discouraged!!
-                $subtypes = array();
-                foreach ($module->types as $subtype) {
-                    $link = $subtype->link->out(true, $urlparams);
-                    $subtypes[$link] = $subtype->title;
-                }
-
-                // Sort module subtypes into the list
-                $activityclass = MOD_CLASS_ACTIVITY;
-                if ($module->archetype == MOD_CLASS_RESOURCE) {
-                    $activityclass = MOD_CLASS_RESOURCE;
-                }
-                if (!empty($module->title)) {
-                    // This grouping has a name
-                    $activities[$activityclass][] = array($module->title => $subtypes);
-                } else {
-                    // This grouping does not have a name
-                    $activities[$activityclass] = array_merge($activities[$activityclass], $subtypes);
-                }
-            } else {
-                // This module has no subtypes
-                $activityclass = MOD_CLASS_ACTIVITY;
-                if ($module->archetype == MOD_ARCHETYPE_RESOURCE) {
-                    $activityclass = MOD_CLASS_RESOURCE;
-                } else if ($module->archetype === MOD_ARCHETYPE_SYSTEM) {
-                    // System modules cannot be added by user, do not add to dropdown
-                    continue;
-                }
-                $link = $module->link->out(true, $urlparams);
-                $activities[$activityclass][$link] = $module->title;
+            $activityclass = MOD_CLASS_ACTIVITY;
+            if ($module->archetype == MOD_ARCHETYPE_RESOURCE) {
+                $activityclass = MOD_CLASS_RESOURCE;
+            } else if ($module->archetype === MOD_ARCHETYPE_SYSTEM) {
+                // System modules cannot be added by user, do not add to dropdown.
+                continue;
             }
+            $link = $module->link->out(true, $urlparams);
+            $activities[$activityclass][$link] = $module->title;
         }
 
         $straddactivity = get_string('addactivity');
@@ -733,10 +702,34 @@ class core_course_renderer extends plugin_renderer_base {
      * @return string
      */
     public function course_section_cm_name(cm_info $mod, $displayoptions = array()) {
-        global $CFG;
+        if ((!$mod->uservisible && empty($mod->availableinfo)) || !$mod->url) {
+            // Nothing to be displayed to the user.
+            return '';
+        }
+
+        // Render element that allows to edit activity name inline. It calls {@link course_section_cm_name_title()}
+        // to get the display title of the activity.
+        $tmpl = new \core_course\output\course_module_name($mod, $this->page->user_is_editing(), $displayoptions);
+        return $this->output->render_from_template('core/inplace_editable', $tmpl->export_for_template($this->output));
+    }
+
+    /**
+     * Renders html to display a name with the link to the course module on a course page
+     *
+     * If module is unavailable for user but still needs to be displayed
+     * in the list, just the name is returned without a link
+     *
+     * Note, that for course modules that never have separate pages (i.e. labels)
+     * this function return an empty string
+     *
+     * @param cm_info $mod
+     * @param array $displayoptions
+     * @return string
+     */
+    public function course_section_cm_name_title(cm_info $mod, $displayoptions = array()) {
         $output = '';
         if (!$mod->uservisible && empty($mod->availableinfo)) {
-            // nothing to be displayed to the user
+            // Nothing to be displayed to the user.
             return $output;
         }
         $url = $mod->url;
@@ -984,10 +977,6 @@ class core_course_renderer extends plugin_renderer_base {
             $output .= html_writer::start_tag('div', array('class' => 'activityinstance'));
             $output .= $cmname;
 
-
-            if ($this->page->user_is_editing()) {
-                $output .= ' ' . course_get_cm_rename_action($mod, $sectionreturn);
-            }
 
             // Module can put text after the link (e.g. forum unread)
             $output .= $mod->afterlink;

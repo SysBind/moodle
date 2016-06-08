@@ -28,7 +28,7 @@ $page = optional_param('page', 0, PARAM_INT);
 $q = optional_param('q', '', PARAM_NOTAGS);
 $title = optional_param('title', '', PARAM_NOTAGS);
 $areaid = optional_param('areaid', false, PARAM_ALPHANUMEXT);
-// Moving timestart and timeend further down as they might come as an array if they come from the form.
+// Moving areaids, courseids, timestart, and timeend further down as they might come as an array if they come from the form.
 
 $context = context_system::instance();
 $pagetitle = get_string('globalsearch', 'search');
@@ -66,7 +66,16 @@ if (!$data && $q) {
     $data = new stdClass();
     $data->q = $q;
     $data->title = $title;
-    $data->areaid = $areaid;
+    $areaids = optional_param('areaids', '', PARAM_RAW);
+    if (!empty($areaids)) {
+        $areaids = explode(',', $areaids);
+        $data->areaids = clean_param_array($areaids, PARAM_ALPHANUMEXT);
+    }
+    $courseids = optional_param('courseids', '', PARAM_RAW);
+    if (!empty($courseids)) {
+        $courseids = explode(',', $courseids);
+        $data->courseids = clean_param_array($courseids, PARAM_INT);
+    }
     $data->timestart = optional_param('timestart', 0, PARAM_INT);
     $data->timeend = optional_param('timeend', 0, PARAM_INT);
     $mform->set_data($data);
@@ -77,7 +86,12 @@ $urlparams = array('page' => $page);
 if ($data) {
     $urlparams['q'] = $data->q;
     $urlparams['title'] = $data->title;
-    $urlparams['areaid'] = $data->areaid;
+    if (!empty($data->areaids)) {
+        $urlparams['areaids'] = implode(',', $data->areaids);
+    }
+    if (!empty($data->courseids)) {
+        $urlparams['courseids'] = implode(',', $data->courseids);
+    }
     $urlparams['timestart'] = $data->timestart;
     $urlparams['timeend'] = $data->timeend;
 }
@@ -90,8 +104,7 @@ echo $OUTPUT->heading($pagetitle);
 
 // Get the results.
 if ($data) {
-    $data->page = $page;
-    $results = $search->search($data);
+    $results = $search->paged_search($data, $page);
 }
 
 if ($errorstr = $search->get_engine()->get_query_error()) {
@@ -103,7 +116,7 @@ if ($errorstr = $search->get_engine()->get_query_error()) {
 $mform->display();
 
 if (!empty($results)) {
-    echo $searchrenderer->render_results($results, $page, $url);
+    echo $searchrenderer->render_results($results->results, $results->actualpage, $results->totalcount, $url);
 }
 
 echo $OUTPUT->footer();

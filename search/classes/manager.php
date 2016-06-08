@@ -43,6 +43,11 @@ class manager {
     const TYPE_TEXT = 1;
 
     /**
+     * @var int File contents.
+     */
+    const TYPE_FILE = 2;
+
+    /**
      * @var int User can not access the document.
      */
     const ACCESS_DENIED = 0;
@@ -66,6 +71,11 @@ class manager {
      * @var int Number of results per page.
      */
     const DISPLAY_RESULTS_PER_PAGE = 10;
+
+    /**
+     * @var int The id to be placed in owneruserid when there is no owner.
+     */
+    const NO_OWNER_ID = 0;
 
     /**
      * @var \core_search\area\base[] Enabled search areas.
@@ -99,10 +109,8 @@ class manager {
     /**
      * Returns an initialised \core_search instance.
      *
-     * It requires global search to be enabled. Use \core_search\manager::is_global_search_enabled
-     * to verify it is enabled.
-     *
-     * @throws \moodle_exception
+     * @see \core_search\engine::is_installed
+     * @see \core_search\engine::is_server_ready
      * @throws \core_search\engine_exception
      * @return \core_search\manager
      */
@@ -112,10 +120,6 @@ class manager {
         // One per request, this should be purged during testing.
         if (static::$instance !== null) {
             return static::$instance;
-        }
-
-        if (!static::is_global_search_enabled()) {
-            throw new \moodle_exception('globalsearchdisabled', 'search');
         }
 
         if (!$engine = static::search_engine_instance()) {
@@ -309,9 +313,10 @@ class manager {
      * information and there will be a performance benefit on passing only some contexts
      * instead of the whole context array set.
      *
+     * @param array|false $limitcourseids An array of course ids to limit the search to. False for no limiting.
      * @return bool|array Indexed by area identifier (component + area name). Returns true if the user can see everything.
      */
-    protected function get_areas_user_accesses() {
+    protected function get_areas_user_accesses($limitcourseids = false) {
         global $CFG, $USER;
 
         // All results for admins. Eventually we could add a new capability for managers.
@@ -334,7 +339,7 @@ class manager {
         // This will store area - allowed contexts relations.
         $areascontexts = array();
 
-        if (!empty($areasbylevel[CONTEXT_SYSTEM])) {
+        if (empty($limitcourseids) && !empty($areasbylevel[CONTEXT_SYSTEM])) {
             // We add system context to all search areas working at this level. Here each area is fully responsible of
             // the access control as we can not automate much, we can not even check guest access as some areas might
             // want to allow guests to retrieve data from them.
@@ -347,9 +352,16 @@ class manager {
 
         // Get the courses where the current user has access.
         $courses = enrol_get_my_courses(array('id', 'cacherev'));
-        $courses[SITEID] = get_course(SITEID);
-        $site = \course_modinfo::instance(SITEID);
+
+        if (empty($limitcourseids) || in_array(SITEID, $limitcourseids)) {
+            $courses[SITEID] = get_course(SITEID);
+        }
+
         foreach ($courses as $course) {
+            if (!empty($limitcourseids) && !in_array($course->id, $limitcourseids)) {
+                // Skip non-included courses.
+                continue;
+            }
 
             // Info about the course modules.
             $modinfo = get_fast_modinfo($course);
@@ -387,6 +399,61 @@ class manager {
     }
 
     /**
+     * Returns requested page of documents plus additional information for paging.
+     *
+     * This function does not perform any kind of security checking for access, the caller code
+     * should check that the current user have moodle/search:query capability.
+     *
+     * If a page is requested that is beyond the last result, the last valid page is returned in
+     * results, and actualpage indicates which page was returned.
+     *
+     * @param stdClass $formdata
+     * @param int $pagenum The 0 based page number.
+     * @return object An object with 3 properties:
+     *                    results    => An array of \core_search\documents for the actual page.
+     *                    totalcount => Number of records that are possibly available, to base paging on.
+     *                    actualpage => The actual page returned.
+     */
+    public function paged_search(\stdClass $formdata, $pagenum) {
+        $out = new \stdClass();
+
+        $perpage = static::DISPLAY_RESULTS_PER_PAGE;
+
+        // Make sure we only allow request up to max page.
+        $pagenum = min($pagenum, (static::MAX_RESULTS / $perpage) - 1);
+
+        // Calculate the first and last document number for the current page, 1 based.
+        $mindoc = ($pagenum * $perpage) + 1;
+        $maxdoc = ($pagenum + 1) * $perpage;
+
+        // Get engine documents, up to max.
+        $docs = $this->search($formdata, $maxdoc);
+
+        $resultcount = count($docs);
+        if ($resultcount < $maxdoc) {
+            // This means it couldn't give us results to max, so the count must be the max.
+            $out->totalcount = $resultcount;
+        } else {
+            // Get the possible count reported by engine, and limit to our max.
+            $out->totalcount = $this->engine->get_query_total_count();
+            $out->totalcount = min($out->totalcount, static::MAX_RESULTS);
+        }
+
+        // Determine the actual page.
+        if ($resultcount < $mindoc) {
+            // We couldn't get the min docs for this page, so determine what page we can get.
+            $out->actualpage = floor(($resultcount - 1) / $perpage);
+        } else {
+            $out->actualpage = $pagenum;
+        }
+
+        // Split the results to only return the page.
+        $out->results = array_slice($docs, $out->actualpage * $perpage, $perpage, true);
+
+        return $out;
+    }
+
+    /**
      * Returns documents from the engine based on the data provided.
      *
      * This function does not perform any kind of security checking, the caller code
@@ -395,63 +462,29 @@ class manager {
      * It might return the results from the cache instead.
      *
      * @param stdClass $formdata
+     * @param int      $limit The maximum number of documents to return
      * @return \core_search\document[]
      */
-    public function search(\stdClass $formdata) {
+    public function search(\stdClass $formdata, $limit = 0) {
+        global $USER;
 
-        $cache = \cache::make('core', 'search_results');
-
-        // Generate a string from all query filters
-        // Not including $areascontext here, being a user cache it is not needed.
-        $querykey = $this->generate_query_key($formdata);
-
-        // Look for cached results before executing it.
-        if ($results = $cache->get($querykey)) {
-            return $results;
+        $limitcourseids = false;
+        if (!empty($formdata->courseids)) {
+            $limitcourseids = $formdata->courseids;
         }
 
         // Clears previous query errors.
         $this->engine->clear_query_error();
 
-        $areascontexts = $this->get_areas_user_accesses();
+        $areascontexts = $this->get_areas_user_accesses($limitcourseids);
         if (!$areascontexts) {
             // User can not access any context.
             $docs = array();
         } else {
-            $docs = $this->engine->execute_query($formdata, $areascontexts);
+            $docs = $this->engine->execute_query($formdata, $areascontexts, $limit);
         }
-
-        // Cache results.
-        $cache->set($querykey, $docs);
 
         return $docs;
-    }
-
-    /**
-     * We generate the key ourselves so MUC knows that it contains simplekeys.
-     *
-     * @param stdClass $formdata
-     * @return string
-     */
-    protected function generate_query_key($formdata) {
-
-        // Empty values by default (although q should always have a value).
-        $fields = array('q', 'title', 'areaid', 'timestart', 'timeend', 'page');
-
-        // Just in this function scope.
-        $params = clone $formdata;
-        foreach ($fields as $field) {
-            if (empty($params->{$field})) {
-                $params->{$field} = '';
-            }
-        }
-
-        // Although it is not likely, we prevent cache hits if available search areas change during the session.
-        $enabledareas = implode('-', array_keys(static::get_search_areas_list(true)));
-
-        return md5($params->q . 'title=' . $params->title . 'areaid=' . $params->areaid .
-            'timestart=' . $params->timestart . 'timeend=' . $params->timeend . 'page=' . $params->page .
-            $enabledareas);
     }
 
     /**
@@ -474,7 +507,10 @@ class manager {
         // Unlimited time.
         \core_php_time_limit::raise();
 
-        $anyupdate = false;
+        // Notify the engine that an index starting.
+        $this->engine->index_starting($fullindex);
+
+        $sumdocs = 0;
 
         $searchareas = $this->get_search_areas_list(true);
         foreach ($searchareas as $areaid => $searcharea) {
@@ -482,6 +518,9 @@ class manager {
             if (CLI_SCRIPT && !PHPUNIT_TEST) {
                 mtrace('Processing ' . $searcharea->get_visible_name() . ' area');
             }
+
+            // Notify the engine that an area is starting.
+            $this->engine->area_index_starting($searcharea, $fullindex);
 
             $indexingstart = time();
 
@@ -493,71 +532,80 @@ class manager {
             $numdocsignored = 0;
             $lastindexeddoc = 0;
 
+            $prevtimestart = intval(get_config($componentconfigname, $varname . '_indexingstart'));
+
             if ($fullindex === true) {
-                $prevtimestart = 0;
+                $referencestarttime = 0;
             } else {
-                $prevtimestart = intval(get_config($componentconfigname, $varname . '_indexingstart'));
+                $referencestarttime = $prevtimestart;
             }
 
             // Getting the recordset from the area.
-            $recordset = $searcharea->get_recordset_by_timestamp($prevtimestart);
+            $recordset = $searcharea->get_recordset_by_timestamp($referencestarttime);
 
             // Pass get_document as callback.
-            $iterator = new \core\dml\recordset_walk($recordset, array($searcharea, 'get_document'));
+            $fileindexing = $this->engine->file_indexing_enabled() && $searcharea->uses_file_indexing();
+            $options = array('indexfiles' => $fileindexing, 'lastindexedtime' => $prevtimestart);
+            $iterator = new \core\dml\recordset_walk($recordset, array($searcharea, 'get_document'), $options);
             foreach ($iterator as $document) {
-
                 if (!$document instanceof \core_search\document) {
                     continue;
                 }
 
-                $docdata = $document->export_for_engine();
-                switch ($docdata['type']) {
-                    case static::TYPE_TEXT:
-                        $this->engine->add_document($docdata);
-                        $numdocs++;
-                        break;
-                    default:
-                        $numdocsignored++;
-                        $iterator->close();
-                        throw new \moodle_exception('doctypenotsupported', 'search');
+                if ($prevtimestart == 0) {
+                    // If we have never indexed this area before, it must be new.
+                    $document->set_is_new(true);
+                }
+
+                if ($fileindexing) {
+                    // Attach files if we are indexing.
+                    $searcharea->attach_files($document);
+                }
+
+                if ($this->engine->add_document($document, $fileindexing)) {
+                    $numdocs++;
+                } else {
+                    $numdocsignored++;
                 }
 
                 $lastindexeddoc = $document->get('modified');
                 $numrecords++;
             }
 
-            if ($numdocs > 0) {
-                $anyupdate = true;
-
-                // Commit all remaining documents.
-                $this->engine->commit();
-
-                if (CLI_SCRIPT && !PHPUNIT_TEST) {
+            if (CLI_SCRIPT && !PHPUNIT_TEST) {
+                if ($numdocs > 0) {
                     mtrace('Processed ' . $numrecords . ' records containing ' . $numdocs . ' documents for ' .
-                        $searcharea->get_visible_name() . ' area. Commits completed.');
+                            $searcharea->get_visible_name() . ' area.');
+                } else  {
+                    mtrace('No new documents to index for ' . $searcharea->get_visible_name() . ' area.');
                 }
-            } else if (CLI_SCRIPT && !PHPUNIT_TEST) {
-                mtrace('No new documents to index for ' . $searcharea->get_visible_name() . ' area.');
             }
 
-            // Store last index run once documents have been commited to the search engine.
-            set_config($varname . '_indexingstart', $indexingstart, $componentconfigname);
-            set_config($varname . '_indexingend', time(), $componentconfigname);
-            set_config($varname . '_docsignored', $numdocsignored, $componentconfigname);
-            set_config($varname . '_docsprocessed', $numdocs, $componentconfigname);
-            set_config($varname . '_recordsprocessed', $numrecords, $componentconfigname);
-            if ($lastindexeddoc > 0) {
-                set_config($varname . '_lastindexrun', $lastindexeddoc, $componentconfigname);
+            // Notify the engine this area is complete, and only mark times if true.
+            if ($this->engine->area_index_complete($searcharea, $numdocs, $fullindex)) {
+                $sumdocs += $numdocs;
+
+                // Store last index run once documents have been commited to the search engine.
+                set_config($varname . '_indexingstart', $indexingstart, $componentconfigname);
+                set_config($varname . '_indexingend', time(), $componentconfigname);
+                set_config($varname . '_docsignored', $numdocsignored, $componentconfigname);
+                set_config($varname . '_docsprocessed', $numdocs, $componentconfigname);
+                set_config($varname . '_recordsprocessed', $numrecords, $componentconfigname);
+                if ($lastindexeddoc > 0) {
+                    set_config($varname . '_lastindexrun', $lastindexeddoc, $componentconfigname);
+                }
             }
         }
 
-        if ($anyupdate) {
+        if ($sumdocs > 0) {
             $event = \core\event\search_indexed::create(
                     array('context' => \context_system::instance()));
             $event->trigger();
         }
 
-        return $anyupdate;
+        $this->engine->index_complete($sumdocs, $fullindex);
+
+        return (bool)$sumdocs;
     }
 
     /**
@@ -606,7 +654,6 @@ class manager {
             $this->engine->delete();
             $this->reset_config();
         }
-        $this->engine->commit();
     }
 
     /**
@@ -616,7 +663,6 @@ class manager {
      */
     public function delete_index_by_id($id) {
         $this->engine->delete_by_id($id);
-        $this->engine->commit();
     }
 
     /**

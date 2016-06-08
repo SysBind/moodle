@@ -271,6 +271,9 @@ class block_manager {
      * @return boolean true if this region exists on this page.
      */
     public function is_known_region($region) {
+        if (empty($region)) {
+            return false;
+        }
         return array_key_exists($region, $this->regions);
     }
 
@@ -2041,6 +2044,15 @@ function blocks_name_allowed_in_format($name, $pageformat) {
 function blocks_delete_instance($instance, $nolongerused = false, $skipblockstables = false) {
     global $DB;
 
+    // Allow plugins to use this block before we completely delete it.
+    if ($pluginsfunction = get_plugins_with_function('pre_block_delete')) {
+        foreach ($pluginsfunction as $plugintype => $plugins) {
+            foreach ($plugins as $pluginfunction) {
+                $pluginfunction($instance);
+            }
+        }
+    }
+
     if ($block = block_instance($instance->blockname, $instance)) {
         $block->instance_delete();
     }
@@ -2061,21 +2073,31 @@ function blocks_delete_instance($instance, $nolongerused = false, $skipblockstab
 function blocks_delete_instances($instanceids) {
     global $DB;
 
-    $instances = $DB->get_recordset_list('block_instances', 'id', $instanceids);
-    foreach ($instances as $instance) {
-        blocks_delete_instance($instance, false, true);
+    $limit = 1000;
+    $count = count($instanceids);
+    $chunks = [$instanceids];
+    if ($count > $limit) {
+        $chunks = array_chunk($instanceids, $limit);
     }
-    $instances->close();
 
-    $DB->delete_records_list('block_positions', 'blockinstanceid', $instanceids);
-    $DB->delete_records_list('block_instances', 'id', $instanceids);
+    // Perform deletion for each chunk.
+    foreach ($chunks as $chunk) {
+        $instances = $DB->get_recordset_list('block_instances', 'id', $chunk);
+        foreach ($instances as $instance) {
+            blocks_delete_instance($instance, false, true);
+        }
+        $instances->close();
 
-    $preferences = array();
-    foreach ($instanceids as $instanceid) {
-        $preferences[] = 'block' . $instanceid . 'hidden';
-        $preferences[] = 'docked_block_instance_' . $instanceid;
+        $DB->delete_records_list('block_positions', 'blockinstanceid', $chunk);
+        $DB->delete_records_list('block_instances', 'id', $chunk);
+
+        $preferences = array();
+        foreach ($chunk as $instanceid) {
+            $preferences[] = 'block' . $instanceid . 'hidden';
+            $preferences[] = 'docked_block_instance_' . $instanceid;
+        }
+        $DB->delete_records_list('user_preferences', 'name', $preferences);
     }
-    $DB->delete_records_list('user_preferences', 'name', $preferences);
 }
 
 /**
@@ -2260,6 +2282,6 @@ function blocks_add_default_system_blocks() {
     }
 
     $newblocks = array('private_files', 'online_users', 'badges', 'calendar_month', 'calendar_upcoming');
-    $newcontent = array('course_overview');
+    $newcontent = array('lp', 'course_overview');
     $page->blocks->add_blocks(array(BLOCK_POS_RIGHT => $newblocks, 'content' => $newcontent), 'my-index', $subpagepattern);
 }

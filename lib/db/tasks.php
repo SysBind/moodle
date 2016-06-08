@@ -285,10 +285,19 @@ $tasks = array(
         'month' => '*'
     ),
     array(
-        'classname' => 'core\task\search_task',
+        'classname' => 'core\task\search_index_task',
         'blocking' => 0,
         'minute' => '*/30',
         'hour' => '*',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*'
+    ),
+    array(
+        'classname' => 'core\task\search_optimize_task',
+        'blocking' => 0,
+        'minute' => '15',
+        'hour' => '*/12',
         'day' => '*',
         'dayofweek' => '*',
         'month' => '*'
@@ -310,5 +319,23 @@ $tasks = array(
         'day' => '*',
         'dayofweek' => '*',
         'month' => '*'
-    )
+    ),
+    array(
+        'classname' => 'core\task\complete_plans_task',
+        'blocking' => 0,
+        'minute' => 'R',
+        'hour' => '*',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*'
+    ),
+    array(
+        'classname' => 'core\task\sync_plans_from_template_cohorts_task',
+        'blocking' => 0,
+        'minute' => 'R',
+        'hour' => '*',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*'
+    ),
 );

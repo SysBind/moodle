@@ -126,7 +126,7 @@ body.jsenabled .questionflagcheckbox {
     background: #ddd;
     text-align: center;
     vertical-align: middle;
-    line-height: 1.5em !important;
+    line-height: 1.5em;
     font-weight: bold;
     text-decoration: none;
 }
@@ -647,6 +647,14 @@ table.quizreviewsummary td.cell {
 }
 #page-mod-quiz-edit .section-heading .sectioninstance {
     position: relative;
+}
+#page-mod-quiz-edit .section-heading .instancesection {
+    white-space: nowrap;
+    max-width: 72%;
+    display: inline-block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    vertical-align: bottom;
 }
 #page-mod-quiz-edit .section-heading form {
     display: inline;

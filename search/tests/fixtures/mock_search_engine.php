@@ -37,15 +37,11 @@ class engine extends \core_search\engine {
         return true;
     }
 
-    public function add_document($doc) {
+    public function add_document($document, $fileindexing = false) {
         // No need to implement.
     }
 
-    public function commit() {
-        // No need to implement.
-    }
-
-    public function execute_query($data, $usercontexts) {
+    public function execute_query($data, $usercontexts, $limit = 0) {
         // No need to implement.
     }
 
@@ -59,5 +55,9 @@ class engine extends \core_search\engine {
 
     public function get_search_area($areaid) {
         return parent::get_search_area($areaid);
+    }
+
+    public function get_query_total_count() {
+        return 0;
     }
 }

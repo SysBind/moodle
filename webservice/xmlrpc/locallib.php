@@ -78,16 +78,15 @@ class webservice_xmlrpc_server extends webservice_base_server {
 
         // Decode the request to get the decoded parameters and the name of the method to be called.
         $decodedparams = xmlrpc_decode_request($rawpostdata, $methodname);
+        $methodinfo = external_api::external_function_info($methodname);
+        $methodparams = array_keys($methodinfo->parameters_desc->keys);
 
         // Add the decoded parameters to the methodvariables array.
         if (is_array($decodedparams)) {
-            foreach ($decodedparams as $param) {
-                // Check if decoded param is an associative array.
-                if (is_array($param) && array_keys($param) !== range(0, count($param) - 1)) {
-                    $methodvariables = array_merge($methodvariables, $param);
-                } else {
-                    $methodvariables[] = $param;
-                }
+            foreach ($decodedparams as $index => $param) {
+                // See MDL-53962 - XML-RPC requests will usually be sent as an array (as in, one with indicies).
+                // We need to use a bit of "magic" to add the correct index back. Zend used to do this for us.
+                $methodvariables[$methodparams[$index]] = $param;
             }
         }
 
@@ -192,39 +191,6 @@ class webservice_xmlrpc_server extends webservice_base_server {
         );
 
         return xmlrpc_encode_request(null, $fault, $encodingoptions);
-    }
-}
-
-/**
- * The Zend XMLRPC server but with a fault that return debuginfo.
- *
- * MDL-52209: Since Zend is being removed from Moodle, this class will be deprecated and eventually removed.
- * Please use webservice_xmlrpc_server instead.
- *
- * @package    webservice_xmlrpc
- * @copyright  2011 Jerome Mouneyrac
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @since Moodle 2.2
- * @deprecated since 3.1, see {@link webservice_xmlrpc_server}.
- */
-class moodle_zend_xmlrpc_server extends webservice_xmlrpc_server {
-
-    /**
-     * Raise an xmlrpc server fault.
-     *
-     * Moodle note: the difference with the Zend server is that we throw a plain PHP Exception
-     * with the debuginfo integrated to the exception message when DEBUG >= NORMAL.
-     *
-     * @param string|Exception $fault
-     * @param int $code
-     * @return Zend_XmlRpc_Server_Fault
-     * @deprecated since 3.1, see {@link webservice_xmlrpc_server::generate_error()}.
-     */
-    public function fault($fault = null, $code = 404) {
-        debugging('moodle_zend_xmlrpc_server::fault() is deprecated, please use ' .
-            'webservice_xmlrpc_server::generate_error() instead.', DEBUG_DEVELOPER);
-
-        return $this->generate_error($fault, $code);
     }
 }
 

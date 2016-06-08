@@ -1647,6 +1647,8 @@
       </PHP_EXTENSION>
       <PHP_EXTENSION name="xml" level="required">
       </PHP_EXTENSION>
+      <PHP_EXTENSION name="xmlreader" level="required">
+      </PHP_EXTENSION>
       <PHP_EXTENSION name="intl" level="optional">
         <FEEDBACK>
           <ON_CHECK message="intlrecommended" />
@@ -1692,6 +1694,11 @@
       <CUSTOM_CHECK file="lib/upgradelib.php" function="check_database_tables_row_format" level="optional">
         <FEEDBACK>
           <ON_CHECK message="unsupporteddbtablerowformat" />
+        </FEEDBACK>
+      </CUSTOM_CHECK>
+      <CUSTOM_CHECK file="lib/upgradelib.php" function="check_unoconv_version" level="optional">
+        <FEEDBACK>
+          <ON_CHECK message="unoconvwarning" />
         </FEEDBACK>
       </CUSTOM_CHECK>
     </CUSTOM_CHECKS>

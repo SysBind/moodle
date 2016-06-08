@@ -114,6 +114,10 @@ YUI.add('moodle-enrol_manual-quickenrolment', function(Y) {
                                         .append(create('<select><option value="0" selected="selected">'+M.util.get_string('unlimitedduration', 'enrol')+'</option></select>')))
                                 )
                             )
+                            .append(create('<div class="'+CSS.SEARCH+'"><label for="enrolusersearch" class="accesshide">'+M.util.get_string('usersearch', 'enrol')+'</label></div>')
+                                .append(create('<input type="text" id="enrolusersearch" value="" />'))
+                                .append(create('<input type="button" id="searchbtn" class="'+CSS.SEARCHBTN+'" value="'+M.util.get_string('usersearch', 'enrol')+'" />'))
+                            )
                         )
                         .append(create('<div class="'+CSS.AJAXCONTENT+'"></div>'))
                         .append(create('<div class="'+CSS.LIGHTBOX+' '+CSS.HIDDEN+'"></div>')
@@ -121,10 +125,6 @@ YUI.add('moodle-enrol_manual-quickenrolment', function(Y) {
                                 .setAttribute('src', M.util.image_url('i/loading', 'moodle')))
                             .setStyle('opacity', 0.5)))
                     .append(create('<div class="'+CSS.FOOTER+'"></div>')
-                        .append(create('<div class="'+CSS.SEARCH+'"><label for="enrolusersearch" class="accesshide">'+M.util.get_string('usersearch', 'enrol')+'</label></div>')
-                            .append(create('<input type="text" id="enrolusersearch" value="" />'))
-                                .append(create('<input type="button" id="searchbtn" class="'+CSS.SEARCHBTN+'" value="'+M.util.get_string('usersearch', 'enrol')+'" />'))
-                        )
                         .append(create('<div class="'+CSS.CLOSEBTN+'"></div>')
                             .append(create('<input type="button" value="'+M.util.get_string('finishenrollingusers', 'enrol')+'" />'))
                         )
@@ -227,6 +227,7 @@ YUI.add('moodle-enrol_manual-quickenrolment', function(Y) {
         populateDuration : function() {
             var select = this.get(UEP.BASE).one('.'+CSS.ENROLMENTOPTION+'.'+CSS.DURATION+' select');
             var defaultvalue = this.get(UEP.DEFAULTDURATION);
+            var prefix = Math.round(defaultvalue) != defaultvalue ? '≈' : '';
             var index = 0, count = 0;
             var durationdays = M.util.get_string('durationdays', 'enrol', '{a}');
             for (var i = 1; i <= 365; i++) {
@@ -236,6 +237,11 @@ YUI.add('moodle-enrol_manual-quickenrolment', function(Y) {
                     index = count;
                 }
                 select.append(option);
+            }
+            if (!index && defaultvalue > 0) {
+                select.append(create('<option value="'+defaultvalue+'">'+durationdays.replace('{a}',
+                    prefix + (Math.round(defaultvalue * 100) / 100))+'</option>'));
+                index = ++count;
             }
             select.set('selectedIndex', index);
         },

@@ -48,13 +48,6 @@ class core_course_externallib_testcase extends externallib_advanced_testcase {
     }
 
     /**
-     * Tidy up open files that may be left open.
-     */
-    protected function tearDown() {
-        gc_collect_cycles();
-    }
-
-    /**
      * Test create_categories
      */
     public function test_create_categories() {
@@ -561,6 +554,7 @@ class core_course_externallib_testcase extends externallib_advanced_testcase {
             $dbcourse = $generatedcourses[$course['id']];
             $this->assertEquals($course['idnumber'], $dbcourse->idnumber);
             $this->assertEquals($course['fullname'], $dbcourse->fullname);
+            $this->assertEquals($course['displayname'], get_course_display_name_for_list($dbcourse));
             // Summary was converted to the HTML format.
             $this->assertEquals($course['summary'], format_text($dbcourse->summary, FORMAT_MOODLE, array('para' => false)));
             $this->assertEquals($course['summaryformat'], FORMAT_HTML);
@@ -652,6 +646,14 @@ class core_course_externallib_testcase extends externallib_advanced_testcase {
 
         // Now as a normal user.
         $user = self::getDataGenerator()->create_user();
+
+        // Add a 3rd, hidden, course we shouldn't see, even when enrolled as student.
+        $coursedata3['fullname'] = 'HIDDEN COURSE';
+        $coursedata3['visible'] = 0;
+        $course3  = self::getDataGenerator()->create_course($coursedata3);
+        $this->getDataGenerator()->enrol_user($user->id, $course3->id, 'student');
+
+        $this->getDataGenerator()->enrol_user($user->id, $course2->id, 'student');
         $this->setUser($user);
 
         $results = core_course_external::search_courses('search', 'FIRST');
@@ -659,6 +661,19 @@ class core_course_externallib_testcase extends externallib_advanced_testcase {
         $this->assertCount(1, $results['courses']);
         $this->assertEquals(1, $results['total']);
         $this->assertEquals($coursedata1['fullname'], $results['courses'][0]['fullname']);
+
+        // Check that we can see both without the limit to enrolled setting.
+        $results = core_course_external::search_courses('search', 'COURSE', 0, 0, array(), 0);
+        $results = external_api::clean_returnvalue(core_course_external::search_courses_returns(), $results);
+        $this->assertCount(2, $results['courses']);
+        $this->assertEquals(2, $results['total']);
+
+        // Check that we only see our enrolled course when limiting.
+        $results = core_course_external::search_courses('search', 'COURSE', 0, 0, array(), 1);
+        $results = external_api::clean_returnvalue(core_course_external::search_courses_returns(), $results);
+        $this->assertCount(1, $results['courses']);
+        $this->assertEquals(1, $results['total']);
+        $this->assertEquals($coursedata2['fullname'], $results['courses'][0]['fullname']);
 
         // Search by block (use news_items default block). Should fail (only admins allowed).
         $this->setExpectedException('required_capability_exception');

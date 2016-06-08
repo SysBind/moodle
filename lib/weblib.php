@@ -760,7 +760,6 @@ class moodle_url {
         if ($forcedownload) {
             $params['forcedownload'] = 1;
         }
-        $path = rtrim($path, '/');
         $url = new moodle_url($urlbase, $params);
         $url->set_slashargument($path);
         return $url;
@@ -1175,6 +1174,7 @@ function format_text_menu() {
  *                      with the class no-overflow before being returned. Default false.
  *      allowid     :   If true then id attributes will not be removed, even when
  *                      using htmlpurifier. Default false.
+ *      blanktarget :   If true all <a> tags will have target="_blank" added unless target is explicitly specified.
  * </pre>
  *
  * @staticvar array $croncache
@@ -1222,6 +1222,7 @@ function format_text($text, $format = FORMAT_MOODLE, $options = null, $courseidd
     if (!isset($options['overflowdiv'])) {
         $options['overflowdiv'] = false;
     }
+    $options['blanktarget'] = !empty($options['blanktarget']);
 
     // Calculate best context.
     if (empty($CFG->version) or $CFG->version < 2013051400 or during_initial_install()) {
@@ -1316,6 +1317,26 @@ function format_text($text, $format = FORMAT_MOODLE, $options = null, $courseidd
 
     if (!empty($options['overflowdiv'])) {
         $text = html_writer::tag('div', $text, array('class' => 'no-overflow'));
+    }
+
+    if ($options['blanktarget']) {
+        $domdoc = new DOMDocument();
+        $domdoc->loadHTML($text);
+        foreach ($domdoc->getElementsByTagName('a') as $link) {
+            if ($link->hasAttribute('target') && strpos($link->getAttribute('target'), '_blank') === false) {
+                continue;
+            }
+            $link->setAttribute('target', '_blank');
+            if (strpos($link->getAttribute('rel'), 'noreferrer') === false) {
+                $link->setAttribute('rel', trim($link->getAttribute('rel') . ' noreferrer'));
+            }
+        }
+
+        // This regex is nasty and I don't like it. The correct way to solve this is by loading the HTML like so:
+        // $domdoc->loadHTML($text, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD); however it seems like the libxml
+        // version that travis uses doesn't work properly and ends up leaving <html><body>, so I'm forced to use
+        // this regex to remove those tags.
+        $text = trim(preg_replace('~<(?:!DOCTYPE|/?(?:html|body))[^>]*>\s*~i', '', $domdoc->saveHTML()));
     }
 
     return $text;
@@ -1754,7 +1775,7 @@ function purify_html($text, $options = array()) {
         $config = HTMLPurifier_Config::createDefault();
 
         $config->set('HTML.DefinitionID', 'moodlehtml');
-        $config->set('HTML.DefinitionRev', 3);
+        $config->set('HTML.DefinitionRev', 4);
         $config->set('Cache.SerializerPath', $cachedir);
         $config->set('Cache.SerializerPermissions', $CFG->directorypermissions);
         $config->set('Core.NormalizeNewlines', false);
@@ -1796,6 +1817,9 @@ function purify_html($text, $options = array()) {
 
             // Use the built-in Ruby module to add annotation support.
             $def->manager->addModule(new HTMLPurifier_HTMLModule_Ruby());
+
+            // Use the custom Noreferrer module.
+            $def->manager->addModule(new HTMLPurifier_HTMLModule_Noreferrer());
         }
 
         $purifier = new HTMLPurifier($config);
@@ -1915,24 +1939,35 @@ function html_to_text($html, $width = 75, $dolinks = true) {
 }
 
 /**
- * Converts content introduced in an editor to plain text.
+ * Converts texts or strings to plain text.
+ *
+ * - When used to convert user input introduced in an editor the text format needs to be passed in $contentformat like we usually
+ *   do in format_text.
+ * - When this function is used for strings that are usually passed through format_string before displaying them
+ *   we need to set $contentformat to false. This will execute html_to_text as these strings can contain multilang tags if
+ *   multilang filter is applied to headings.
  *
  * @param string $content The text as entered by the user
- * @param int $contentformat The text format: FORMAT_MOODLE, FORMAT_HTML, FORMAT_PLAIN or FORMAT_MARKDOWN
+ * @param int|false $contentformat False for strings or the text format: FORMAT_MOODLE/FORMAT_HTML/FORMAT_PLAIN/FORMAT_MARKDOWN
  * @return string Plain text.
  */
 function content_to_text($content, $contentformat) {
 
     switch ($contentformat) {
         case FORMAT_PLAIN:
-            return $content;
+            // Nothing here.
+            break;
         case FORMAT_MARKDOWN:
-            $html = markdown_to_html($content);
-            return html_to_text($html, 75, false);
+            $content = markdown_to_html($content);
+            $content = html_to_text($content, 75, false);
+            break;
         default:
-            // FORMAT_HTML and FORMAT_MOODLE.
-            return html_to_text($content, 75, false);
+            // FORMAT_HTML, FORMAT_MOODLE and $contentformat = false, the later one are strings usually formatted through
+            // format_string, we need to convert them from html because they can contain HTML (multilang filter).
+            $content = html_to_text($content, 75, false);
     }
+
+    return trim($content, "\r\n ");
 }
 
 /**
@@ -3659,5 +3694,5 @@ function get_formatted_help_string($identifier, $component, $ajax = false, $a = 
  * @return string HTML to prevent password autofill
  */
 function prevent_form_autofill_password() {
-    return '<div class="hide"><input type="password" /></div>';
+    return '<div class="hide"><input type="text" class="ignoredirty" /><input type="password" class="ignoredirty" /></div>';
 }

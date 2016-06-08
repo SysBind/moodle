@@ -54,9 +54,15 @@ $observers = array(
         'eventname'   => '\core\event\user_updated',
         'callback'    => 'core_badges_observer::profile_criteria_review',
     ),
+
+    // Competencies.
     array(
-        'eventname'   => '\core\event\search_indexed',
-        'callback'    => 'core_search_observer::invalidate_caches',
+        'eventname'   => '\core\event\course_completed',
+        'callback'    => 'core_competency\api::observe_course_completed',
+    ),
+    array(
+        'eventname'   => '\core\event\course_module_completion_updated',
+        'callback'    => 'core_competency\api::observe_course_module_completion_updated',
     ),
 );
 

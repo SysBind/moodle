@@ -39,6 +39,7 @@ class search extends \moodleform {
         global $CFG;
 
         $mform =& $this->_form;
+        $mform->disable_form_change_checker();
         $mform->addElement('header', 'search', get_string('search', 'search'));
 
         // Help info depends on the selected search engine.
@@ -56,11 +57,23 @@ class search extends \moodleform {
         $search = \core_search\manager::instance();
 
         $searchareas = \core_search\manager::get_search_areas_list(true);
-        $areanames = array('' => get_string('allareas', 'search'));
+        $areanames = array();
         foreach ($searchareas as $areaid => $searcharea) {
             $areanames[$areaid] = $searcharea->get_visible_name();
         }
-        $mform->addElement('select', 'areaid', get_string('searcharea', 'search'), $areanames);
+        $options = array(
+            'multiple' => true,
+            'noselectionstring' => get_string('allareas', 'search'),
+        );
+        $mform->addElement('autocomplete', 'areaids', get_string('searcharea', 'search'), $areanames, $options);
+
+        $options = array(
+            'multiple' => true,
+            'limittoenrolled' => !is_siteadmin(),
+            'noselectionstring' => get_string('allcourses', 'search'),
+        );
+        $mform->addElement('course', 'courseids', get_string('courses', 'core'), $options);
+        $mform->setType('courseids', PARAM_INT);
 
         $mform->addElement('date_time_selector', 'timestart', get_string('fromtime', 'search'), array('optional' => true));
         $mform->setDefault('timestart', 0);

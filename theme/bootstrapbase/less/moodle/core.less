@@ -501,6 +501,17 @@ a.skip:active {
 .groupselector label {
     display: inline-block;
 }
+// Data format selector
+.dataformatselector {
+    margin: 1em 0;
+}
+.dataformatselector label {
+    display: inline-block;
+    margin: 0 5px 10px 0;
+    line-height: 30px;
+    vertical-align: top;
+}
+
 // Login
 .loginbox {
     margin: 15px;
@@ -829,6 +840,15 @@ tr.flagged-tag a {
 .tag-management-table .inplaceeditable.inplaceeditingon input {
     width: 150px;
 }
+.path-admin-tag .addstandardtags {
+    float: right;
+    img {
+        margin: 0 5px;
+    }
+}
+.dir-rtl.path-admin-tag .addstandardtags {
+    float: left;
+}
 .path-tag .tag-relatedtags {
     padding-top: 10px;
 }
@@ -1080,8 +1100,12 @@ tr.flagged-tag a {
 .userenrolment .subfield {
     margin-right: 5px;
 }
+.userenrolment .col_userdetails .subfield {
+    margin-left: 40px;
+}
 .userenrolment .col_userdetails .subfield_picture {
     float: left;
+    margin-left: 0;
 }
 .userenrolment .col_lastseen {
     width: 150px;
@@ -1194,8 +1218,13 @@ tr.flagged-tag a {
 .dir-rtl {
     &#page-enrol-users {
         .col_userdetails {
+            .subfield {
+                margin-right: 40px;
+                margin-left: 5px;
+            }
             .subfield_picture {
                 float: right;
+                margin-right: 0;
             }
         }
         .enrol_user_buttons {
@@ -2439,20 +2468,6 @@ dd:after {
     cursor: pointer;
 }
 
-span.inplaceeditable.inplaceeditingon {
-    position: relative;
-}
-span.inplaceeditable.inplaceeditingon span.editinstructions {
-    margin-top: -30px;
-    font-weight: normal;
-    margin-right: -300px;
-    margin-left: 0;
-}
-.dir-rtl span.inplaceeditable.inplaceeditingon span.editinstructions {
-    margin-left: -300px;
-    margin-right: 0;
-}
-
 .inplaceeditable {
 
     &.inplaceeditingon {
@@ -2461,8 +2476,11 @@ span.inplaceeditable.inplaceeditingon span.editinstructions {
         .editinstructions {
             margin-top: -30px;
             font-weight: normal;
-            margin-right: -300px;
+            margin-right: 0;
             margin-left: 0;
+            left: 0;
+            right: auto;
+            white-space: nowrap;
         }
 
         input {
@@ -2496,11 +2514,13 @@ span.inplaceeditable.inplaceeditingon span.editinstructions {
     }
 }
 
-.dir-rtl .inplaceeditable {
-    &.inplaceeditingon {
-        .editinstructions {
-            margin-left: -300px;
-            margin-right: 0;
+.dir-rtl {
+    .inplaceeditable {
+        &.inplaceeditingon {
+            .editinstructions {
+                right: 0;
+                left: auto;
+            }
         }
     }
 }

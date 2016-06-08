@@ -980,20 +980,17 @@ function load_course_context($userid, context_course $coursecontext, &$accessdat
     }
 
     // now get overrides of interesting roles in all interesting contexts (this course + children + parents)
-    $params = array('c'=>$coursecontext->id);
+    $params = array('pathprefix' => $coursecontext->path . '/%');
     list($parentsaself, $rparams) = $DB->get_in_or_equal($coursecontext->get_parent_context_ids(true), SQL_PARAMS_NAMED, 'pc_');
     $params = array_merge($params, $rparams);
     list($roleids, $rparams) = $DB->get_in_or_equal($roles, SQL_PARAMS_NAMED, 'r_');
     $params = array_merge($params, $rparams);
 
     $sql = "SELECT ctx.path, rc.roleid, rc.capability, rc.permission
-                 FROM {role_capabilities} rc
-                 JOIN {context} ctx
-                      ON (ctx.id = rc.contextid)
-                 JOIN {context} cctx
-                      ON (cctx.id = :c
-                          AND (ctx.id $parentsaself OR ctx.path LIKE ".$DB->sql_concat('cctx.path',"'/%'")."))
+                 FROM {context} ctx
+                 JOIN {role_capabilities} rc ON rc.contextid = ctx.id
                 WHERE rc.roleid $roleids
+                  AND (ctx.id $parentsaself OR ctx.path LIKE :pathprefix)
              ORDER BY rc.capability"; // fixed capability order is necessary for rdef dedupe
     $rs = $DB->get_recordset_sql($sql, $params);
 
@@ -4110,8 +4107,7 @@ function sort_by_roleassignment_authority($users, context $context, $roles = arr
  * system is more flexible. If you really need, you can to use this
  * function but consider has_capability() as a possible substitute.
  *
- * The caller function is responsible for including all the
- * $sort fields in $fields param.
+ * All $sort fields are added into $fields if not present there yet.
  *
  * If $roleid is an array or is empty (all roles) you need to set $fields
  * (and $sort by extension) params according to it, as the first field
@@ -4207,6 +4203,24 @@ function get_role_users($roleid, context $context, $parent = false, $fields = ''
     if (!$sort) {
         list($sort, $sortparams) = users_order_by_sql('u');
         $params = array_merge($params, $sortparams);
+    }
+
+    // Adding the fields from $sort that are not present in $fields.
+    $sortarray = preg_split('/,\s*/', $sort);
+    $fieldsarray = preg_split('/,\s*/', $fields);
+    $addedfields = array();
+    foreach ($sortarray as $sortfield) {
+        // Throw away any additional arguments to the sort (e.g. ASC/DESC).
+        list ($sortfield) = explode(' ', $sortfield);
+        if (!in_array($sortfield, $fieldsarray)) {
+            $fieldsarray[] = $sortfield;
+            $addedfields[] = $sortfield;
+        }
+    }
+    $fields = implode(', ', $fieldsarray);
+    if (!empty($addedfields)) {
+        $addedfields = implode(', ', $addedfields);
+        debugging('get_role_users() adding '.$addedfields.' to the query result because they were required by $sort but missing in $fields');
     }
 
     if ($all === null) {

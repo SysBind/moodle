@@ -120,8 +120,8 @@ abstract class assign_feedback_plugin extends assign_plugin {
      * @return boolean - True if the form element has been modified.
      */
     public function is_feedback_modified(stdClass $grade, stdClass $data) {
-        debugging('This plugin has not overwritten the is_feedback_modified() method. Please add this method to your plugin',
-                DEBUG_DEVELOPER);
+        debugging('This plugin (' . $this->get_name() . ') has not overwritten the is_feedback_modified() method.
+                Please add this method to your plugin', DEBUG_DEVELOPER);
         return true;
     }
 
@@ -165,6 +165,15 @@ abstract class assign_feedback_plugin extends assign_plugin {
      */
     public function grading_action($gradingaction) {
         return '';
+    }
+
+    /**
+     * Supports injecting content into the review panel of the grading app.
+     *
+     * @return bool True if this plugin will add content to the review panel of the grading app.
+     */
+    public function supports_review_panel() {
+        return false;
     }
 
     /**

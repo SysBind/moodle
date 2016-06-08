@@ -371,6 +371,11 @@ function upgrade_stale_php_files_present() {
     global $CFG;
 
     $someexamplesofremovedfiles = array(
+        // Removed in 3.1.
+        '/lib/classes/log/sql_internal_reader.php',
+        '/lib/zend/',
+        '/mod/forum/pix/icon.gif',
+        '/tag/templates/tagname.mustache',
         // Removed in 3.0.
         '/mod/lti/grade.php',
         '/tag/coursetagslib.php',
@@ -1080,6 +1085,28 @@ function external_update_descriptions($component) {
             $dbfunction->capabilities = $functioncapabilities;
             $update = true;
         }
+
+        if (isset($function['services']) and is_array($function['services'])) {
+            sort($function['services']);
+            $functionservices = implode(',', $function['services']);
+        } else {
+            // Force null values in the DB.
+            $functionservices = null;
+        }
+
+        if ($dbfunction->services != $functionservices) {
+            // Now, we need to check if services were removed, in that case we need to remove the function from them.
+            $servicesremoved = array_diff(explode(",", $dbfunction->services), explode(",", $functionservices));
+            foreach ($servicesremoved as $removedshortname) {
+                if ($externalserviceid = $DB->get_field('external_services', 'id', array("shortname" => $removedshortname))) {
+                    $DB->delete_records('external_services_functions', array('functionname' => $dbfunction->name,
+                                                                                'externalserviceid' => $externalserviceid));
+                }
+            }
+
+            $dbfunction->services = $functionservices;
+            $update = true;
+        }
         if ($update) {
             $DB->update_record('external_functions', $dbfunction);
         }
@@ -1092,6 +1119,15 @@ function external_update_descriptions($component) {
         $dbfunction->classpath  = empty($function['classpath']) ? null : $function['classpath'];
         $dbfunction->component  = $component;
         $dbfunction->capabilities = array_key_exists('capabilities', $function)?$function['capabilities']:'';
+
+        if (isset($function['services']) and is_array($function['services'])) {
+            sort($function['services']);
+            $dbfunction->services = implode(',', $function['services']);
+        } else {
+            // Force null values in the DB.
+            $dbfunction->services = null;
+        }
+
         $dbfunction->id = $DB->insert_record('external_functions', $dbfunction);
     }
     unset($functions);
@@ -1196,6 +1232,52 @@ function external_update_descriptions($component) {
             $newf->externalserviceid = $dbservice->id;
             $newf->functionname      = $fname;
             $DB->insert_record('external_services_functions', $newf);
+        }
+    }
+}
+
+/**
+ * Allow plugins and subsystems to add external functions to other plugins or built-in services.
+ * This function is executed just after all the plugins have been updated.
+ */
+function external_update_services() {
+    global $DB;
+
+    // Look for external functions that want to be added in existing services.
+    $functions = $DB->get_records_select('external_functions', 'services IS NOT NULL');
+
+    $servicescache = array();
+    foreach ($functions as $function) {
+        // Prevent edge cases.
+        if (empty($function->services)) {
+            continue;
+        }
+        $services = explode(',', $function->services);
+
+        foreach ($services as $serviceshortname) {
+            // Get the service id by shortname.
+            if (!empty($servicescache[$serviceshortname])) {
+                $serviceid = $servicescache[$serviceshortname];
+            } else if ($service = $DB->get_record('external_services', array('shortname' => $serviceshortname))) {
+                // If the component is empty, it means that is not a built-in service.
+                // We don't allow functions to inject themselves in services created by an user in Moodle.
+                if (empty($service->component)) {
+                    continue;
+                }
+                $serviceid = $service->id;
+                $servicescache[$serviceshortname] = $serviceid;
+            } else {
+                // Service not found.
+                continue;
+            }
+            // Finally add the function to the service.
+            $newf = new stdClass();
+            $newf->externalserviceid = $serviceid;
+            $newf->functionname      = $function->name;
+
+            if (!$DB->record_exists('external_services_functions', (array)$newf)) {
+                $DB->insert_record('external_services_functions', $newf);
+            }
         }
     }
 }
@@ -1444,7 +1526,9 @@ function print_upgrade_part_end($plugin, $installation, $verbose) {
         }
     }
     if ($verbose) {
-        echo $OUTPUT->notification(get_string('success'), 'notifysuccess');
+        $notification = new \core\output\notification(get_string('success'), \core\output\notification::NOTIFY_SUCCESS);
+        $notification->set_show_closebutton(false);
+        echo $OUTPUT->render($notification);
         print_upgrade_separator();
     }
 }
@@ -1657,6 +1741,10 @@ function upgrade_noncore($verbose) {
         foreach ($plugintypes as $type=>$location) {
             upgrade_plugins($type, 'print_upgrade_part_start', 'print_upgrade_part_end', $verbose);
         }
+        // Upgrade services.
+        // This function gives plugins and subsystems a chance to add functions to existing built-in services.
+        external_update_services();
+
         // Update cache definitions. Involves scanning each plugin for any changes.
         cache_helper::update_definitions();
         // Mark the site as upgraded.
@@ -1748,7 +1836,6 @@ function upgrade_plugin_mnet_functions($component) {
     }
 
     // reflect all the services we're publishing and save them
-    require_once($CFG->dirroot . '/lib/zend/Zend/Server/Reflection.php');
     static $cachedclasses = array(); // to store reflection information in
     foreach ($publishes as $service => $data) {
         $f = $data['filename'];
@@ -1781,8 +1868,8 @@ function upgrade_plugin_mnet_functions($component) {
                 $key = $dataobject->filename . '|' . $dataobject->classname;
                 if (!array_key_exists($key, $cachedclasses)) { // look to see if we've already got a reflection object
                     try {
-                        $cachedclasses[$key] = Zend_Server_Reflection::reflectClass($dataobject->classname);
-                    } catch (Zend_Server_Reflection_Exception $e) { // catch these and rethrow them to something more helpful
+                        $cachedclasses[$key] = new ReflectionClass($dataobject->classname);
+                    } catch (ReflectionException $e) { // catch these and rethrow them to something more helpful
                         throw new moodle_exception('installreflectionclasserror', 'mnet', '', (object)array('method' => $dataobject->functionname, 'class' => $dataobject->classname, 'error' => $e->getMessage()));
                     }
                 }
@@ -1790,27 +1877,20 @@ function upgrade_plugin_mnet_functions($component) {
                 if (!$r->hasMethod($dataobject->functionname)) {
                     throw new moodle_exception('installnosuchmethod', 'mnet', '', (object)array('method' => $dataobject->functionname, 'class' => $dataobject->classname));
                 }
-                // stupid workaround for zend not having a getMethod($name) function
-                $ms = $r->getMethods();
-                foreach ($ms as $m) {
-                    if ($m->getName() == $dataobject->functionname) {
-                        $functionreflect = $m;
-                        break;
-                    }
-                }
+                $functionreflect = $r->getMethod($dataobject->functionname);
                 $dataobject->static = (int)$functionreflect->isStatic();
             } else {
                 if (!function_exists($dataobject->functionname)) {
                     throw new moodle_exception('installnosuchfunction', 'mnet', '', (object)array('method' => $dataobject->functionname, 'file' => $dataobject->filename));
                 }
                 try {
-                    $functionreflect = Zend_Server_Reflection::reflectFunction($dataobject->functionname);
-                } catch (Zend_Server_Reflection_Exception $e) { // catch these and rethrow them to something more helpful
+                    $functionreflect = new ReflectionFunction($dataobject->functionname);
+                } catch (ReflectionException $e) { // catch these and rethrow them to something more helpful
                     throw new moodle_exception('installreflectionfunctionerror', 'mnet', '', (object)array('method' => $dataobject->functionname, '' => $dataobject->filename, 'error' => $e->getMessage()));
                 }
             }
             $dataobject->profile =  serialize(admin_mnet_method_profile($functionreflect));
-            $dataobject->help = $functionreflect->getDescription();
+            $dataobject->help = admin_mnet_method_get_help($functionreflect);
 
             if ($record_exists = $DB->get_record('mnet_rpc', array('xmlrpcpath'=>$dataobject->xmlrpcpath))) {
                 $dataobject->id      = $record_exists->id;
@@ -1888,31 +1968,74 @@ function upgrade_plugin_mnet_functions($component) {
 }
 
 /**
- * Given some sort of Zend Reflection function/method object, return a profile array, ready to be serialized and stored
+ * Given some sort of reflection function/method object, return a profile array, ready to be serialized and stored
  *
- * @param Zend_Server_Reflection_Function_Abstract $function can be any subclass of this object type
+ * @param ReflectionFunctionAbstract $function reflection function/method object from which to extract information
  *
- * @return array
+ * @return array associative array with function/method information
  */
-function admin_mnet_method_profile(Zend_Server_Reflection_Function_Abstract $function) {
-    $protos = $function->getPrototypes();
-    $proto = array_pop($protos);
-    $ret = $proto->getReturnValue();
-    $profile = array(
-        'parameters' =>  array(),
-        'return'     =>  array(
-            'type'        => $ret->getType(),
-            'description' => $ret->getDescription(),
-        ),
+function admin_mnet_method_profile(ReflectionFunctionAbstract $function) {
+    $commentlines = admin_mnet_method_get_docblock($function);
+    $getkey = function($key) use ($commentlines) {
+        return array_values(array_filter($commentlines, function($line) use ($key) {
+            return $line[0] == $key;
+        }));
+    };
+    $returnline = $getkey('@return');
+    return array (
+        'parameters' => array_map(function($line) {
+            return array(
+                'name' => trim($line[2], " \t\n\r\0\x0B$"),
+                'type' => $line[1],
+                'description' => $line[3]
+            );
+        }, $getkey('@param')),
+
+        'return' => array(
+            'type' => !empty($returnline[0][1]) ? $returnline[0][1] : 'void',
+            'description' => !empty($returnline[0][2]) ? $returnline[0][2] : ''
+        )
     );
-    foreach ($proto->getParameters() as $p) {
-        $profile['parameters'][] = array(
-            'name' => $p->getName(),
-            'type' => $p->getType(),
-            'description' => $p->getDescription(),
-        );
-    }
-    return $profile;
+}
+
+/**
+ * Given some sort of reflection function/method object, return an array of docblock lines, where each line is an array of
+ * keywords/descriptions
+ *
+ * @param ReflectionFunctionAbstract $function reflection function/method object from which to extract information
+ *
+ * @return array docblock converted in to an array
+ */
+function admin_mnet_method_get_docblock(ReflectionFunctionAbstract $function) {
+    return array_map(function($line) {
+        $text = trim($line, " \t\n\r\0\x0B*/");
+        if (strpos($text, '@param') === 0) {
+            return preg_split('/\s+/', $text, 4);
+        }
+
+        if (strpos($text, '@return') === 0) {
+            return preg_split('/\s+/', $text, 3);
+        }
+
+        return array($text);
+    }, explode("\n", $function->getDocComment()));
+}
+
+/**
+ * Given some sort of reflection function/method object, return just the help text
+ *
+ * @param ReflectionFunctionAbstract $function reflection function/method object from which to extract information
+ *
+ * @return string docblock help text
+ */
+function admin_mnet_method_get_help(ReflectionFunctionAbstract $function) {
+    $helplines = array_map(function($line) {
+        return implode(' ', $line);
+    }, array_values(array_filter(admin_mnet_method_get_docblock($function), function($line) {
+        return strpos($line[0], '@') !== 0 && !empty($line[0]);
+    })));
+
+    return implode("\n", $helplines);
 }
 
 /**
@@ -2160,4 +2283,28 @@ function upgrade_install_plugins(array $installable, $confirmed, $heading='', $c
         echo $output->footer();
         die();
     }
+}
+/**
+ * Method used to check the installed unoconv version.
+ *
+ * @param environment_results $result object to update, if relevant.
+ * @return environment_results|null updated results or null if unoconv path is not executable.
+ */
+function check_unoconv_version(environment_results $result) {
+    global $CFG;
+
+    if (!during_initial_install() && !empty($CFG->pathtounoconv) && file_is_executable(trim($CFG->pathtounoconv))) {
+        $unoconvbin = \escapeshellarg($CFG->pathtounoconv);
+        $command = "$unoconvbin --version";
+        exec($command, $output);
+        preg_match('/([0-9]+\.[0-9]+)/', $output[0], $matches);
+        $currentversion = (float)$matches[0];
+        $supportedversion = 0.7;
+        if ($currentversion < $supportedversion) {
+            $result->setInfo('unoconv version not supported');
+            $result->setStatus(false);
+            return $result;
+        }
+    }
+    return null;
 }

@@ -33,13 +33,6 @@ require_once($CFG->dirroot . '/enrol/imsenterprise/tests/imsenterprise_test.php'
 class core_course_courselib_testcase extends advanced_testcase {
 
     /**
-     * Tidy up open files that may be left open.
-     */
-    protected function tearDown() {
-        gc_collect_cycles();
-    }
-
-    /**
      * Set forum specific test values for calling create_module().
      *
      * @param object $moduleinfo - the moduleinfo to add some specific values - passed in reference.
@@ -1522,9 +1515,12 @@ class core_course_courselib_testcase extends advanced_testcase {
             case 'assign':
                 // Add some tags to this assignment.
                 core_tag_tag::set_item_tags('mod_assign', 'assign', $module->id, $modcontext, array('Tag 1', 'Tag 2', 'Tag 3'));
+                core_tag_tag::set_item_tags('core', 'course_modules', $module->cmid, $modcontext, array('Tag 3', 'Tag 4', 'Tag 5'));
 
                 // Confirm the tag instances were added.
-                $criteria = array('component' => 'mod_assign', 'contextid' => $modcontext->id);
+                $criteria = array('component' => 'mod_assign', 'itemtype' => 'assign', 'contextid' => $modcontext->id);
+                $this->assertEquals(3, $DB->count_records('tag_instance', $criteria));
+                $criteria = array('component' => 'core', 'itemtype' => 'course_modules', 'contextid' => $modcontext->id);
                 $this->assertEquals(3, $DB->count_records('tag_instance', $criteria));
 
                 // Verify event assignment event has been generated.
@@ -1564,6 +1560,9 @@ class core_course_courselib_testcase extends advanced_testcase {
 
                 // Verify the tag instances were deleted.
                 $criteria = array('component' => 'mod_assign', 'contextid' => $modcontext->id);
+                $this->assertEquals(0, $DB->count_records('tag_instance', $criteria));
+
+                $criteria = array('component' => 'core', 'itemtype' => 'course_modules', 'contextid' => $modcontext->id);
                 $this->assertEquals(0, $DB->count_records('tag_instance', $criteria));
                 break;
             case 'quiz':
@@ -1911,7 +1910,6 @@ class core_course_courselib_testcase extends advanced_testcase {
         $filepath = $CFG->dataroot . '/temp/backup/test-restore-course-event';
         $file->extract_to_pathname($fp, $filepath);
         $bc->destroy();
-        unset($bc);
 
         // Now we want to catch the restore course event.
         $sink = $this->redirectEvents();
@@ -1949,7 +1947,6 @@ class core_course_courselib_testcase extends advanced_testcase {
 
         // Destroy the resource controller since we are done using it.
         $rc->destroy();
-        unset($rc);
     }
 
     /**
@@ -2772,5 +2769,148 @@ class core_course_courselib_testcase extends advanced_testcase {
         update_module($formdata);
         $this->assertNull($DB->get_field('course_modules', 'availability',
                 array('id' => $label->cmid)));
+    }
+
+    /**
+     * Test update_inplace_editable()
+     */
+    public function test_update_module_name_inplace() {
+        global $CFG, $DB, $PAGE;
+        require_once($CFG->dirroot . '/lib/external/externallib.php');
+
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $this->resetAfterTest(true);
+        $course = $this->getDataGenerator()->create_course();
+        $forum = self::getDataGenerator()->create_module('forum', array('course' => $course->id, 'name' => 'forum name'));
+
+        // Call service for core_course component without necessary permissions.
+        try {
+            core_external::update_inplace_editable('core_course', 'activityname', $forum->cmid, 'New forum name');
+            $this->fail('Exception expected');
+        } catch (moodle_exception $e) {
+            $this->assertEquals('Course or activity not accessible. (Not enrolled)',
+                $e->getMessage());
+        }
+
+        // Change to admin user and make sure that cm name can be updated using web service update_inplace_editable().
+        $this->setAdminUser();
+        $res = core_external::update_inplace_editable('core_course', 'activityname', $forum->cmid, 'New forum name');
+        $res = external_api::clean_returnvalue(core_external::update_inplace_editable_returns(), $res);
+        $this->assertEquals('New forum name', $res['value']);
+        $this->assertEquals('New forum name', $DB->get_field('forum', 'name', array('id' => $forum->id)));
+    }
+
+    /**
+     * Testing function course_get_tagged_course_modules - search tagged course modules
+     */
+    public function test_course_get_tagged_course_modules() {
+        global $DB;
+        $this->resetAfterTest();
+        $course3 = $this->getDataGenerator()->create_course();
+        $course2 = $this->getDataGenerator()->create_course();
+        $course1 = $this->getDataGenerator()->create_course();
+        $cm11 = $this->getDataGenerator()->create_module('assign', array('course' => $course1->id,
+            'tags' => 'Cat, Dog'));
+        $cm12 = $this->getDataGenerator()->create_module('page', array('course' => $course1->id,
+            'tags' => 'Cat, Mouse', 'visible' => 0));
+        $cm13 = $this->getDataGenerator()->create_module('page', array('course' => $course1->id,
+            'tags' => 'Cat, Mouse, Dog'));
+        $cm21 = $this->getDataGenerator()->create_module('forum', array('course' => $course2->id,
+            'tags' => 'Cat, Mouse'));
+        $cm31 = $this->getDataGenerator()->create_module('forum', array('course' => $course3->id,
+            'tags' => 'Cat, Mouse'));
+
+        // Admin is able to view everything.
+        $this->setAdminUser();
+        $res = course_get_tagged_course_modules(core_tag_tag::get_by_name(0, 'Cat'),
+                /*$exclusivemode = */false, /*$fromctx = */0, /*$ctx = */0, /*$rec = */1, /*$page = */0);
+        $this->assertRegExp('/'.$cm11->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm12->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm13->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm21->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm31->name.'/', $res->content);
+        // Results from course1 are returned before results from course2.
+        $this->assertTrue(strpos($res->content, $cm11->name) < strpos($res->content, $cm21->name));
+
+        // Ordinary user is not able to see anything.
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $res = course_get_tagged_course_modules(core_tag_tag::get_by_name(0, 'Cat'),
+                /*$exclusivemode = */false, /*$fromctx = */0, /*$ctx = */0, /*$rec = */1, /*$page = */0);
+        $this->assertNull($res);
+
+        // Enrol user as student in course1 and course2.
+        $roleids = $DB->get_records_menu('role', null, '', 'shortname, id');
+        $this->getDataGenerator()->enrol_user($user->id, $course1->id, $roleids['student']);
+        $this->getDataGenerator()->enrol_user($user->id, $course2->id, $roleids['student']);
+        core_tag_index_builder::reset_caches();
+
+        // Searching in the course context returns visible modules in this course.
+        $context = context_course::instance($course1->id);
+        $res = course_get_tagged_course_modules(core_tag_tag::get_by_name(0, 'Cat'),
+                /*$exclusivemode = */false, /*$fromctx = */0, /*$ctx = */$context->id, /*$rec = */1, /*$page = */0);
+        $this->assertRegExp('/'.$cm11->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm12->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm13->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm21->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm31->name.'/', $res->content);
+
+        // Searching FROM the course context returns visible modules in all courses.
+        $context = context_course::instance($course2->id);
+        $res = course_get_tagged_course_modules(core_tag_tag::get_by_name(0, 'Cat'),
+                /*$exclusivemode = */false, /*$fromctx = */$context->id, /*$ctx = */0, /*$rec = */1, /*$page = */0);
+        $this->assertRegExp('/'.$cm11->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm12->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm13->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm21->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm31->name.'/', $res->content); // No access to course3.
+        // Results from course2 are returned before results from course1.
+        $this->assertTrue(strpos($res->content, $cm21->name) < strpos($res->content, $cm11->name));
+
+        // Enrol user in course1 as a teacher - now he should be able to see hidden module.
+        $this->getDataGenerator()->enrol_user($user->id, $course1->id, $roleids['editingteacher']);
+        get_fast_modinfo(0,0,true);
+
+        $context = context_course::instance($course1->id);
+        $res = course_get_tagged_course_modules(core_tag_tag::get_by_name(0, 'Cat'),
+                /*$exclusivemode = */false, /*$fromctx = */$context->id, /*$ctx = */0, /*$rec = */1, /*$page = */0);
+        $this->assertRegExp('/'.$cm12->name.'/', $res->content);
+
+        // Create more modules and try pagination.
+        $cm14 = $this->getDataGenerator()->create_module('assign', array('course' => $course1->id,
+            'tags' => 'Cat, Dog'));
+        $cm15 = $this->getDataGenerator()->create_module('page', array('course' => $course1->id,
+            'tags' => 'Cat, Mouse', 'visible' => 0));
+        $cm16 = $this->getDataGenerator()->create_module('page', array('course' => $course1->id,
+            'tags' => 'Cat, Mouse, Dog'));
+
+        $context = context_course::instance($course1->id);
+        $res = course_get_tagged_course_modules(core_tag_tag::get_by_name(0, 'Cat'),
+                /*$exclusivemode = */false, /*$fromctx = */0, /*$ctx = */$context->id, /*$rec = */1, /*$page = */0);
+        $this->assertRegExp('/'.$cm11->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm12->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm13->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm21->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm14->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm15->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm16->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm31->name.'/', $res->content); // No access to course3.
+        $this->assertEmpty($res->prevpageurl);
+        $this->assertNotEmpty($res->nextpageurl);
+
+        $res = course_get_tagged_course_modules(core_tag_tag::get_by_name(0, 'Cat'),
+                /*$exclusivemode = */false, /*$fromctx = */0, /*$ctx = */$context->id, /*$rec = */1, /*$page = */1);
+        $this->assertNotRegExp('/'.$cm11->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm12->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm13->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm21->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm14->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm15->name.'/', $res->content);
+        $this->assertRegExp('/'.$cm16->name.'/', $res->content);
+        $this->assertNotRegExp('/'.$cm31->name.'/', $res->content); // No access to course3.
+        $this->assertNotEmpty($res->prevpageurl);
+        $this->assertEmpty($res->nextpageurl);
     }
 }

@@ -906,6 +906,18 @@ class auth_plugin_db extends auth_plugin_base {
         error_reporting($CFG->debug);
         ob_end_flush();
     }
+
+    /**
+     * Clean the user data that comes from an external database.
+     * @deprecated since 3.1, please use core_user::clean_data() instead.
+     * @param array $user the user data to be validated against properties definition.
+     * @return stdClass $user the cleaned user data.
+     */
+    public function clean_data($user) {
+        debugging('The method clean_data() has been deprecated, please use core_user::clean_data() instead.',
+            DEBUG_DEVELOPER);
+        return core_user::clean_data($user);
+    }
 }
 
 

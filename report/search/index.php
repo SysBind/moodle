@@ -37,8 +37,6 @@ echo $OUTPUT->heading($pagetitle);
 if (\core_search\manager::is_global_search_enabled() === false) {
     $renderer = $PAGE->get_renderer('core_search');
     echo $renderer->render_search_disabled();
-    echo $OUTPUT->footer();
-    exit;
 }
 
 $renderer = $PAGE->get_renderer('report_search');
@@ -66,10 +64,6 @@ if ($data = $mform->get_data()) {
 
         if (!empty($data->all) || $anydelete) {
             echo $OUTPUT->notification(get_string('deleted', 'report_search'), 'notifysuccess');
-
-            // Purge the cache.
-            $cache = \cache::make('core', 'search_results');
-            $cache->purge();
         }
     }
 

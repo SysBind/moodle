@@ -1062,7 +1062,13 @@ class core_renderer extends renderer_base {
         }
         $footer = str_replace($this->unique_performance_info_token, $performanceinfo, $footer);
 
-        $this->page->requires->js_call_amd('core/notification', 'init', array($PAGE->context->id, \core\notification::fetch_as_array($this)));
+        // Only show notifications when we have a $PAGE context id.
+        if (!empty($PAGE->context->id)) {
+            $this->page->requires->js_call_amd('core/notification', 'init', array(
+                $PAGE->context->id,
+                \core\notification::fetch_as_array($this)
+            ));
+        }
         $footer = str_replace($this->unique_end_html_token, $this->page->requires->get_end_code(), $footer);
 
         $this->page->set_state(moodle_page::STATE_DONE);
@@ -1875,6 +1881,48 @@ class core_renderer extends renderer_base {
 
         return $this->render($select);
     }
+
+    /**
+     * Returns a dataformat selection and download form
+     *
+     * @param string $label A text label
+     * @param moodle_url|string $base The download page url
+     * @param string $name The query param which will hold the type of the download
+     * @param array $params Extra params sent to the download page
+     * @return string HTML fragment
+     */
+    public function download_dataformat_selector($label, $base, $name = 'dataformat', $params = array()) {
+
+        $formats = core_plugin_manager::instance()->get_plugins_of_type('dataformat');
+        $options = array();
+        foreach ($formats as $format) {
+            if ($format->is_enabled()) {
+                $options[] = array(
+                    'value' => $format->name,
+                    'label' => get_string('dataformat', $format->component),
+                );
+            }
+        }
+        $hiddenparams = array();
+        foreach ($params as $key => $value) {
+            $hiddenparams[] = array(
+                'name' => $key,
+                'value' => $value,
+            );
+        }
+        $data = array(
+            'label' => $label,
+            'base' => $base,
+            'name' => $name,
+            'params' => $hiddenparams,
+            'options' => $options,
+            'sesskey' => sesskey(),
+            'submit' => get_string('download'),
+        );
+
+        return $this->render_from_template('core/dataformat_selector', $data);
+    }
+
 
     /**
      * Internal implementation of single_select rendering
@@ -3000,7 +3048,7 @@ EOD;
             }
 
             if (!empty($pagingbar->lastlink)) {
-                $output .= ' ...' . $pagingbar->lastlink . ' ';
+                $output .= ' ... ' . $pagingbar->lastlink . ' ';
             }
 
             if (!empty($pagingbar->nextlink)) {
@@ -3377,12 +3425,16 @@ EOD;
                                 array('class' => 'iconsmall')
                             ) . $value->title;
                         }
+
                         $al = new action_menu_link_secondary(
                             $value->url,
                             $pix,
                             $value->title,
                             array('class' => 'icon')
                         );
+                        if (!empty($value->titleidentifier)) {
+                            $al->attributes['data-title'] = $value->titleidentifier;
+                        }
                         $am->add($al);
                         break;
                 }
@@ -3429,8 +3481,11 @@ EOD;
         }
 
         //accessibility: heading for navbar list  (MDL-20446)
-        $navbarcontent = html_writer::tag('span', get_string('pagepath'), array('class'=>'accesshide'));
-        $navbarcontent .= html_writer::tag('nav', html_writer::tag('ul', join('', $htmlblocks)));
+        $navbarcontent = html_writer::tag('span', get_string('pagepath'),
+                array('class' => 'accesshide', 'id' => 'navbar-label'));
+        $navbarcontent .= html_writer::tag('nav',
+                html_writer::tag('ul', join('', $htmlblocks)),
+                array('aria-labelledby' => 'navbar-label'));
         // XHTML
         return $navbarcontent;
     }
@@ -4191,7 +4246,7 @@ EOD;
         $html = html_writer::start_tag('header', array('id' => 'page-header', 'class' => 'clearfix'));
         $html .= $this->context_header();
         $html .= html_writer::start_div('clearfix', array('id' => 'page-navbar'));
-        $html .= html_writer::tag('nav', $this->navbar(), array('class' => 'breadcrumb-nav'));
+        $html .= html_writer::tag('div', $this->navbar(), array('class' => 'breadcrumb-nav'));
         $html .= html_writer::div($this->page_heading_button(), 'breadcrumb-button');
         $html .= html_writer::end_div();
         $html .= html_writer::tag('div', $this->course_header(), array('id' => 'course-header'));
@@ -4317,6 +4372,17 @@ class core_renderer_cli extends core_renderer {
      * footer method to prevent the default footer.
      */
     public function footer() {}
+
+    /**
+     * Render a notification (that is, a status message about something that has
+     * just happened).
+     *
+     * @param \core\output\notification $notification the notification to print out
+     * @return string plain text output
+     */
+    public function render_notification(\core\output\notification $notification) {
+        return $this->notification($notification->get_message(), $notification->get_message_type());
+    }
 }
 
 

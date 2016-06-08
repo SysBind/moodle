@@ -22,7 +22,6 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-
 /**
  * Creates a user
  *
@@ -34,7 +33,7 @@
  * @return int id of the newly created user
  */
 function user_create_user($user, $updatepassword = true, $triggerevent = true) {
-    global $CFG, $DB;
+    global $DB;
 
     // Set the timecreate field to the current time.
     if (!is_object($user)) {
@@ -45,7 +44,7 @@ function user_create_user($user, $updatepassword = true, $triggerevent = true) {
     if ($user->username !== core_text::strtolower($user->username)) {
         throw new moodle_exception('usernamelowercase');
     } else {
-        if ($user->username !== clean_param($user->username, PARAM_USERNAME)) {
+        if ($user->username !== core_user::clean_field($user->username, 'username')) {
             throw new moodle_exception('invalidusername');
         }
     }
@@ -62,38 +61,40 @@ function user_create_user($user, $updatepassword = true, $triggerevent = true) {
         unset($user->password);
     }
 
-    // Make sure calendartype, if set, is valid.
-    if (!empty($user->calendartype)) {
-        $availablecalendartypes = \core_calendar\type_factory::get_list_of_calendar_types();
-        if (empty($availablecalendartypes[$user->calendartype])) {
-            $user->calendartype = $CFG->calendartype;
-        }
-    } else {
-        $user->calendartype = $CFG->calendartype;
-    }
-
     // Apply default values for user preferences that are stored in users table.
+    if (!isset($user->calendartype)) {
+        $user->calendartype = core_user::get_property_default('calendartype');
+    }
     if (!isset($user->maildisplay)) {
-        $user->maildisplay = $CFG->defaultpreference_maildisplay;
+        $user->maildisplay = core_user::get_property_default('maildisplay');
     }
     if (!isset($user->mailformat)) {
-        $user->mailformat = $CFG->defaultpreference_mailformat;
+        $user->mailformat = core_user::get_property_default('mailformat');
     }
     if (!isset($user->maildigest)) {
-        $user->maildigest = $CFG->defaultpreference_maildigest;
+        $user->maildigest = core_user::get_property_default('maildigest');
     }
     if (!isset($user->autosubscribe)) {
-        $user->autosubscribe = $CFG->defaultpreference_autosubscribe;
+        $user->autosubscribe = core_user::get_property_default('autosubscribe');
     }
     if (!isset($user->trackforums)) {
-        $user->trackforums = $CFG->defaultpreference_trackforums;
+        $user->trackforums = core_user::get_property_default('trackforums');
     }
     if (!isset($user->lang)) {
-        $user->lang = $CFG->lang;
+        $user->lang = core_user::get_property_default('lang');
     }
 
     $user->timecreated = time();
     $user->timemodified = $user->timecreated;
+
+    // Validate user data object.
+    $uservalidation = core_user::validate($user);
+    if ($uservalidation !== true) {
+        foreach ($uservalidation as $field => $message) {
+            debugging("The property '$field' has invalid data and has been cleaned.", DEBUG_DEVELOPER);
+            $user->$field = core_user::clean_field($user->$field, $field);
+        }
+    }
 
     // Insert the user into the database.
     $newuserid = $DB->insert_record('user', $user);
@@ -139,7 +140,7 @@ function user_update_user($user, $updatepassword = true, $triggerevent = true) {
         if ($user->username !== core_text::strtolower($user->username)) {
             throw new moodle_exception('usernamelowercase');
         } else {
-            if ($user->username !== clean_param($user->username, PARAM_USERNAME)) {
+            if ($user->username !== core_user::clean_field($user->username, 'username')) {
                 throw new moodle_exception('invalidusername');
             }
         }
@@ -158,18 +159,22 @@ function user_update_user($user, $updatepassword = true, $triggerevent = true) {
     }
 
     // Make sure calendartype, if set, is valid.
-    if (!empty($user->calendartype)) {
-        $availablecalendartypes = \core_calendar\type_factory::get_list_of_calendar_types();
-        // If it doesn't exist, then unset this value, we do not want to update the user's value.
-        if (empty($availablecalendartypes[$user->calendartype])) {
-            unset($user->calendartype);
-        }
-    } else {
+    if (empty($user->calendartype)) {
         // Unset this variable, must be an empty string, which we do not want to update the calendartype to.
         unset($user->calendartype);
     }
 
     $user->timemodified = time();
+
+    // Validate user data object.
+    $uservalidation = core_user::validate($user);
+    if ($uservalidation !== true) {
+        foreach ($uservalidation as $field => $message) {
+            debugging("The property '$field' has invalid data and has been cleaned.", DEBUG_DEVELOPER);
+            $user->$field = core_user::clean_field($user->$field, $field);
+        }
+    }
+
     $DB->update_record('user', $user);
 
     if ($updatepassword) {
@@ -685,11 +690,13 @@ function user_convert_text_to_menu_items($text, $page) {
             if (clean_param($namebits[0], PARAM_STRINGID) !== '') {
                 // Treat this as a language string.
                 $child->title = get_string($namebits[0], $namebits[1]);
+                $child->titleidentifier = implode(',', $namebits);
             }
         }
         if (empty($child->title)) {
             // Use it as is, don't even clean it.
             $child->title = $bits[0];
+            $child->titleidentifier = str_replace(" ", "-", $bits[0]);
         }
 
         // URL processing.
@@ -839,6 +846,7 @@ function user_get_user_navigation_info($user, $page, $options = array()) {
     $myhome->itemtype = 'link';
     $myhome->url = new moodle_url('/my/');
     $myhome->title = get_string('mymoodle', 'admin');
+    $myhome->titleidentifier = 'mymoodle,admin';
     $myhome->pix = "i/course";
     $returnobject->navitems[] = $myhome;
 
@@ -847,6 +855,7 @@ function user_get_user_navigation_info($user, $page, $options = array()) {
     $myprofile->itemtype = 'link';
     $myprofile->url = new moodle_url('/user/profile.php', array('id' => $user->id));
     $myprofile->title = get_string('profile');
+    $myprofile->titleidentifier = 'profile,moodle';
     $myprofile->pix = "i/user";
     $returnobject->navitems[] = $myprofile;
 
@@ -867,6 +876,7 @@ function user_get_user_navigation_info($user, $page, $options = array()) {
             ));
             $rolereturn->pix = "a/logout";
             $rolereturn->title = get_string('switchrolereturn');
+            $rolereturn->titleidentifier = 'switchrolereturn,moodle';
             $lastobj = $rolereturn;
 
             $returnobject->metadata['asotherrole'] = true;
@@ -897,6 +907,7 @@ function user_get_user_navigation_info($user, $page, $options = array()) {
         ));
         $userrevert->pix = "a/logout";
         $userrevert->title = get_string('logout');
+        $userrevert->titleidentifier = 'logout,moodle';
         $lastobj = $userrevert;
 
         $buildlogout = false;
@@ -909,6 +920,7 @@ function user_get_user_navigation_info($user, $page, $options = array()) {
         $logout->url = new moodle_url('/login/logout.php', array('sesskey' => sesskey()));
         $logout->pix = "a/logout";
         $logout->title = get_string('logout');
+        $logout->titleidentifier = 'logout,moodle';
         $lastobj = $logout;
     }
 

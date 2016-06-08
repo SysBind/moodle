@@ -431,6 +431,7 @@ class core_course_external extends external_api {
             $courseinfo['id'] = $course->id;
             $courseinfo['fullname'] = $course->fullname;
             $courseinfo['shortname'] = $course->shortname;
+            $courseinfo['displayname'] = external_format_string(get_course_display_name_for_list($course), $context->id);
             $courseinfo['categoryid'] = $course->category;
             list($courseinfo['summary'], $courseinfo['summaryformat']) =
                 external_format_text($course->summary, $course->summaryformat, $context->id, 'course', 'summary', 0);
@@ -498,6 +499,7 @@ class core_course_external extends external_api {
                             'categorysortorder' => new external_value(PARAM_INT,
                                     'sort order into the category', VALUE_OPTIONAL),
                             'fullname' => new external_value(PARAM_TEXT, 'full name'),
+                            'displayname' => new external_value(PARAM_TEXT, 'course display name'),
                             'idnumber' => new external_value(PARAM_RAW, 'id number', VALUE_OPTIONAL),
                             'summary' => new external_value(PARAM_RAW, 'summary'),
                             'summaryformat' => new external_format_value('summary'),
@@ -2135,7 +2137,12 @@ class core_course_external extends external_api {
                                                         (search, modulelist (only admins), blocklist (only admins), tagid)'),
                 'criteriavalue' => new external_value(PARAM_RAW, 'criteria value'),
                 'page'          => new external_value(PARAM_INT, 'page number (0 based)', VALUE_DEFAULT, 0),
-                'perpage'       => new external_value(PARAM_INT, 'items per page', VALUE_DEFAULT, 0)
+                'perpage'       => new external_value(PARAM_INT, 'items per page', VALUE_DEFAULT, 0),
+                'requiredcapabilities' => new external_multiple_structure(
+                    new external_value(PARAM_CAPABILITY, 'Capability string used to filter courses by permission'),
+                    VALUE_OPTIONAL
+                ),
+                'limittoenrolled' => new external_value(PARAM_BOOL, 'limit to enrolled courses', VALUE_DEFAULT, 0),
             )
         );
     }
@@ -2147,11 +2154,18 @@ class core_course_external extends external_api {
      * @param string $criteriavalue Criteria value
      * @param int $page             Page number (for pagination)
      * @param int $perpage          Items per page
+     * @param array $requiredcapabilities Optional list of required capabilities (used to filter the list).
+     * @param int $limittoenrolled  Limit to only enrolled courses
      * @return array of course objects and warnings
      * @since Moodle 3.0
      * @throws moodle_exception
      */
-    public static function search_courses($criterianame, $criteriavalue, $page=0, $perpage=0) {
+    public static function search_courses($criterianame,
+                                          $criteriavalue,
+                                          $page=0,
+                                          $perpage=0,
+                                          $requiredcapabilities=array(),
+                                          $limittoenrolled=0) {
         global $CFG;
         require_once($CFG->libdir . '/coursecatlib.php');
 
@@ -2161,9 +2175,11 @@ class core_course_external extends external_api {
             'criterianame'  => $criterianame,
             'criteriavalue' => $criteriavalue,
             'page'          => $page,
-            'perpage'       => $perpage
+            'perpage'       => $perpage,
+            'requiredcapabilities' => $requiredcapabilities
         );
         $params = self::validate_parameters(self::search_courses_parameters(), $parameters);
+        self::validate_context(context_system::instance());
 
         $allowedcriterianames = array('search', 'modulelist', 'blocklist', 'tagid');
         if (!in_array($params['criterianame'], $allowedcriterianames)) {
@@ -2194,13 +2210,25 @@ class core_course_external extends external_api {
         }
 
         // Search the courses.
-        $courses = coursecat::search_courses($searchcriteria, $options);
-        $totalcount = coursecat::search_courses_count($searchcriteria);
+        $courses = coursecat::search_courses($searchcriteria, $options, $params['requiredcapabilities']);
+        $totalcount = coursecat::search_courses_count($searchcriteria, $options, $params['requiredcapabilities']);
+
+        if (!empty($limittoenrolled)) {
+            // Get the courses where the current user has access.
+            $enrolled = enrol_get_my_courses(array('id', 'cacherev'));
+        }
 
         $finalcourses = array();
         $categoriescache = array();
 
         foreach ($courses as $course) {
+            if (!empty($limittoenrolled)) {
+                // Filter out not enrolled courses.
+                if (!isset($enrolled[$course->id])) {
+                    $totalcount--;
+                    continue;
+                }
+            }
 
             $coursecontext = context_course::instance($course->id);
 
@@ -2244,10 +2272,12 @@ class core_course_external extends external_api {
             list($summary, $summaryformat) =
                 external_format_text($course->summary, $course->summaryformat, $coursecontext->id, 'course', 'summary', null);
 
+            $displayname = get_course_display_name_for_list($course);
             $coursereturns = array();
             $coursereturns['id']                = $course->id;
-            $coursereturns['fullname']          = $course->get_formatted_fullname();
-            $coursereturns['shortname']         = $course->get_formatted_shortname();
+            $coursereturns['fullname']          = external_format_string($course->fullname, $coursecontext->id);
+            $coursereturns['displayname']       = external_format_string($displayname, $coursecontext->id);
+            $coursereturns['shortname']         = external_format_string($course->shortname, $coursecontext->id);
             $coursereturns['categoryid']        = $course->category;
             $coursereturns['categoryname']      = $category->name;
             $coursereturns['summary']           = $summary;
@@ -2281,6 +2311,7 @@ class core_course_external extends external_api {
                         array(
                             'id' => new external_value(PARAM_INT, 'course id'),
                             'fullname' => new external_value(PARAM_TEXT, 'course full name'),
+                            'displayname' => new external_value(PARAM_TEXT, 'course display name'),
                             'shortname' => new external_value(PARAM_TEXT, 'course short name'),
                             'categoryid' => new external_value(PARAM_INT, 'category id'),
                             'categoryname' => new external_value(PARAM_TEXT, 'category name'),
@@ -2466,109 +2497,4 @@ class core_course_external extends external_api {
         return self::get_course_module_returns();
     }
 
-}
-
-/**
- * Deprecated course external functions
- *
- * @package    core_course
- * @copyright  2009 Petr Skodak
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @since Moodle 2.0
- * @deprecated Moodle 2.2 MDL-29106 - Please do not use this class any more.
- * @see core_course_external
- */
-class moodle_course_external extends external_api {
-
-    /**
-     * Returns description of method parameters
-     *
-     * @return external_function_parameters
-     * @since Moodle 2.0
-     * @deprecated Moodle 2.2 MDL-29106 - Please do not call this function any more.
-     * @see core_course_external::get_courses_parameters()
-     */
-    public static function get_courses_parameters() {
-        return core_course_external::get_courses_parameters();
-    }
-
-    /**
-     * Get courses
-     *
-     * @param array $options
-     * @return array
-     * @since Moodle 2.0
-     * @deprecated Moodle 2.2 MDL-29106 - Please do not call this function any more.
-     * @see core_course_external::get_courses()
-     */
-    public static function get_courses($options) {
-        return core_course_external::get_courses($options);
-    }
-
-    /**
-     * Returns description of method result value
-     *
-     * @return external_description
-     * @since Moodle 2.0
-     * @deprecated Moodle 2.2 MDL-29106 - Please do not call this function any more.
-     * @see core_course_external::get_courses_returns()
-     */
-    public static function get_courses_returns() {
-        return core_course_external::get_courses_returns();
-    }
-
-    /**
-     * Marking the method as deprecated.
-     *
-     * @return bool
-     */
-    public static function get_courses_is_deprecated() {
-        return true;
-    }
-
-    /**
-     * Returns description of method parameters
-     *
-     * @return external_function_parameters
-     * @since Moodle 2.0
-     * @deprecated Moodle 2.2 MDL-29106 - Please do not call this function any more.
-     * @see core_course_external::create_courses_parameters()
-     */
-    public static function create_courses_parameters() {
-        return core_course_external::create_courses_parameters();
-    }
-
-    /**
-     * Create  courses
-     *
-     * @param array $courses
-     * @return array courses (id and shortname only)
-     * @since Moodle 2.0
-     * @deprecated Moodle 2.2 MDL-29106 - Please do not call this function any more.
-     * @see core_course_external::create_courses()
-     */
-    public static function create_courses($courses) {
-        return core_course_external::create_courses($courses);
-    }
-
-    /**
-     * Returns description of method result value
-     *
-     * @return external_description
-     * @since Moodle 2.0
-     * @deprecated Moodle 2.2 MDL-29106 - Please do not call this function any more.
-     * @see core_course_external::create_courses_returns()
-     */
-    public static function create_courses_returns() {
-        return core_course_external::create_courses_returns();
-    }
-
-    /**
-     * Marking the method as deprecated.
-     *
-     * @return bool
-     */
-    public static function create_courses_is_deprecated() {
-        return true;
-    }
 }

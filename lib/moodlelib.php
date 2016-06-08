@@ -448,7 +448,11 @@ define('MOD_ARCHETYPE_ASSIGNMENT', 2);
 /** System (not user-addable) module archetype */
 define('MOD_ARCHETYPE_SYSTEM', 3);
 
-/** Return this from modname_get_types callback to use default display in activity chooser */
+/**
+ * Return this from modname_get_types callback to use default display in activity chooser.
+ * Deprecated, will be removed in 3.5, TODO MDL-53697.
+ * @deprecated since Moodle 3.1
+ */
 define('MOD_SUBTYPE_NO_CHILDREN', 'modsubtypenochildren');
 
 /**
@@ -3928,6 +3932,15 @@ function delete_user(stdClass $user) {
         return false;
     }
 
+    // Allow plugins to use this user object before we completely delete it.
+    if ($pluginsfunction = get_plugins_with_function('pre_user_delete')) {
+        foreach ($pluginsfunction as $plugintype => $plugins) {
+            foreach ($plugins as $pluginfunction) {
+                $pluginfunction($user);
+            }
+        }
+    }
+
     // Keep user record before updating it, as we have to pass this to user_deleted event.
     $olduser = clone $user;
 
@@ -4677,6 +4690,15 @@ function delete_course($courseorid, $showfeedback = true) {
         return false;
     }
 
+    // Allow plugins to use this course before we completely delete it.
+    if ($pluginsfunction = get_plugins_with_function('pre_course_delete')) {
+        foreach ($pluginsfunction as $plugintype => $plugins) {
+            foreach ($plugins as $pluginfunction) {
+                $pluginfunction($course);
+            }
+        }
+    }
+
     // Make the course completely empty.
     remove_course_contents($courseid, $showfeedback);
 
@@ -4793,6 +4815,9 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
                     if ($cm = get_coursemodule_from_instance($modname, $instance->id, $course->id)) {
                         // Delete activity context questions and question categories.
                         question_delete_activity($cm,  $showfeedback);
+
+                        // Notify the competency subsystem.
+                        \core_competency\api::hook_course_module_deleted($cm);
                     }
                     if (function_exists($moddelete)) {
                         // This purges all module data in related tables, extra user prefs, settings, etc.
@@ -4909,6 +4934,9 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
 
     // Delete course tags.
     core_tag_tag::remove_all_item_tags('core', 'course', $course->id);
+
+    // Notify the competency subsystem.
+    \core_competency\api::hook_course_deleted($course);
 
     // Delete calendar events.
     $DB->delete_records('event', array('courseid' => $course->id));
@@ -5094,6 +5122,12 @@ function reset_course_userdata($data) {
         $cc->delete_all_completion_data();
         $status[] = array('component' => $componentstr,
                 'item' => get_string('deletecompletiondata', 'completion'), 'error' => false);
+    }
+
+    if (!empty($data->reset_competency_ratings)) {
+        \core_competency\api::hook_course_reset_competency_ratings($data->courseid);
+        $status[] = array('component' => $componentstr,
+            'item' => get_string('deletecompetencyratings', 'core_competency'), 'error' => false);
     }
 
     $componentstr = get_string('roles');
@@ -5461,6 +5495,37 @@ function email_should_be_diverted($email) {
 }
 
 /**
+ * Generate a unique email Message-ID using the moodle domain and install path
+ *
+ * @param string $localpart An optional unique message id prefix.
+ * @return string The formatted ID ready for appending to the email headers.
+ */
+function generate_email_messageid($localpart = null) {
+    global $CFG;
+
+    $urlinfo = parse_url($CFG->wwwroot);
+    $base = '@' . $urlinfo['host'];
+
+    // If multiple moodles are on the same domain we want to tell them
+    // apart so we add the install path to the local part. This means
+    // that the id local part should never contain a / character so
+    // we can correctly parse the id to reassemble the wwwroot.
+    if (isset($urlinfo['path'])) {
+        $base = $urlinfo['path'] . $base;
+    }
+
+    if (empty($localpart)) {
+        $localpart = uniqid('', true);
+    }
+
+    // Because we may have an option /installpath suffix to the local part
+    // of the id we need to escape any / chars which are in the $localpart.
+    $localpart = str_replace('/', '%2F', $localpart);
+
+    return '<' . $localpart . $base . '>';
+}
+
+/**
  * Send an email to a specified user
  *
  * @param stdClass $user  A {@link $USER} object
@@ -5681,6 +5746,11 @@ function email_to_user($user, $from, $subject, $messagetext, $messagehtml = '', 
     $mail->Subject = $renderer->render_from_template('core/email_subject', $context);
     $mail->FromName = $renderer->render_from_template('core/email_fromname', $context);
     $messagetext = $renderer->render_from_template('core/email_text', $context);
+
+    // Autogenerate a MessageID if it's missing.
+    if (empty($mail->MessageID)) {
+        $mail->MessageID = generate_email_messageid();
+    }
 
     if ($messagehtml && !empty($user->mailformat) && $user->mailformat == 1) {
         // Don't ever send HTML to users who don't want it.
@@ -6166,53 +6236,65 @@ function valid_uploaded_file($newfile) {
 /**
  * Returns the maximum size for uploading files.
  *
- * There are seven possible upload limits:
- * 1. in Apache using LimitRequestBody (no way of checking or changing this)
- * 2. in php.ini for 'upload_max_filesize' (can not be changed inside PHP)
- * 3. in .htaccess for 'upload_max_filesize' (can not be changed inside PHP)
- * 4. in php.ini for 'post_max_size' (can not be changed inside PHP)
- * 5. by the Moodle admin in $CFG->maxbytes
- * 6. by the teacher in the current course $course->maxbytes
- * 7. by the teacher for the current module, eg $assignment->maxbytes
+ * There are eight possible upload limits:
+ * 1. No limit, if the upload isn't using a post request and the user has permission to ignore limits.
+ * 2. in Apache using LimitRequestBody (no way of checking or changing this)
+ * 3. in php.ini for 'upload_max_filesize' (can not be changed inside PHP)
+ * 4. in .htaccess for 'upload_max_filesize' (can not be changed inside PHP)
+ * 5. in php.ini for 'post_max_size' (can not be changed inside PHP)
+ * 6. by the Moodle admin in $CFG->maxbytes
+ * 7. by the teacher in the current course $course->maxbytes
+ * 8. by the teacher for the current module, eg $assignment->maxbytes
  *
  * These last two are passed to this function as arguments (in bytes).
  * Anything defined as 0 is ignored.
  * The smallest of all the non-zero numbers is returned.
  *
- * @todo Finish documenting this function
+ * The php.ini settings are only used if $usespost is true. This allows repositories that do not use post requests, such as
+ * repository_filesystem, to copy in files that are larger than post_max_size if the user has permission.
  *
  * @param int $sitebytes Set maximum size
  * @param int $coursebytes Current course $course->maxbytes (in bytes)
  * @param int $modulebytes Current module ->maxbytes (in bytes)
+ * @param bool $usespost Does the upload we're getting the max size for use a post request?
  * @return int The maximum size for uploading files.
  */
-function get_max_upload_file_size($sitebytes=0, $coursebytes=0, $modulebytes=0) {
+function get_max_upload_file_size($sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $usespost = true) {
+    $sizes = array();
 
-    if (! $filesize = ini_get('upload_max_filesize')) {
-        $filesize = '5M';
-    }
-    $minimumsize = get_real_size($filesize);
+    if ($usespost) {
+        if (!$filesize = ini_get('upload_max_filesize')) {
+            $filesize = '5M';
+        }
+        $sizes[] = get_real_size($filesize);
 
-    if ($postsize = ini_get('post_max_size')) {
-        $postsize = get_real_size($postsize);
-        if ($postsize < $minimumsize) {
-            $minimumsize = $postsize;
+        if ($postsize = ini_get('post_max_size')) {
+            $sizes[] = get_real_size($postsize);
+        }
+
+        if ($sitebytes > 0) {
+            $sizes[] = $sitebytes;
+        }
+    } else {
+        if ($sitebytes != 0) {
+            // It's for possible that $sitebytes == USER_CAN_IGNORE_FILE_SIZE_LIMITS (-1).
+            $sizes[] = $sitebytes;
         }
     }
 
-    if (($sitebytes > 0) and ($sitebytes < $minimumsize)) {
-        $minimumsize = $sitebytes;
+    if ($coursebytes > 0) {
+        $sizes[] = $coursebytes;
     }
 
-    if (($coursebytes > 0) and ($coursebytes < $minimumsize)) {
-        $minimumsize = $coursebytes;
+    if ($modulebytes > 0) {
+        $sizes[] = $modulebytes;
     }
 
-    if (($modulebytes > 0) and ($modulebytes < $minimumsize)) {
-        $minimumsize = $modulebytes;
+    if (empty($sizes)) {
+        throw new coding_exception('You must specify at least one filesize limit.');
     }
 
-    return $minimumsize;
+    return min($sizes);
 }
 
 /**
@@ -6225,9 +6307,11 @@ function get_max_upload_file_size($sitebytes=0, $coursebytes=0, $modulebytes=0) 
  * @param int $coursebytes Current course $course->maxbytes (in bytes)
  * @param int $modulebytes Current module ->maxbytes (in bytes)
  * @param stdClass $user The user
+ * @param bool $usespost Does the upload we're getting the max size for use a post request?
  * @return int The maximum size for uploading files.
  */
-function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $user = null) {
+function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $user = null,
+        $usespost = true) {
     global $USER;
 
     if (empty($user)) {
@@ -6235,10 +6319,10 @@ function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 
     }
 
     if (has_capability('moodle/course:ignorefilesizelimits', $context, $user)) {
-        return get_max_upload_file_size(USER_CAN_IGNORE_FILE_SIZE_LIMITS);
+        return get_max_upload_file_size(USER_CAN_IGNORE_FILE_SIZE_LIMITS, 0, 0, $usespost);
     }
 
-    return get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes);
+    return get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes, $usespost);
 }
 
 /**
@@ -8154,72 +8238,6 @@ function make_grades_menu($gradingtype) {
         return $grades;
     }
     return $grades;
-}
-
-/**
- * This function returns the number of activities using the given scale in the given course.
- *
- * @param int $courseid The course ID to check.
- * @param int $scaleid The scale ID to check
- * @return int
- */
-function course_scale_used($courseid, $scaleid) {
-    global $CFG, $DB;
-
-    $return = 0;
-
-    if (!empty($scaleid)) {
-        if ($cms = get_course_mods($courseid)) {
-            foreach ($cms as $cm) {
-                // Check cm->name/lib.php exists.
-                if (file_exists($CFG->dirroot.'/mod/'.$cm->modname.'/lib.php')) {
-                    include_once($CFG->dirroot.'/mod/'.$cm->modname.'/lib.php');
-                    $functionname = $cm->modname.'_scale_used';
-                    if (function_exists($functionname)) {
-                        if ($functionname($cm->instance, $scaleid)) {
-                            $return++;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Check if any course grade item makes use of the scale.
-        $return += $DB->count_records('grade_items', array('courseid' => $courseid, 'scaleid' => $scaleid));
-
-        // Check if any outcome in the course makes use of the scale.
-        $return += $DB->count_records_sql("SELECT COUNT('x')
-                                             FROM {grade_outcomes_courses} goc,
-                                                  {grade_outcomes} go
-                                            WHERE go.id = goc.outcomeid
-                                                  AND go.scaleid = ? AND goc.courseid = ?",
-                                          array($scaleid, $courseid));
-    }
-    return $return;
-}
-
-/**
- * This function returns the number of activities using scaleid in the entire site
- *
- * @param int $scaleid
- * @param array $courses
- * @return int
- */
-function site_scale_used($scaleid, &$courses) {
-    $return = 0;
-
-    if (!is_array($courses) || count($courses) == 0) {
-        $courses = get_courses("all", false, "c.id, c.shortname");
-    }
-
-    if (!empty($scaleid)) {
-        if (is_array($courses) && count($courses) > 0) {
-            foreach ($courses as $course) {
-                $return += course_scale_used($course->id, $scaleid);
-            }
-        }
-    }
-    return $return;
 }
 
 /**

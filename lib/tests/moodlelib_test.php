@@ -1582,7 +1582,7 @@ class core_moodlelib_testcase extends advanced_testcase {
                 'expectedoutput' => '1309485600'
             ),
             array(
-                'usertimezone' => '14', // Server time.
+                'usertimezone' => '-14', // Server time.
                 'year' => '2011',
                 'month' => '7',
                 'day' => '1',
@@ -2217,6 +2217,84 @@ class core_moodlelib_testcase extends advanced_testcase {
     }
 
     /**
+     * Provider for get_max_upload_file_size.
+     *
+     * @return array
+     */
+    public function get_max_upload_file_size_provider() {
+        $inisize = min(array(get_real_size(ini_get('post_max_size')), get_real_size(ini_get('upload_max_filesize'))));
+        return [
+            'POST: inisize smallest' => [
+                $inisize + 10,
+                $inisize + 20,
+                $inisize + 30,
+                true,
+                $inisize,
+            ],
+            'POST: sitebytes smallest' => [
+                $inisize - 30,
+                $inisize - 20,
+                $inisize - 10,
+                true,
+                $inisize - 30,
+            ],
+            'POST: coursebytes smallest' => [
+                $inisize - 20,
+                $inisize - 30,
+                $inisize - 10,
+                true,
+                $inisize - 30,
+            ],
+            'POST: modulebytes smallest' => [
+                $inisize - 20,
+                $inisize - 10,
+                $inisize - 30,
+                true,
+                $inisize - 30,
+            ],
+            'POST: User can ignore site limit (respect ini)' => [
+                USER_CAN_IGNORE_FILE_SIZE_LIMITS,
+                0,
+                0,
+                true,
+                $inisize,
+            ],
+            'NOPOST: inisize smallest' => [
+                $inisize + 10,
+                $inisize + 20,
+                $inisize + 30,
+                false,
+                $inisize + 10,
+            ],
+            'NOPOST: User can ignore site limit (no limit)' => [
+                USER_CAN_IGNORE_FILE_SIZE_LIMITS,
+                0,
+                0,
+                false,
+                USER_CAN_IGNORE_FILE_SIZE_LIMITS,
+            ],
+        ];
+    }
+
+    /**
+     * Test get_max_upload_file_size with various combinations.
+     *
+     * @dataProvider get_max_upload_file_size_provider
+     */
+    public function test_get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes, $ispost, $expectation) {
+        $this->assertEquals($expectation, get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes, $ispost));
+    }
+
+    /**
+     * Test that when get_max_upload_file_size is called with no sizes, and no post, an exception is thrown.
+     */
+    public function test_get_max_upload_file_size_no_sizes() {
+        // If not using post we have to provide at least one other limit.
+        $this->setExpectedException('coding_exception', 'You must specify at least one filesize limit.');
+        get_max_upload_file_size(0, 0, 0, false);
+    }
+
+    /**
      * Test function password_is_legacy_hash().
      */
     public function test_password_is_legacy_hash() {
@@ -2644,7 +2722,50 @@ class core_moodlelib_testcase extends advanced_testcase {
         $this->assertEventContextNotUsed($event);
     }
 
+    /**
+     * A data provider for testing email messageid
+     */
+    public function generate_email_messageid_provider() {
+        return array(
+            'nopath' => array(
+                'wwwroot' => 'http://www.example.com',
+                'ids' => array(
+                    'a-custom-id' => '<a-custom-id@www.example.com>',
+                    'an-id-with-/-a-slash' => '<an-id-with-%2F-a-slash@www.example.com>',
+                ),
+            ),
+            'path' => array(
+                'wwwroot' => 'http://www.example.com/path/subdir',
+                'ids' => array(
+                    'a-custom-id' => '<a-custom-id/path/subdir@www.example.com>',
+                    'an-id-with-/-a-slash' => '<an-id-with-%2F-a-slash/path/subdir@www.example.com>',
+                ),
+            ),
+        );
+    }
 
+    /**
+     * Test email message id generation
+     *
+     * @dataProvider generate_email_messageid_provider
+     *
+     * @param string $wwwroot The wwwroot
+     * @param array $msgids An array of msgid local parts and the final result
+     */
+    public function test_generate_email_messageid($wwwroot, $msgids) {
+        global $CFG;
+
+        $this->resetAfterTest();
+        $CFG->wwwroot = $wwwroot;
+
+        foreach ($msgids as $local => $final) {
+            $this->assertEquals($final, generate_email_messageid($local));
+        }
+    }
+
+    /**
+     * A data provider for testing email diversion
+     */
     public function diverted_emails_provider() {
         return array(
             'nodiverts' => array(
@@ -2697,7 +2818,14 @@ class core_moodlelib_testcase extends advanced_testcase {
     }
 
     /**
+     * Test email diversion
+     *
      * @dataProvider diverted_emails_provider
+     *
+     * @param string $divertallemailsto An optional email address
+     * @param string $divertallemailsexcept An optional exclusion list
+     * @param array $addresses An array of test addresses
+     * @param boolean $expected Expected result
      */
     public function test_email_should_be_diverted($divertallemailsto, $divertallemailsexcept, $addresses, $expected) {
         global $CFG;

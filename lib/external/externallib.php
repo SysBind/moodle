@@ -92,7 +92,7 @@ class core_external extends external_api {
                       new external_single_structure(array(
                           'name' => new external_value(PARAM_ALPHANUMEXT, 'param name
                             - if the string expect only one $a parameter then don\'t send this field, just send the value.', VALUE_OPTIONAL),
-                          'value' => new external_value(PARAM_TEXT,'param value'))),
+                          'value' => new external_value(PARAM_RAW,'param value'))),
                           'the definition of a string param (i.e. {$a->name})', VALUE_DEFAULT, array()
                    )
             )
@@ -124,7 +124,7 @@ class core_external extends external_api {
      * @since Moodle 2.4
      */
     public static function get_string_returns() {
-        return new external_value(PARAM_TEXT, 'translated string');
+        return new external_value(PARAM_RAW, 'translated string');
     }
 
     /**
@@ -144,7 +144,7 @@ class core_external extends external_api {
                             new external_single_structure(array(
                                 'name' => new external_value(PARAM_ALPHANUMEXT, 'param name
                                     - if the string expect only one $a parameter then don\'t send this field, just send the value.', VALUE_OPTIONAL),
-                                'value' => new external_value(PARAM_TEXT, 'param value'))),
+                                'value' => new external_value(PARAM_RAW, 'param value'))),
                                 'the definition of a string param (i.e. {$a->name})', VALUE_DEFAULT, array()
                         ))
                     )
@@ -198,7 +198,7 @@ class core_external extends external_api {
                 'stringid' => new external_value(PARAM_STRINGID, 'string id'),
                 'component' => new external_value(PARAM_COMPONENT, 'string component'),
                 'lang' => new external_value(PARAM_LANG, 'lang'),
-                'string' => new external_value(PARAM_TEXT, 'translated string'))
+                'string' => new external_value(PARAM_RAW, 'translated string'))
             ));
     }
 
@@ -319,6 +319,7 @@ class core_external extends external_api {
 
         $context = context::instance_by_id($contextid);
         self::validate_context($context);
+        $arguments['context'] = $context;
 
         // Hack alert: Forcing bootstrap_renderer to initiate moodle page.
         $OUTPUT->header();
@@ -326,7 +327,7 @@ class core_external extends external_api {
         // Overwriting page_requirements_manager with the fragment one so only JS included from
         // this point is returned to the user.
         $PAGE->start_collecting_javascript_requirements();
-        $data = component_callback($params['component'], 'output_fragment_' . $params['callback'], $arguments);
+        $data = component_callback($params['component'], 'output_fragment_' . $params['callback'], array($arguments));
         $jsfooter = $PAGE->requires->get_end_code();
         $output = array('html' => $data, 'javascript' => $jsfooter);
         return $output;
@@ -385,7 +386,6 @@ class core_external extends external_api {
         if (!$tmpl || !($tmpl instanceof \core\output\inplace_editable)) {
             throw new \moodle_exception('inplaceeditableerror');
         }
-        $PAGE->set_context(null); // To prevent warning if context was not set in the callback.
         return $tmpl->export_for_template($PAGE->get_renderer('core'));
     }
 
@@ -461,7 +461,7 @@ class core_external extends external_api {
             ]);
 
         $context = \context::instance_by_id($contextid);
-        $PAGE->set_context($context);
+        self::validate_context($context);
 
         return \core\notification::fetch_as_array($PAGE->get_renderer('core'));
     }

@@ -833,16 +833,18 @@ class assign_grading_table extends table_sql implements renderable {
         $gradingdisabled = $this->assignment->grading_disabled($row->id);
 
         if (!$this->is_downloading() && $this->hasgrade) {
-            $name = $this->assignment->fullname($row);
-            $icon = $this->output->pix_icon('gradefeedback',
-                                            get_string('gradeuser', 'assign', $name),
-                                            'mod_assign');
             $urlparams = array('id' => $this->assignment->get_course_module()->id,
-                               'rownum'=>$this->rownum,
-                               'action' => 'grade',
-                               'useridlistid' => $this->assignment->get_useridlist_key_id());
+                               'rownum' => 0,
+                               'action' => 'grader');
+
+            if ($this->assignment->is_blind_marking()) {
+                $urlparams['blindid'] = $this->assignment->get_uniqueid_for_user($row->userid);
+            } else {
+                $urlparams['userid'] = $row->userid;
+            }
+
             $url = new moodle_url('/mod/assign/view.php', $urlparams);
-            $link = $this->output->action_link($url, $icon);
+            $link = '<a href="' . $url . '" class="btn btn-primary">' . get_string('grade') . '</a>';
             $grade .= $link . $separator;
         }
 
@@ -905,7 +907,7 @@ class assign_grading_table extends table_sql implements renderable {
         $this->get_group_and_submission($row->id, $group, $submission, -1);
         if ($submission && $submission->timemodified && $submission->status != ASSIGN_SUBMISSION_STATUS_NEW) {
             $o = userdate($submission->timemodified);
-        } else if ($row->timesubmitted) {
+        } else if ($row->timesubmitted && $row->status != ASSIGN_SUBMISSION_STATUS_NEW) {
             $o = userdate($row->timesubmitted);
         }
 
@@ -944,11 +946,16 @@ class assign_grading_table extends table_sql implements renderable {
             $status = $row->status;
         }
 
+        $displaystatus = $status;
+        if ($displaystatus == 'new') {
+            $displaystatus = '';
+        }
+
         if ($this->assignment->is_any_submission_plugin_enabled()) {
 
-            $o .= $this->output->container(get_string('submissionstatus_' . $status, 'assign'),
-                                           array('class'=>'submissionstatus' .$status));
-            if ($due && $timesubmitted > $due) {
+            $o .= $this->output->container(get_string('submissionstatus_' . $displaystatus, 'assign'),
+                                           array('class'=>'submissionstatus' .$displaystatus));
+            if ($due && $timesubmitted > $due && $status != ASSIGN_SUBMISSION_STATUS_NEW) {
                 $usertime = format_time($timesubmitted - $due);
                 $latemessage = get_string('submittedlateshort',
                                           'assign',
@@ -964,7 +971,7 @@ class assign_grading_table extends table_sql implements renderable {
             if (!$instance->markingworkflow) {
                 if ($row->grade !== null && $row->grade >= 0) {
                     $o .= $this->output->container(get_string('graded', 'assign'), 'submissiongraded');
-                } else if (!$timesubmitted) {
+                } else if (!$timesubmitted || $status == ASSIGN_SUBMISSION_STATUS_NEW) {
                     $now = time();
                     if ($due && ($now > $due)) {
                         $overduestr = get_string('overdue', 'assign', format_time($now - $due));
@@ -1003,10 +1010,15 @@ class assign_grading_table extends table_sql implements renderable {
 
         $actions = array();
 
-        $urlparams = array('id'=>$this->assignment->get_course_module()->id,
-                           'rownum'=>$this->rownum,
-                           'action' => 'grade',
-                           'useridlistid' => $this->assignment->get_useridlist_key_id());
+        $urlparams = array('id' => $this->assignment->get_course_module()->id,
+                               'rownum' => 0,
+                               'action' => 'grader');
+
+        if ($this->assignment->is_blind_marking()) {
+            $urlparams['blindid'] = $this->assignment->get_uniqueid_for_user($row->userid);
+        } else {
+            $urlparams['userid'] = $row->userid;
+        }
         $url = new moodle_url('/mod/assign/view.php', $urlparams);
         $noimage = null;
 

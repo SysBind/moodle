@@ -1,5 +1,5 @@
 @mod @mod_feedback
-Feature: Test creating different types of feedback questions
+Feature: Test creating different types of feedback questions for anonymous feedback
   In order to create feedbacks
   As a teacher
   I need to be able to add different question types
@@ -18,10 +18,6 @@ Feature: Test creating different types of feedback questions
       | teacher1 | C1     | editingteacher |
       | student1 | C1     | student        |
       | student2 | C1     | student        |
-    And I log in as "admin"
-    And I navigate to "Manage activities" node in "Site administration > Plugins > Activity modules"
-    And I click on "Show" "link" in the "Feedback" "table_row"
-    And I log out
     And the following "activities" exist:
       | activity   | name                | course | idnumber    |
       | feedback   | Learning experience | C1     | feedback0   |
@@ -32,7 +28,7 @@ Feature: Test creating different types of feedback questions
     And I add a "Information" question to the feedback with:
       | Question         | this is an information question |
       | Label            | info                            |
-      | Information-Type | Course                          |
+      | Information type | Course                          |
     And I add a "Label" question to the feedback with:
       | Contents | label text |
     And I add a "Longer text answer" question to the feedback with:
@@ -62,6 +58,7 @@ Feature: Test creating different types of feedback questions
     And I add a "Numeric answer" question to the feedback with:
       | Question               | this is a numeric answer |
       | Label                  | numeric                  |
+      | Range from             | 0                        |
       | Range to               | 100                      |
     And I add a "Short text answer" question to the feedback with:
       | Question               | this is a short text answer |
@@ -112,8 +109,6 @@ Feature: Test creating different types of feedback questions
     And I should see "C1" in the "(info)" "table"
     And I should see "my long answer" in the "(longertext)" "table"
     And I should see "lots of feedbacks" in the "(longertext)" "table"
-    #And I should see "1 (50.00 %)" in the "option a:" "table_row"  // TODO: MDL-46891
-    #And I should see "1 (50.00 %)" in the "option b:" "table_row"  // TODO: MDL-46891
     And I should see "2 (100.00 %)" in the "option d:" "table_row"
     And I should see "1 (50.00 %)" in the "option e:" "table_row"
     And I should see "1 (50.00 %)" in the "option f:" "table_row"
@@ -121,19 +116,22 @@ Feature: Test creating different types of feedback questions
     And I should not see "%" in the "option g:" "table_row"
     And I should see "1 (50.00 %)" in the "option h:" "table_row"
     And I should see "1 (50.00 %)" in the "option i:" "table_row"
-    And I should see "0" in the "option k (0):" "table_row"
-    And I should not see "%" in the "option k (0):" "table_row"
-    And I should see "1 (50.00 %)" in the "option l (1):" "table_row"
-    And I should see "1 (50.00 %)" in the "option m (5):" "table_row"
+    And I should see "0" in the "(0) option k" "table_row"
+    And I should not see "%" in the "(0) option k" "table_row"
+    And I should see "1 (50.00 %)" in the "(1) option l" "table_row"
+    And I should see "1 (50.00 %)" in the "(5) option m:" "table_row"
     And I should see "Average: 3.00" in the "(multichoice4)" "table"
-    And I should see "35.00" in the "(numeric)" "table"
-    And I should see "71.00" in the "(numeric)" "table"
+    And I should see "35" in the "(numeric)" "table"
+    And I should see "71" in the "(numeric)" "table"
     And I should see "Average: 53.00" in the "(numeric)" "table"
     And I should see "no way" in the "(shorttext)" "table"
     And I should see "hello" in the "(shorttext)" "table"
+
+  Scenario: Create different types of questions in anonymous feedback with javascript disabled
     And I log out
 
-  Scenario: Create different types of questions in feedback with javascript disabled
-
   @javascript
-  Scenario: Create different types of questions in feedback with javascript enabled
+  Scenario: Create different types of questions in anonymous feedback with javascript enabled
+    And I should see "1 (50.00 %)" in the "option a:" "table_row"
+    And I should see "1 (50.00 %)" in the "option b:" "table_row"
+    And I log out

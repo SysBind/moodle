@@ -43,9 +43,10 @@ class activity extends \core_search\area\base_activity {
      * description field is not.
      *
      * @param stdClass $record
+     * @param array    $options
      * @return \core_search\document
      */
-    public function get_document($record) {
+    public function get_document($record, $options = array()) {
 
         try {
             $cm = $this->get_cm($this->get_module_name(), $record->id, $record->course);
@@ -63,11 +64,11 @@ class activity extends \core_search\area\base_activity {
 
         // Prepare associative array with data from DB.
         $doc = \core_search\document_factory::instance($record->id, $this->componentname, $this->areaname);
-        $doc->set('title', $record->name);
+        $doc->set('title', content_to_text($record->name, false));
         $doc->set('content', content_to_text($record->content, $record->contentformat));
         $doc->set('contextid', $context->id);
-        $doc->set('type', \core_search\manager::TYPE_TEXT);
         $doc->set('courseid', $record->course);
+        $doc->set('owneruserid', \core_search\manager::NO_OWNER_ID);
         $doc->set('modified', $record->timemodified);
         $doc->set('description1', content_to_text($record->intro, $record->introformat));
 
