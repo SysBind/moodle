@@ -26,6 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__ . '/fixtures/testable_core_search.php');
+require_once(__DIR__ . '/fixtures/mock_search_area.php');
 
 /**
  * Unit tests for search manager.
@@ -69,7 +70,7 @@ class search_manager_testcase extends advanced_testcase {
         $fakeareaid = \core_search\manager::generate_areaid('mod_unexisting', 'chihuaquita');
 
         $searcharea = \core_search\manager::get_search_area($this->forumpostareaid);
-        $this->assertInstanceOf('\core_search\area\base', $searcharea);
+        $this->assertInstanceOf('\core_search\base', $searcharea);
 
         $this->assertFalse(\core_search\manager::get_search_area($fakeareaid));
 
@@ -80,12 +81,12 @@ class search_manager_testcase extends advanced_testcase {
         $this->assertArrayHasKey($this->forumpostareaid, \core_search\manager::get_search_areas_list(true));
 
         list($componentname, $varname) = $searcharea->get_config_var_name();
-        set_config($varname . '_enabled', false, $componentname);
+        set_config($varname . '_enabled', 0, $componentname);
         \core_search\manager::clear_static();
 
         $this->assertArrayNotHasKey('mod_forum', \core_search\manager::get_search_areas_list(true));
 
-        set_config($varname . '_enabled', true, $componentname);
+        set_config($varname . '_enabled', 1, $componentname);
 
         // Although the result is wrong, we want to check that \core_search\manager::get_search_areas_list returns cached results.
         $this->assertArrayNotHasKey($this->forumpostareaid, \core_search\manager::get_search_areas_list(true));
@@ -126,10 +127,11 @@ class search_manager_testcase extends advanced_testcase {
 
         // We clean it all but enabled components.
         $search->reset_config($this->forumpostareaid);
-        $this->assertEquals(1, get_config($componentname, $varname . '_enabled'));
-        $this->assertEquals(0, get_config($componentname, $varname . '_indexingstart'));
-        $this->assertEquals(0, get_config($componentname, $varname . '_indexingend'));
-        $this->assertEquals(0, get_config($componentname, $varname . '_lastindexrun'));
+        $config = $searcharea->get_config();
+        $this->assertEquals(1, $config[$varname . '_enabled']);
+        $this->assertEquals(0, $config[$varname . '_indexingstart']);
+        $this->assertEquals(0, $config[$varname . '_indexingend']);
+        $this->assertEquals(0, $config[$varname . '_lastindexrun']);
         // No caching.
         $configs = $search->get_areas_config(array($this->forumpostareaid => $searcharea));
         $this->assertEquals(0, $configs[$this->forumpostareaid]->indexingstart);
@@ -165,8 +167,11 @@ class search_manager_testcase extends advanced_testcase {
         $course2 = $this->getDataGenerator()->create_course();
         $course2ctx = context_course::instance($course2->id);
         $teacher = $this->getDataGenerator()->create_user();
+        $teacherctx = context_user::instance($teacher->id);
         $student = $this->getDataGenerator()->create_user();
+        $studentctx = context_user::instance($student->id);
         $noaccess = $this->getDataGenerator()->create_user();
+        $noaccessctx = context_user::instance($noaccess->id);
         $this->getDataGenerator()->enrol_user($teacher->id, $course1->id, 'teacher');
         $this->getDataGenerator()->enrol_user($student->id, $course1->id, 'student');
 
@@ -180,17 +185,23 @@ class search_manager_testcase extends advanced_testcase {
         $context3 = context_module::instance($forum3->cmid);
 
         $search = testable_core_search::instance();
+        $mockareaid = \core_search\manager::generate_areaid('core_mocksearch', 'mock_search_area');
+        $search->add_core_search_areas();
+        $search->add_search_area($mockareaid, new core_mocksearch\search\mock_search_area());
 
         $this->setAdminUser();
         $this->assertTrue($search->get_areas_user_accesses());
 
         $sitectx = \context_course::instance(SITEID);
+        $systemctxid = \context_system::instance()->id;
 
         // Can access the frontpage ones.
         $this->setUser($noaccess);
         $contexts = $search->get_areas_user_accesses();
         $this->assertEquals(array($frontpageforumcontext->id => $frontpageforumcontext->id), $contexts[$this->forumpostareaid]);
         $this->assertEquals(array($sitectx->id => $sitectx->id), $contexts[$this->mycoursesareaid]);
+        $mockctxs = array($noaccessctx->id => $noaccessctx->id, $systemctxid => $systemctxid);
+        $this->assertEquals($mockctxs, $contexts[$mockareaid]);
 
         $this->setUser($teacher);
         $contexts = $search->get_areas_user_accesses();
@@ -199,12 +210,16 @@ class search_manager_testcase extends advanced_testcase {
         $this->assertEquals($frontpageandcourse1, $contexts[$this->forumpostareaid]);
         $this->assertEquals(array($sitectx->id => $sitectx->id, $course1ctx->id => $course1ctx->id),
             $contexts[$this->mycoursesareaid]);
+        $mockctxs = array($teacherctx->id => $teacherctx->id, $systemctxid => $systemctxid);
+        $this->assertEquals($mockctxs, $contexts[$mockareaid]);
 
         $this->setUser($student);
         $contexts = $search->get_areas_user_accesses();
         $this->assertEquals($frontpageandcourse1, $contexts[$this->forumpostareaid]);
         $this->assertEquals(array($sitectx->id => $sitectx->id, $course1ctx->id => $course1ctx->id),
             $contexts[$this->mycoursesareaid]);
+        $mockctxs = array($studentctx->id => $studentctx->id, $systemctxid => $systemctxid);
+        $this->assertEquals($mockctxs, $contexts[$mockareaid]);
 
         // Hide the activity.
         set_coursemodule_visible($forum2->cmid, 0);

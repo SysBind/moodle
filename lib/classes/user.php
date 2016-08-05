@@ -152,14 +152,15 @@ class core_user {
         // If noreply user is set then use it, else create one.
         if (!empty($CFG->noreplyuserid)) {
             self::$noreplyuser = self::get_user($CFG->noreplyuserid);
+            self::$noreplyuser->emailstop = 1; // Force msg stop for this user.
+            return self::$noreplyuser;
+        } else {
+            // Do not cache the dummy user record to avoid language internationalization issues.
+            $noreplyuser = self::get_dummy_user_record();
+            $noreplyuser->maildisplay = '1'; // Show to all.
+            $noreplyuser->emailstop = 1;
+            return $noreplyuser;
         }
-
-        if (empty(self::$noreplyuser)) {
-            self::$noreplyuser = self::get_dummy_user_record();
-            self::$noreplyuser->maildisplay = '1'; // Show to all.
-        }
-        self::$noreplyuser->emailstop = 1; // Force msg stop for this user.
-        return self::$noreplyuser;
     }
 
     /**
@@ -182,18 +183,19 @@ class core_user {
         // If custom support user is set then use it, else if supportemail is set then use it, else use noreply.
         if (!empty($CFG->supportuserid)) {
             self::$supportuser = self::get_user($CFG->supportuserid, '*', MUST_EXIST);
-        }
-
-        // Try sending it to support email if support user is not set.
-        if (empty(self::$supportuser) && !empty($CFG->supportemail)) {
-            self::$supportuser = self::get_dummy_user_record();
-            self::$supportuser->id = self::SUPPORT_USER;
-            self::$supportuser->email = $CFG->supportemail;
+        } else if (empty(self::$supportuser) && !empty($CFG->supportemail)) {
+            // Try sending it to support email if support user is not set.
+            $supportuser = self::get_dummy_user_record();
+            $supportuser->id = self::SUPPORT_USER;
+            $supportuser->email = $CFG->supportemail;
             if ($CFG->supportname) {
-                self::$supportuser->firstname = $CFG->supportname;
+                $supportuser->firstname = $CFG->supportname;
             }
-            self::$supportuser->username = 'support';
-            self::$supportuser->maildisplay = '1'; // Show to all.
+            $supportuser->username = 'support';
+            $supportuser->maildisplay = '1'; // Show to all.
+            // Unset emailstop to make sure support message is sent.
+            $supportuser->emailstop = 0;
+            return $supportuser;
         }
 
         // Send support msg to admin user if nothing is set above.
@@ -277,6 +279,67 @@ class core_user {
             throw new moodle_exception('suspended', 'auth');
         }
     }
+
+    /**
+     * Updates the provided users profile picture based upon the expected fields returned from the edit or edit_advanced forms.
+     *
+     * @param stdClass $usernew An object that contains some information about the user being updated
+     * @param array $filemanageroptions
+     * @return bool True if the user was updated, false if it stayed the same.
+     */
+    public static function update_picture(stdClass $usernew, $filemanageroptions = array()) {
+        global $CFG, $DB;
+        require_once("$CFG->libdir/gdlib.php");
+
+        $context = context_user::instance($usernew->id, MUST_EXIST);
+        $user = core_user::get_user($usernew->id, 'id, picture', MUST_EXIST);
+
+        $newpicture = $user->picture;
+        // Get file_storage to process files.
+        $fs = get_file_storage();
+        if (!empty($usernew->deletepicture)) {
+            // The user has chosen to delete the selected users picture.
+            $fs->delete_area_files($context->id, 'user', 'icon'); // Drop all images in area.
+            $newpicture = 0;
+
+        } else {
+            // Save newly uploaded file, this will avoid context mismatch for newly created users.
+            file_save_draft_area_files($usernew->imagefile, $context->id, 'user', 'newicon', 0, $filemanageroptions);
+            if (($iconfiles = $fs->get_area_files($context->id, 'user', 'newicon')) && count($iconfiles) == 2) {
+                // Get file which was uploaded in draft area.
+                foreach ($iconfiles as $file) {
+                    if (!$file->is_directory()) {
+                        break;
+                    }
+                }
+                // Copy file to temporary location and the send it for processing icon.
+                if ($iconfile = $file->copy_content_to_temp()) {
+                    // There is a new image that has been uploaded.
+                    // Process the new image and set the user to make use of it.
+                    // NOTE: Uploaded images always take over Gravatar.
+                    $newpicture = (int)process_new_icon($context, 'user', 'icon', 0, $iconfile);
+                    // Delete temporary file.
+                    @unlink($iconfile);
+                    // Remove uploaded file.
+                    $fs->delete_area_files($context->id, 'user', 'newicon');
+                } else {
+                    // Something went wrong while creating temp file.
+                    // Remove uploaded file.
+                    $fs->delete_area_files($context->id, 'user', 'newicon');
+                    return false;
+                }
+            }
+        }
+
+        if ($newpicture != $user->picture) {
+            $DB->set_field('user', 'picture', $newpicture, array('id' => $user->id));
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
 
     /**
      * Definition of user profile fields and the expected parameter type for data validation.

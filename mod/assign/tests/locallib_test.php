@@ -85,7 +85,7 @@ class mod_assign_locallib_testcase extends mod_assign_base_testcase {
         $nopermission = false;
         $this->students[0]->ignoresesskey = true;
         $this->setUser($this->students[0]);
-        $this->setExpectedException('required_capability_exception');
+        $this->expectException('required_capability_exception');
         $assign->reveal_identities();
         $this->students[0]->ignoresesskey = false;
 
@@ -93,13 +93,13 @@ class mod_assign_locallib_testcase extends mod_assign_base_testcase {
         $nopermission = false;
         $this->teachers[0]->ignoresesskey = true;
         $this->setUser($this->teachers[0]);
-        $this->setExpectedException('required_capability_exception');
+        $this->expectException('required_capability_exception');
         $assign->reveal_identities();
         $this->teachers[0]->ignoresesskey = false;
 
         // Test sesskey is required.
         $this->setUser($this->editingteachers[0]);
-        $this->setExpectedException('moodle_exception');
+        $this->expectException('moodle_exception');
         $assign->reveal_identities();
 
         // Test editingteacher can reveal identities if sesskey is ignored.
@@ -685,6 +685,63 @@ class mod_assign_locallib_testcase extends mod_assign_base_testcase {
         // Test you can see the submit button for an online text assignment with a submission.
         $output = $assign->view_student_summary($this->students[0], true);
         $this->assertContains(get_string('submitassignment', 'assign'), $output, 'Can submit non empty onlinetext assignment');
+    }
+
+    /**
+     * Test new_submission_empty
+     *
+     * We only test combinations of plugins here. Individual plugins are tested
+     * in their respective test files.
+     *
+     * @dataProvider test_new_submission_empty_testcases
+     * @param string $data The file submission data
+     * @param bool $expected The expected return value
+     */
+    public function test_new_submission_empty($data, $expected) {
+        $this->resetAfterTest();
+        $assign = $this->create_instance(['assignsubmission_file_enabled' => 1,
+                                          'assignsubmission_file_maxfiles' => 12,
+                                          'assignsubmission_file_maxsizebytes' => 10,
+                                          'assignsubmission_onlinetext_enabled' => 1]);
+        $this->setUser($this->students[0]);
+        $submission = new stdClass();
+
+        if ($data['file'] && isset($data['file']['filename'])) {
+            $itemid = file_get_unused_draft_itemid();
+            $submission->files_filemanager = $itemid;
+            $data['file'] += ['contextid' => context_user::instance($this->students[0]->id)->id, 'itemid' => $itemid];
+            $fs = get_file_storage();
+            $fs->create_file_from_string((object)$data['file'], 'Content of ' . $data['file']['filename']);
+        }
+
+        if ($data['onlinetext']) {
+            $submission->onlinetext_editor = ['text' => $data['onlinetext']];
+        }
+
+        $result = $assign->new_submission_empty($submission);
+        $this->assertTrue($result === $expected);
+    }
+
+    /**
+     * Dataprovider for the test_new_submission_empty testcase
+     *
+     * @return array of testcases
+     */
+    public function test_new_submission_empty_testcases() {
+        return [
+            'With file and onlinetext' => [
+                [
+                    'file' => [
+                        'component' => 'user',
+                        'filearea' => 'draft',
+                        'filepath' => '/',
+                        'filename' => 'not_a_virus.exe'
+                    ],
+                    'onlinetext' => 'Balin Fundinul Uzbadkhazaddumu'
+                ],
+                false
+            ]
+        ];
     }
 
     public function test_list_participants() {
@@ -2092,8 +2149,9 @@ class mod_assign_locallib_testcase extends mod_assign_base_testcase {
         $this->assertNotEquals(true, strpos($output, $this->students[0]->lastname));
     }
 
-
-
+    /**
+     * @expectedException moodle_exception
+     */
     public function test_teacher_submit_for_student() {
         global $PAGE;
 
@@ -2172,7 +2230,6 @@ class mod_assign_locallib_testcase extends mod_assign_base_testcase {
                                          'format'=>FORMAT_MOODLE);
 
         $notices = array();
-        $this->setExpectedException('moodle_exception');
         $assign->save_submission($data, $notices);
 
         $sink->close();

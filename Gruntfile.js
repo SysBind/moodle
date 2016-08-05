@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 /* jshint node: true, browser: false */
+/* eslint-env node */
 
 /**
  * @copyright  2014 Andrew Nicols
@@ -26,7 +27,10 @@
 module.exports = function(grunt) {
     var path = require('path'),
         tasks = {},
-        cwd = process.env.PWD || process.cwd();
+        cwd = process.env.PWD || process.cwd(),
+        async = require('async'),
+        DOMParser = require('xmldom').DOMParser,
+        xpath = require('xpath');
 
     // Windows users can't run grunt in a subdirectory, so allow them to set
     // the root by passing --root=path/to/dir.
@@ -34,9 +38,9 @@ module.exports = function(grunt) {
         var root = grunt.option('root');
         if (grunt.file.exists(__dirname, root)) {
             cwd = path.join(__dirname, root);
-            grunt.log.ok('Setting root to '+cwd);
+            grunt.log.ok('Setting root to ' + cwd);
         } else {
-            grunt.fail.fatal('Setting root to '+root+' failed - path does not exist');
+            grunt.fail.fatal('Setting root to ' + root + ' failed - path does not exist');
         }
     }
 
@@ -55,26 +59,81 @@ module.exports = function(grunt) {
      * @param {String} srcPath the  matched src path
      * @return {String} The rewritten destination path.
      */
-    var uglify_rename = function (destPath, srcPath) {
+    var uglifyRename = function(destPath, srcPath) {
         destPath = srcPath.replace('src', 'build');
         destPath = destPath.replace('.js', '.min.js');
         destPath = path.resolve(cwd, destPath);
         return destPath;
     };
 
+    /**
+     * Find thirdpartylibs.xml and generate an array of paths contained within
+     * them (used to generate ignore files and so on).
+     *
+     * @return {array} The list of thirdparty paths.
+     */
+    var getThirdPartyPathsFromXML = function() {
+        var thirdpartyfiles = grunt.file.expand('*/**/thirdpartylibs.xml');
+        var libs = ['node_modules/', 'vendor/'];
+
+        thirdpartyfiles.forEach(function(file) {
+          var dirname = path.dirname(file);
+
+          var doc = new DOMParser().parseFromString(grunt.file.read(file));
+          var nodes = xpath.select("/libraries/library/location/text()", doc);
+
+          nodes.forEach(function(node) {
+            var lib = path.join(dirname, node.toString());
+            if (grunt.file.isDir(lib)) {
+                // Ensure trailing slash on dirs.
+                lib = lib.replace(/\/?$/, '/');
+            }
+
+            // Look for duplicate paths before adding to array.
+            if (libs.indexOf(lib) === -1) {
+                libs.push(lib);
+            }
+          });
+        });
+        return libs;
+    };
+
+
     // Project configuration.
     grunt.initConfig({
-        jshint: {
-            options: {jshintrc: '.jshintrc'},
-            amd: { src: amdSrc }
+        eslint: {
+            // Even though warnings dont stop the build we don't display warnings by default because
+            // at this moment we've got too many core warnings.
+            options: {quiet: !grunt.option('show-lint-warnings')},
+            amd: {
+              src: amdSrc,
+              // Check AMD with some slightly stricter rules.
+              rules: {
+                'no-unused-vars': 'error',
+                'no-implicit-globals': 'error'
+              }
+            },
+            // Check YUI module source files.
+            yui: {
+               src: ['**/yui/src/**/*.js', '!*/**/yui/src/*/meta/*.js'],
+               options: {
+                   // Disable some rules which we can't safely define for YUI rollups.
+                   rules: {
+                     'no-undef': 'off',
+                     'no-unused-vars': 'off',
+                     'no-unused-expressions': 'off'
+                   }
+               }
+            }
         },
         uglify: {
             amd: {
                 files: [{
                     expand: true,
                     src: amdSrc,
-                    rename: uglify_rename
-                }]
+                    rename: uglifyRename
+                }],
+                options: {report: 'none'}
             }
         },
         less: {
@@ -98,11 +157,11 @@ module.exports = function(grunt) {
             },
             bootstrapbase: {
                 files: ["theme/bootstrapbase/less/**/*.less"],
-                tasks: ["less:bootstrapbase"]
+                tasks: ["css"]
             },
             yui: {
                 files: ['**/yui/src/**/*.js'],
-                tasks: ['shifter']
+                tasks: ['yui']
             },
         },
         shifter: {
@@ -110,8 +169,40 @@ module.exports = function(grunt) {
                 recursive: true,
                 paths: [cwd]
             }
+        },
+        stylelint: {
+            less: {
+                options: {
+                    syntax: 'less',
+                    configOverrides: {
+                        rules: {
+                            // TODO: MDL-55165 -Enable these rules once we make output-changing changes to less.
+                            "declaration-block-no-ignored-properties": null,
+                            "value-keyword-case": null,
+                            "declaration-block-no-duplicate-properties": null,
+                            "declaration-block-no-shorthand-property-overrides": null,
+                            "selector-type-no-unknown": null,
+                            "length-zero-no-unit": null,
+                            "color-hex-case": null,
+                            "color-hex-length": null
+                        }
+                    }
+                },
+                src: ['theme/**/*.less', '!theme/bootstrapbase/less/bootstrap/*'],
+            }
         }
     });
+
+    /**
+     * Generate ignore files (utilising thirdpartylibs.xml data)
+     */
+    tasks.ignorefiles = function() {
+      // An array of paths to third party directories.
+      var thirdPartyPaths = getThirdPartyPathsFromXML();
+      // Generate .eslintignore.
+      var eslintIgnores = ['# Generated by "grunt ignorefiles"', '*/**/yui/src/*/meta/', '*/**/build/'].concat(thirdPartyPaths);
+      grunt.file.write('.eslintignore', eslintIgnores.join('\n'));
+    };
 
     /**
      * Shifter task. Is configured with a path to a specific file or a directory,
@@ -121,14 +212,13 @@ module.exports = function(grunt) {
      * so be careful to to call done().
      */
     tasks.shifter = function() {
-        var async = require('async'),
-            done = this.async(),
+        var done = this.async(),
             options = grunt.config('shifter.options');
 
         // Run the shifter processes one at a time to avoid confusing output.
-        async.eachSeries(options.paths, function (src, filedone) {
+        async.eachSeries(options.paths, function(src, filedone) {
             var args = [];
-            args.push( path.normalize(__dirname + '/node_modules/shifter/bin/shifter'));
+            args.push(path.normalize(__dirname + '/node_modules/shifter/bin/shifter'));
 
             // Always ignore the node_modules directory.
             args.push('--excludes', 'node_modules');
@@ -176,7 +266,7 @@ module.exports = function(grunt) {
                     cmd: "node",
                     args: args,
                     opts: {cwd: src, stdio: 'inherit', env: process.env}
-                }, function (error, result, code) {
+                }, function(error, result, code) {
                     if (code) {
                         grunt.fail.fatal('Shifter failed with code: ' + code);
                     } else {
@@ -205,7 +295,7 @@ module.exports = function(grunt) {
     tasks.startup = function() {
         // Are we in a YUI directory?
         if (path.basename(path.resolve(cwd, '../../')) == 'yui') {
-            grunt.task.run('shifter');
+            grunt.task.run('yui');
         // Are we in an AMD directory?
         } else if (inAMD) {
             grunt.task.run('amd');
@@ -222,9 +312,11 @@ module.exports = function(grunt) {
     var changedFiles = Object.create(null);
     var onChange = grunt.util._.debounce(function() {
           var files = Object.keys(changedFiles);
-          grunt.config('jshint.amd.src', files);
-          grunt.config('uglify.amd.files', [{ expand: true, src: files, rename: uglify_rename }]);
+          grunt.config('eslint.amd.src', files);
+          grunt.config('eslint.yui.src', files);
+          grunt.config('uglify.amd.files', [{ expand: true, src: files, rename: uglifyRename }]);
           grunt.config('shifter.options.paths', files);
+          grunt.config('stylelint.less.src', files);
           changedFiles = Object.create(null);
     }, 200);
 
@@ -235,17 +327,20 @@ module.exports = function(grunt) {
 
     // Register NPM tasks.
     grunt.loadNpmTasks('grunt-contrib-uglify');
-    grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-contrib-less');
     grunt.loadNpmTasks('grunt-contrib-watch');
+    grunt.loadNpmTasks('grunt-eslint');
+    grunt.loadNpmTasks('grunt-stylelint');
 
     // Register JS tasks.
     grunt.registerTask('shifter', 'Run Shifter against the current directory', tasks.shifter);
-    grunt.registerTask('amd', ['jshint', 'uglify']);
-    grunt.registerTask('js', ['amd', 'shifter']);
+    grunt.registerTask('ignorefiles', 'Generate ignore files for linters', tasks.ignorefiles);
+    grunt.registerTask('yui', ['eslint:yui', 'shifter']);
+    grunt.registerTask('amd', ['eslint:amd', 'uglify']);
+    grunt.registerTask('js', ['amd', 'yui']);
 
     // Register CSS taks.
-    grunt.registerTask('css', ['less:bootstrapbase']);
+    grunt.registerTask('css', ['stylelint:less', 'less:bootstrapbase']);
 
     // Register the startup task.
     grunt.registerTask('startup', 'Run the correct tasks for the current directory', tasks.startup);

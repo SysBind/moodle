@@ -43,7 +43,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
      *
      * @method getCartridgeURL
      * @private
-     * @return string
+     * @return {String}
      */
     var getCartridgeURL = function() {
         return $(SELECTORS.REGISTRATION_FORM).attr('data-cartridge-url');
@@ -54,7 +54,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
      *
      * @method getSubmitButton
      * @private
-     * @return object jQuery object
+     * @return {JQuery} jQuery object
      */
     var getSubmitButton = function() {
         return $(SELECTORS.REGISTRATION_SUBMIT_BUTTON);
@@ -65,7 +65,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
      *
      * @method getCancelButton
      * @private
-     * @return object jQuery object
+     * @return {JQuery} jQuery object
      */
     var getCancelButton = function() {
         return $(SELECTORS.REGISTRATION_CANCEL_BUTTON);
@@ -76,7 +76,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
      *
      * @method getConsumerKey
      * @private
-     * @return string
+     * @return {String} the value entered for consumer key.
      */
     var getConsumerKey = function() {
         return $(SELECTORS.CONSUMER_KEY).val();
@@ -87,7 +87,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
      *
      * @method getSharedSecret
      * @private
-     * @return string
+     * @return {String} the value entered for shared secret
      */
     var getSharedSecret = function() {
         return $(SELECTORS.SHARED_SECRET).val();
@@ -118,7 +118,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
      *
      * @method isLoading
      * @private
-     * @return bool
+     * @return {Boolean}
      */
     var isLoading = function() {
         return getSubmitButton().hasClass('loading');
@@ -134,17 +134,17 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
      *
      * @method submitCartridgeURL
      * @private
-     * @return object jQuery deferred object
+     * @return {Promise} jQuery Deferred object
      */
     var submitCartridgeURL = function() {
         if (isLoading()) {
-            return;
+            return false;
         }
 
         var url = getCartridgeURL();
         // No URL? Do nothing.
         if (url === "") {
-            return;
+            return false;
         }
 
         startLoading();
@@ -153,27 +153,25 @@ define(['jquery', 'core/ajax', 'core/notification', 'mod_lti/tool_type', 'mod_lt
         var promise = toolType.create({cartridgeurl: url, key: consumerKey, secret: sharedSecret});
 
         promise.done(function() {
-            str.get_strings([{key: 'success', component: 'moodle'},
-                             {key: 'successfullycreatedtooltype', component: 'mod_lti'}]).done(function (s) {
+            str.get_string('successfullycreatedtooltype', 'mod_lti').done(function(s) {
                 $(document).trigger(ltiEvents.NEW_TOOL_TYPE);
                 $(document).trigger(ltiEvents.STOP_CARTRIDGE_REGISTRATION);
                 $(document).trigger(ltiEvents.REGISTRATION_FEEDBACK, {
-                    status: s[0],
-                    message: s[1]
+                    message: s
                 });
             }).fail(notification.exception);
         }).fail(function() {
-            str.get_strings([{key: 'error', component: 'moodle'},
-                             {key: 'failedtocreatetooltype', component: 'mod_lti'}]).done(function (s) {
+            str.get_string('failedtocreatetooltype', 'mod_lti').done(function(s) {
                 $(document).trigger(ltiEvents.NEW_TOOL_TYPE);
                 $(document).trigger(ltiEvents.STOP_CARTRIDGE_REGISTRATION);
                 $(document).trigger(ltiEvents.REGISTRATION_FEEDBACK, {
-                    status: s[0],
-                    message: s[1],
+                    message: s,
                     error: true
                 });
             }).fail(notification.exception);
-        }).always(function() { stopLoading(); });
+        }).always(function() {
+          stopLoading();
+        });
 
         return promise;
     };

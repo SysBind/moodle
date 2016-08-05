@@ -35,7 +35,7 @@ require_once($CFG->dirroot . '/mod/glossary/lib.php');
  * @copyright  2015 David Monllao {@link http://www.davidmonllao.com}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class entry extends \core_search\area\base_mod {
+class entry extends \core_search\base_mod {
 
     /**
      * @var array Internal quick static cache.
@@ -53,7 +53,7 @@ class entry extends \core_search\area\base_mod {
 
         $sql = "SELECT ge.*, g.course FROM {glossary_entries} ge
                   JOIN {glossary} g ON g.id = ge.glossaryid
-                WHERE ge.timemodified >= ?";
+                WHERE ge.timemodified >= ? ORDER BY ge.timemodified ASC";
         return $DB->get_recordset_sql($sql, array($modifiedfrom));
     }
 

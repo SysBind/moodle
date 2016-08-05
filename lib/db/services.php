@@ -214,7 +214,8 @@ $functions = array(
         'classpath' => 'course/externallib.php',
         'description' => 'Return category details',
         'type' => 'read',
-        'capabilities' => 'moodle/category:viewhiddencategories'
+        'capabilities' => 'moodle/category:viewhiddencategories',
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'core_course_get_contents' => array(
         'classname' => 'core_course_external',
@@ -291,6 +292,14 @@ $functions = array(
         'classpath' => 'course/externallib.php',
         'description' => 'Log that the course was viewed',
         'type' => 'write',
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'core_course_get_activities_overview' => array(
+        'classname' => 'core_course_external',
+        'methodname' => 'get_activities_overview',
+        'classpath' => 'course/externallib.php',
+        'description' => 'Return activities overview for the given courses.',
+        'type' => 'read',
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'core_enrol_get_course_enrolment_methods' => array(
@@ -392,7 +401,8 @@ $functions = array(
     'core_grades_get_grades' => array(
         'classname' => 'core_grades_external',
         'methodname' => 'get_grades',
-        'description' => 'Returns student course total grade and grades for activities.
+        'description' => '** DEPRECATED ** Please do not call this function any more.
+                                     Returns student course total grade and grades for activities.
                                      This function does not return category or manual items.
                                      This function is suitable for managers or teachers not students.',
         'type' => 'read',
@@ -403,7 +413,6 @@ $functions = array(
         'methodname' => 'update_grades',
         'description' => 'Update a grade item and associated student grades.',
         'type' => 'write',
-        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'core_grading_get_definitions' => array(
         'classname' => 'core_grading_external',
@@ -860,6 +869,14 @@ $functions = array(
         'description' => 'Simulates the web-interface view of user/view.php and user/profile.php (triggering events),.',
         'type' => 'write',
         'capabilities' => 'moodle/user:viewdetails',
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'core_user_get_user_preferences' => array(
+        'classname' => 'core_user_external',
+        'methodname' => 'get_user_preferences',
+        'classpath' => 'user/externallib.php',
+        'description' => 'Return user preferences.',
+        'type' => 'read',
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
 

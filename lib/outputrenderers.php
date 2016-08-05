@@ -566,7 +566,7 @@ class core_renderer extends renderer_base {
     public function standard_top_of_body_html() {
         global $CFG;
         $output = $this->page->requires->get_top_of_body_code();
-        if (!empty($CFG->additionalhtmltopofbody)) {
+        if ($this->page->pagelayout !== 'embedded' && !empty($CFG->additionalhtmltopofbody)) {
             $output .= "\n".$CFG->additionalhtmltopofbody;
         }
         $output .= $this->maintenance_warning();
@@ -689,7 +689,7 @@ class core_renderer extends renderer_base {
         // but some of the content won't be known until later, so we return a placeholder
         // for now. This will be replaced with the real content in {@link core_renderer::footer()}.
         $output = '';
-        if (!empty($CFG->additionalhtmlfooter)) {
+        if ($this->page->pagelayout !== 'embedded' && !empty($CFG->additionalhtmlfooter)) {
             $output .= "\n".$CFG->additionalhtmlfooter;
         }
         $output .= $this->unique_end_html_token;
@@ -3617,6 +3617,17 @@ EOD;
     }
 
     /**
+     * Accessibility: Down arrow-like character.
+     * If the theme does not set characters, appropriate defaults
+     * are set automatically.
+     *
+     * @return string
+     */
+    public function darrow() {
+        return $this->page->theme->darrow;
+    }
+
+    /**
      * Returns the custom menu if one has been set
      *
      * A custom menu can be configured by browsing to
@@ -4280,6 +4291,52 @@ EOD;
     public function render_inplace_editable(\core\output\inplace_editable $element) {
         return $this->render_from_template('core/inplace_editable', $element->export_for_template($this));
     }
+
+    /**
+     * Renders a bar chart.
+     *
+     * @param \core\chart_bar $chart The chart.
+     * @return string.
+     */
+    public function render_chart_bar(\core\chart_bar $chart) {
+        return $this->render_chart($chart);
+    }
+
+    /**
+     * Renders a line chart.
+     *
+     * @param \core\chart_line $chart The chart.
+     * @return string.
+     */
+    public function render_chart_line(\core\chart_line $chart) {
+        return $this->render_chart($chart);
+    }
+
+    /**
+     * Renders a pie chart.
+     *
+     * @param \core\chart_pie $chart The chart.
+     * @return string.
+     */
+    public function render_chart_pie(\core\chart_pie $chart) {
+        return $this->render_chart($chart);
+    }
+
+    /**
+     * Renders a chart.
+     *
+     * @param \core\chart_base $chart The chart.
+     * @param bool $withtable Whether to include a data table with the chart.
+     * @return string.
+     */
+    public function render_chart(\core\chart_base $chart, $withtable = true) {
+        $chartdata = json_encode($chart);
+        return $this->render_from_template('core/chart', (object) [
+            'chartdata' => $chartdata,
+            'withtable' => $withtable
+        ]);
+    }
+
 }
 
 /**

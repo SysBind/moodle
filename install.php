@@ -62,10 +62,10 @@ date_default_timezone_set(@date_default_timezone_get());
 @ini_set('display_errors', '1');
 
 // Check that PHP is of a sufficient version.
-if (version_compare(phpversion(), '5.4.4') < 0) {
+if (version_compare(phpversion(), '5.6.5') < 0) {
     $phpversion = phpversion();
     // do NOT localise - lang strings would not work here and we CAN not move it after installib
-    echo "Moodle 2.7 or later requires at least PHP 5.4.4 (currently using version $phpversion).<br />";
+    echo "Moodle 3.2 or later requires at least PHP 5.6.5 (currently using version $phpversion).<br />";
     echo "Please upgrade your server software or install older Moodle version.";
     die;
 }
@@ -162,7 +162,7 @@ if (!empty($_POST)) {
 global $CFG;
 $CFG = new stdClass();
 $CFG->lang                 = $config->lang;
-$CFG->dirroot              = dirname(__FILE__);
+$CFG->dirroot              = __DIR__;
 $CFG->libdir               = "$CFG->dirroot/lib";
 $CFG->wwwroot              = install_guess_wwwroot(); // can not be changed - ppl must use the real address when installing
 $CFG->httpswwwroot         = $CFG->wwwroot;
@@ -252,7 +252,7 @@ if (isset($_GET['help'])) {
 
 //first time here? find out suitable dataroot
 if (is_null($CFG->dataroot)) {
-    $CFG->dataroot = dirname(dirname(__FILE__)).DIRECTORY_SEPARATOR.'moodledata';
+    $CFG->dataroot = __DIR__.'/../moodledata';
 
     $i = 0; //safety check - dirname might return some unexpected results
     while(is_dataroot_insecure()) {

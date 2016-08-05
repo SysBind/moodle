@@ -316,6 +316,9 @@ class engine extends \core_search\engine {
             $query->setGroupLimit(3);
             $query->setGroupNGroups(true);
             $query->addGroupField('solr_filegroupingid');
+        } else {
+            // Make sure we only get text files, in case the index has pre-existing files.
+            $query->addFilterQuery('type:'.\core_search\manager::TYPE_TEXT);
         }
 
         return $query;
@@ -998,7 +1001,7 @@ class engine extends \core_search\engine {
      *
      * Return false to prevent the search area completed time and stats from being updated.
      *
-     * @param \core_search\area\base $searcharea The search area that was complete
+     * @param \core_search\base $searcharea The search area that was complete
      * @param int $numdocs The number of documents that were added to the index
      * @param bool $fullindex True if a full index is being performed
      * @return bool True means that data is considered indexed
@@ -1156,6 +1159,10 @@ class engine extends \core_search\engine {
             'ssl_capath' => !empty($this->config->ssl_capath) ? $this->config->ssl_capath : '',
             'timeout' => !empty($this->config->server_timeout) ? $this->config->server_timeout : '30'
         );
+
+        if (!class_exists('\SolrClient')) {
+            throw new \core_search\engine_exception('enginenotinstalled', 'search', '', 'solr');
+        }
 
         $client = new \SolrClient($options);
 

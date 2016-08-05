@@ -2460,9 +2460,7 @@ class global_navigation extends navigation_node {
 
         $coursenode = $parent->add($coursename, $url, self::TYPE_COURSE, $shortname, $course->id);
         $coursenode->hidden = (!$course->visible);
-        // We need to decode &amp;'s here as they will have been added by format_string above and attributes will be encoded again
-        // later.
-        $coursenode->title(str_replace('&amp;', '&', $fullname));
+        $coursenode->title(format_string($course->fullname, true, array('context' => $coursecontext, 'escape' => false)));
         if ($canexpandcourse) {
             // This course can be expanded by the user, make it a branch to make the system aware that its expandable by ajax.
             $coursenode->nodetype = self::NODETYPE_BRANCH;
@@ -4450,6 +4448,15 @@ class settings_navigation extends navigation_node {
                     $url = new moodle_url('/user/editor.php', array('id' => $user->id, 'course' => $course->id));
                     $useraccount->add(get_string('editorpreferences'), $url, self::TYPE_SETTING);
                 }
+            }
+        }
+
+        // Add "Course preferences" link.
+        if (isloggedin() && !isguestuser($user)) {
+            if ($currentuser && has_capability('moodle/user:editownprofile', $systemcontext) ||
+                has_capability('moodle/user:editprofile', $usercontext)) {
+                $url = new moodle_url('/user/course.php', array('id' => $user->id, 'course' => $course->id));
+                $useraccount->add(get_string('coursepreferences'), $url, self::TYPE_SETTING, null, 'coursepreferences');
             }
         }
 

@@ -14,6 +14,7 @@ YUI.add('moodle-core_message-messenger', function (Y, NAME) {
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* eslint-disable no-unused-vars */
 
 /**
  * Messenger constants.
@@ -54,6 +55,7 @@ var SELECTORS = {};
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global SELECTORS */
 
 /**
  * Messenger manager.
@@ -197,6 +199,7 @@ Y.namespace('M.core_message.messenger').init = function(config) {
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global CSSR, SELECTORS */
 
 /**
  * Send message dialog.
@@ -408,10 +411,10 @@ Y.namespace('M.core_message.messenger').sendMessage = Y.extend(SENDMSGDIALOG, M.
 
         Y.use('moodle-core-notification-confirm', function() {
             var confirm = new M.core.confirm({
-                title : M.util.get_string('confirm', 'moodle'),
-                question : M.util.get_string('changesmadereallygoaway', 'moodle'),
-                yesLabel : M.util.get_string('confirm', 'moodle'),
-                noLabel : M.util.get_string('cancel', 'moodle')
+                title: M.util.get_string('confirm', 'moodle'),
+                question: M.util.get_string('changesmadereallygoaway', 'moodle'),
+                yesLabel: M.util.get_string('confirm', 'moodle'),
+                noLabel: M.util.get_string('cancel', 'moodle')
             });
             confirm.on('complete-yes', function() {
                 M.core_formchangechecker.reset_form_dirty_state();
@@ -614,7 +617,7 @@ Y.Base.modifyAttrs(Y.namespace('M.core_message.messenger.sendMessage'), {
      * @default false
      */
     center: {
-        value : true
+        value: true
     }
 
 });

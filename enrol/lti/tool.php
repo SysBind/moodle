@@ -22,12 +22,11 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(dirname(__FILE__) . '/../../config.php');
+require_once(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/user/lib.php');
 require_once($CFG->dirroot . '/enrol/lti/ims-blti/blti.php');
 
 $toolid = required_param('id', PARAM_INT);
-$lticontextid = required_param('context_id', PARAM_RAW);
 
 // Get the tool.
 $tool = \enrol_lti\helper::get_lti_tool($toolid);

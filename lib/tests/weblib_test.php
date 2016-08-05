@@ -37,6 +37,7 @@ class core_weblib_testcase extends advanced_testcase {
         $this->assertSame("ANother &amp; &amp;&amp;&amp;&amp;&amp; Category", format_string("ANother & &&&&& Category"));
         $this->assertSame("ANother &amp; &amp;&amp;&amp;&amp;&amp; Category", format_string("ANother & &&&&& Category", true));
         $this->assertSame("Nick's Test Site &amp; Other things", format_string("Nick's Test Site & Other things", true));
+        $this->assertSame("& < > \" '", format_string("& < > \" '", true, ['escape' => false]));
 
         // String entities.
         $this->assertSame("&quot;", format_string("&quot;"));
@@ -257,10 +258,11 @@ class core_weblib_testcase extends advanced_testcase {
 
     /**
      * Test set bad scheme on Moodle URL objects.
+     *
+     * @expectedException coding_exception
      */
     public function test_moodle_url_set_bad_scheme() {
         $url = new moodle_url('http://moodle.org/foo/bar');
-        $this->setExpectedException('coding_exception');
         $url->set_scheme('not a valid $ scheme');
     }
 

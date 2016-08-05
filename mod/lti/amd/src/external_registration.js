@@ -48,7 +48,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method getExternalRegistrationCancelButton
      * @private
-     * @return object jQuery object
+     * @return {JQuery} jQuery object
      */
     var getExternalRegistrationCancelButton = function() {
         return $(SELECTORS.EXTERNAL_REGISTRATION_CANCEL_BUTTON);
@@ -60,7 +60,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method getExternalRegistrationContainer
      * @private
-     * @return object jQuery object
+     * @return {JQuery} jQuery object
      */
     var getExternalRegistrationContainer = function() {
         return $(SELECTORS.EXTERNAL_REGISTRATION_CONTAINER);
@@ -72,7 +72,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method getExternalRegistrationTemplateContainer
      * @private
-     * @return object jQuery object
+     * @return {JQuery} jQuery object
      */
     var getExternalRegistrationTemplateContainer = function() {
         return $(SELECTORS.EXTERNAL_REGISTRATION_TEMPLATE_CONTAINER);
@@ -85,7 +85,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method getToolTypeCapabilitiesContainer
      * @private
-     * @return object jQuery object
+     * @return {JQuery} jQuery object
      */
     var getToolTypeCapabilitiesContainer = function() {
         return $(SELECTORS.TOOL_TYPE_CAPABILITIES_CONTAINER);
@@ -97,7 +97,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method getToolTypeCapabilitiesTemplateContainer
      * @private
-     * @return object jQuery object
+     * @return {JQuery} jQuery object
      */
     var getToolTypeCapabilitiesTemplateContainer = function() {
         return $(SELECTORS.TOOL_TYPE_CAPABILITIES_TEMPLATE_CONTAINER);
@@ -188,7 +188,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method setToolProxyId
      * @private
-     * @param int Tool proxy ID
+     * @param {Integer} id Tool proxy ID
      */
     var setToolProxyId = function(id) {
         var button = getExternalRegistrationCancelButton();
@@ -200,7 +200,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method getToolProxyId
      * @private
-     * @return string Tool proxy ID
+     * @return {String} Tool proxy ID
      */
     var getToolProxyId = function() {
         var button = getExternalRegistrationCancelButton();
@@ -223,7 +223,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method hasToolProxyId
      * @private
-     * @return bool
+     * @return {Boolean}
      */
     var hasToolProxyId = function() {
         return getToolProxyId() ? true : false;
@@ -235,7 +235,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method hasCreatedToolProxy
      * @private
-     * @return bool
+     * @return {Boolean}
      */
     var hasCreatedToolProxy = function() {
         var button = getExternalRegistrationCancelButton();
@@ -247,7 +247,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method setProxyAsNew
      * @private
-     * @return bool
+     * @return {Boolean}
      */
     var setProxyAsNew = function() {
         var button = getExternalRegistrationCancelButton();
@@ -259,7 +259,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method setProxyAsOld
      * @private
-     * @return bool
+     * @return {Boolean}
      */
     var setProxyAsOld = function() {
         var button = getExternalRegistrationCancelButton();
@@ -274,8 +274,8 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method getRegistrationRequest
      * @private
-     * @param int Tool Proxy ID
-     * @return object jQuery Deferred object
+     * @param {Integer} id Tool Proxy ID
+     * @return {Promise} jQuery Deferred object
      */
     var getRegistrationRequest = function(id) {
         var request = {
@@ -294,7 +294,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method cancelRegistration
      * @private
-     * @return object jQuery Deferred object
+     * @return {Promise} jQuery Deferred object
      */
     var cancelRegistration = function() {
         startLoadingCancel();
@@ -306,7 +306,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
             var id = getToolProxyId();
             toolProxy.delete(id).done(function() {
                 promise.resolve();
-            }).fail(function (failure) {
+            }).fail(function(failure) {
                 promise.reject(failure);
             });
         } else {
@@ -317,15 +317,13 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
             // Return to the original page.
             finishExternalRegistration();
             stopLoadingCancel();
-        }).fail(function (failure) {
+        }).fail(function(failure) {
             notification.exception(failure);
             finishExternalRegistration();
             stopLoadingCancel();
-            str.get_strings([{key: 'error', component: 'moodle'},
-                             {key: 'failedtodeletetoolproxy', component: 'mod_lti'}]).done(function (s) {
+            str.get_string('failedtodeletetoolproxy', 'mod_lti').done(function(s) {
                 var feedback = {
-                    status: s[0],
-                    message: s[1],
+                    message: s,
                     error: true
                 };
                 $(document).trigger(ltiEvents.REGISTRATION_FEEDBACK, feedback);
@@ -340,7 +338,8 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method renderExternalRegistrationWindow
      * @private
-     * @return object jQuery Deferred object
+     * @param {Object} registrationRequest
+     * @return {Promise} jQuery Deferred object
      */
     var renderExternalRegistrationWindow = function(registrationRequest) {
         var promise = templates.render('mod_lti/tool_proxy_registration_form', registrationRequest);
@@ -363,9 +362,9 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method setTypeStatusActive
      * @private
-     * @param object A set of data representing a type, as returned by a request to get a type
+     * @param {Object} typeData A set of data representing a type, as returned by a request to get a type
      *               from the Moodle server.
-     * @return object jQuery Deferred object
+     * @return {Promise} jQuery Deferred object
      */
     var setTypeStatusActive = function(typeData) {
         return toolType.update({
@@ -382,9 +381,9 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method promptForToolTypeCapabilitiesAgreement
      * @private
-     * @param object A set of data representing a type, as returned by a request to get a type
+     * @param {Object} typeData A set of data representing a type, as returned by a request to get a type
      *               from the Moodle server.
-     * @return object jQuery Deferred object
+     * @return {Promise} jQuery Deferred object
      */
     var promptForToolTypeCapabilitiesAgreement = function(typeData) {
         var promise = $.Deferred();
@@ -438,8 +437,8 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method createAndRegisterToolProxy
      * @private
-     * @param url Tool registration URL to register
-     * @return object jQuery Deferred object
+     * @param {String} url Tool registration URL to register
+     * @return {Promise} jQuery Deferred object
      */
     var createAndRegisterToolProxy = function(url) {
         var promise = $.Deferred();
@@ -461,16 +460,11 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
                         // Clean up.
                         cancelRegistration();
                         // Let the user know what the error is.
-                        str.get_string('error', 'moodle')
-                            .done(function (s) {
-                                    var feedback = {
-                                        status: s,
-                                        message: exception.message,
-                                        error: true
-                                    };
-                                    $(document).trigger(ltiEvents.REGISTRATION_FEEDBACK, feedback);
-                                })
-                            .fail(notification.exception);
+                        var feedback = {
+                            message: exception.message,
+                            error: true
+                        };
+                        $(document).trigger(ltiEvents.REGISTRATION_FEEDBACK, feedback);
                         promise.reject(exception);
                     });
         }
@@ -483,8 +477,8 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
      *
      * @method registerProxy
      * @private
-     * @param id Proxy id to register
-     * @return jQuery Deferred object to fail or resolve
+     * @param {Integer} id Proxy id to register
+     * @return {Promise} jQuery Deferred object to fail or resolve
      */
     var registerProxy = function(id) {
         var promise = $.Deferred();
@@ -571,16 +565,13 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/templates', 'mod_lti/e
         window.triggerExternalRegistrationComplete = function(data) {
             var promise = $.Deferred();
             var feedback = {
-                status: data.status,
                 message: "",
                 error: false
             };
 
             if (data.status == "success") {
-                str.get_strings([{key: 'success', component: 'moodle'},
-                                 {key: 'successfullycreatedtooltype', component: 'mod_lti'}]).done(function (s) {
-                    feedback.status = s[0];
-                    feedback.message = s[1];
+                str.get_string('successfullycreatedtooltype', 'mod_lti').done(function(s) {
+                    feedback.message = s;
                 }).fail(notification.exception);
 
                 // Trigger appropriate events when we've completed the necessary requests.

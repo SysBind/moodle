@@ -3035,7 +3035,7 @@ function require_user_key_login($script, $instance=null) {
  * @param int $userid
  * @param int $instance optional instance id
  * @param string $iprestriction optional ip restricted access
- * @param timestamp $validuntil key valid only until given data
+ * @param int $validuntil key valid only until given data
  * @return string access key value
  */
 function create_user_key($script, $userid, $instance=null, $iprestriction=null, $validuntil=null) {
@@ -3078,7 +3078,7 @@ function delete_user_key($script, $userid) {
  * @param int $userid
  * @param int $instance optional instance id
  * @param string $iprestriction optional ip restricted access
- * @param timestamp $validuntil key valid only until given data
+ * @param int $validuntil key valid only until given date
  * @return string access key value
  */
 function get_user_key($script, $userid, $instance=null, $iprestriction=null, $validuntil=null) {
@@ -4123,6 +4123,12 @@ function authenticate_user_login($username, $password, $ignorelockout=false, &$f
     if ($user) {
         // Use manual if auth not set.
         $auth = empty($user->auth) ? 'manual' : $user->auth;
+
+        if (in_array($user->auth, $authsenabled)) {
+            $authplugin = get_auth_plugin($user->auth);
+            $authplugin->pre_user_login_hook($user);
+        }
+
         if (!empty($user->suspended)) {
             $failurereason = AUTH_LOGIN_SUSPENDED;
 
@@ -4296,7 +4302,7 @@ function authenticate_user_login($username, $password, $ignorelockout=false, &$f
  * @return stdClass A {@link $USER} object - BC only, do not use
  */
 function complete_user_login($user) {
-    global $CFG, $USER;
+    global $CFG, $USER, $SESSION;
 
     \core\session\manager::login_user($user);
 
@@ -4339,6 +4345,7 @@ function complete_user_login($user) {
             if ($changeurl = $userauth->change_password_url()) {
                 redirect($changeurl);
             } else {
+                $SESSION->wantsurl = core_login_get_return_url();
                 redirect($CFG->httpswwwroot.'/login/change_password.php');
             }
         } else {
@@ -4369,7 +4376,6 @@ function password_is_legacy_hash($password) {
  */
 function validate_internal_user_password($user, $password) {
     global $CFG;
-    require_once($CFG->libdir.'/password_compat/lib/password.php');
 
     if ($user->password === AUTH_PASSWORD_NOT_CACHED) {
         // Internal password is not used at all, it can not validate.
@@ -4430,7 +4436,6 @@ function validate_internal_user_password($user, $password) {
  */
 function hash_internal_user_password($password, $fasthash = false) {
     global $CFG;
-    require_once($CFG->libdir.'/password_compat/lib/password.php');
 
     // Set the cost factor to 4 for fast hashing, otherwise use default cost.
     $options = ($fasthash) ? array('cost' => 4) : array();
@@ -4466,7 +4471,6 @@ function hash_internal_user_password($password, $fasthash = false) {
  */
 function update_internal_user_password($user, $password, $fasthash = false) {
     global $CFG, $DB;
-    require_once($CFG->libdir.'/password_compat/lib/password.php');
 
     // Figure out what the hashed password should be.
     if (!isset($user->auth)) {
@@ -4798,6 +4802,9 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
         echo $OUTPUT->notification($strdeleted.get_string('type_block_plural', 'plugin'), 'notifysuccess');
     }
 
+    // Get the list of all modules that are properly installed.
+    $allmodules = $DB->get_records_menu('modules', array(), '', 'name, id');
+
     // Delete every instance of every module,
     // this has to be done before deleting of course level stuff.
     $locations = core_component::get_plugin_list('mod');
@@ -4805,30 +4812,36 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
         if ($modname === 'NEWMODULE') {
             continue;
         }
-        if ($module = $DB->get_record('modules', array('name' => $modname))) {
+        if (array_key_exists($modname, $allmodules)) {
+            $sql = "SELECT cm.*, m.id AS modinstance, m.name, '$modname' AS modname
+              FROM {".$modname."} m
+                   LEFT JOIN {course_modules} cm ON cm.instance = m.id AND cm.module = :moduleid
+             WHERE m.course = :courseid";
+            $instances = $DB->get_records_sql($sql, array('courseid' => $course->id,
+                'modulename' => $modname, 'moduleid' => $allmodules[$modname]));
+
             include_once("$moddir/lib.php");                 // Shows php warning only if plugin defective.
             $moddelete = $modname .'_delete_instance';       // Delete everything connected to an instance.
             $moddeletecourse = $modname .'_delete_course';   // Delete other stray stuff (uncommon).
 
-            if ($instances = $DB->get_records($modname, array('course' => $course->id))) {
-                foreach ($instances as $instance) {
-                    if ($cm = get_coursemodule_from_instance($modname, $instance->id, $course->id)) {
+            if ($instances) {
+                foreach ($instances as $cm) {
+                    if ($cm->id) {
                         // Delete activity context questions and question categories.
                         question_delete_activity($cm,  $showfeedback);
-
                         // Notify the competency subsystem.
                         \core_competency\api::hook_course_module_deleted($cm);
                     }
                     if (function_exists($moddelete)) {
                         // This purges all module data in related tables, extra user prefs, settings, etc.
-                        $moddelete($instance->id);
+                        $moddelete($cm->modinstance);
                     } else {
                         // NOTE: we should not allow installation of modules with missing delete support!
                         debugging("Defective module '$modname' detected when deleting course contents: missing function $moddelete()!");
-                        $DB->delete_records($modname, array('id' => $instance->id));
+                        $DB->delete_records($modname, array('id' => $cm->modinstance));
                     }
 
-                    if ($cm) {
+                    if ($cm->id) {
                         // Delete cm and its context - orphaned contexts are purged in cron in case of any race condition.
                         context_helper::delete_instance(CONTEXT_MODULE, $cm->id);
                         $DB->delete_records('course_modules', array('id' => $cm->id));
@@ -4836,7 +4849,9 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
                 }
             }
             if (function_exists($moddeletecourse)) {
-                // Execute ptional course cleanup callback.
+                // Execute optional course cleanup callback. Deprecated since Moodle 3.2. TODO MDL-53297 remove in 3.6.
+                debugging("Callback delete_course is deprecated. Function $moddeletecourse should be converted " .
+                    'to observer of event \core\event\course_content_deleted', DEBUG_DEVELOPER);
                 $moddeletecourse($course, $showfeedback);
             }
             if ($instances and $showfeedback) {
@@ -4856,12 +4871,13 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
            'coursemoduleid IN (SELECT id from {course_modules} WHERE course=?)',
            array($courseid));
 
-    // Remove course-module data.
+    // Remove course-module data that has not been removed in modules' _delete_instance callbacks.
     $cms = $DB->get_records('course_modules', array('course' => $course->id));
+    $allmodulesbyid = array_flip($allmodules);
     foreach ($cms as $cm) {
-        if ($module = $DB->get_record('modules', array('id' => $cm->module))) {
+        if (array_key_exists($cm->module, $allmodulesbyid)) {
             try {
-                $DB->delete_records($module->name, array('id' => $cm->instance));
+                $DB->delete_records($allmodulesbyid[$cm->module], array('id' => $cm->instance));
             } catch (Exception $e) {
                 // Ignore weird or missing table problems.
             }
@@ -4874,17 +4890,19 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
         echo $OUTPUT->notification($strdeleted.get_string('type_mod_plural', 'plugin'), 'notifysuccess');
     }
 
-    // Cleanup the rest of plugins.
+    // Cleanup the rest of plugins. Deprecated since Moodle 3.2. TODO MDL-53297 remove in 3.6.
     $cleanuplugintypes = array('report', 'coursereport', 'format');
     $callbacks = get_plugins_with_function('delete_course', 'lib.php');
     foreach ($cleanuplugintypes as $type) {
         if (!empty($callbacks[$type])) {
             foreach ($callbacks[$type] as $pluginfunction) {
+                debugging("Callback delete_course is deprecated. Function $pluginfunction should be converted " .
+                    'to observer of event \core\event\course_content_deleted', DEBUG_DEVELOPER);
                 $pluginfunction($course->id, $showfeedback);
             }
-        }
-        if ($showfeedback) {
-            echo $OUTPUT->notification($strdeleted.get_string('type_'.$type.'_plural', 'plugin'), 'notifysuccess');
+            if ($showfeedback) {
+                echo $OUTPUT->notification($strdeleted.get_string('type_'.$type.'_plural', 'plugin'), 'notifysuccess');
+            }
         }
     }
 
@@ -6236,65 +6254,54 @@ function valid_uploaded_file($newfile) {
 /**
  * Returns the maximum size for uploading files.
  *
- * There are eight possible upload limits:
- * 1. No limit, if the upload isn't using a post request and the user has permission to ignore limits.
- * 2. in Apache using LimitRequestBody (no way of checking or changing this)
- * 3. in php.ini for 'upload_max_filesize' (can not be changed inside PHP)
- * 4. in .htaccess for 'upload_max_filesize' (can not be changed inside PHP)
- * 5. in php.ini for 'post_max_size' (can not be changed inside PHP)
- * 6. by the Moodle admin in $CFG->maxbytes
- * 7. by the teacher in the current course $course->maxbytes
- * 8. by the teacher for the current module, eg $assignment->maxbytes
+ * There are seven possible upload limits:
+ * 1. in Apache using LimitRequestBody (no way of checking or changing this)
+ * 2. in php.ini for 'upload_max_filesize' (can not be changed inside PHP)
+ * 3. in .htaccess for 'upload_max_filesize' (can not be changed inside PHP)
+ * 4. in php.ini for 'post_max_size' (can not be changed inside PHP)
+ * 5. by the Moodle admin in $CFG->maxbytes
+ * 6. by the teacher in the current course $course->maxbytes
+ * 7. by the teacher for the current module, eg $assignment->maxbytes
  *
  * These last two are passed to this function as arguments (in bytes).
  * Anything defined as 0 is ignored.
  * The smallest of all the non-zero numbers is returned.
  *
- * The php.ini settings are only used if $usespost is true. This allows repositories that do not use post requests, such as
- * repository_filesystem, to copy in files that are larger than post_max_size if the user has permission.
+ * @todo Finish documenting this function
  *
  * @param int $sitebytes Set maximum size
  * @param int $coursebytes Current course $course->maxbytes (in bytes)
  * @param int $modulebytes Current module ->maxbytes (in bytes)
- * @param bool $usespost Does the upload we're getting the max size for use a post request?
+ * @param bool $unused This parameter has been deprecated and is not used any more.
  * @return int The maximum size for uploading files.
  */
-function get_max_upload_file_size($sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $usespost = true) {
-    $sizes = array();
+function get_max_upload_file_size($sitebytes=0, $coursebytes=0, $modulebytes=0, $unused = false) {
 
-    if ($usespost) {
-        if (!$filesize = ini_get('upload_max_filesize')) {
-            $filesize = '5M';
-        }
-        $sizes[] = get_real_size($filesize);
+    if (! $filesize = ini_get('upload_max_filesize')) {
+        $filesize = '5M';
+    }
+    $minimumsize = get_real_size($filesize);
 
-        if ($postsize = ini_get('post_max_size')) {
-            $sizes[] = get_real_size($postsize);
-        }
-
-        if ($sitebytes > 0) {
-            $sizes[] = $sitebytes;
-        }
-    } else {
-        if ($sitebytes != 0) {
-            // It's for possible that $sitebytes == USER_CAN_IGNORE_FILE_SIZE_LIMITS (-1).
-            $sizes[] = $sitebytes;
+    if ($postsize = ini_get('post_max_size')) {
+        $postsize = get_real_size($postsize);
+        if ($postsize < $minimumsize) {
+            $minimumsize = $postsize;
         }
     }
 
-    if ($coursebytes > 0) {
-        $sizes[] = $coursebytes;
+    if (($sitebytes > 0) and ($sitebytes < $minimumsize)) {
+        $minimumsize = $sitebytes;
     }
 
-    if ($modulebytes > 0) {
-        $sizes[] = $modulebytes;
+    if (($coursebytes > 0) and ($coursebytes < $minimumsize)) {
+        $minimumsize = $coursebytes;
     }
 
-    if (empty($sizes)) {
-        throw new coding_exception('You must specify at least one filesize limit.');
+    if (($modulebytes > 0) and ($modulebytes < $minimumsize)) {
+        $minimumsize = $modulebytes;
     }
 
-    return min($sizes);
+    return $minimumsize;
 }
 
 /**
@@ -6307,11 +6314,11 @@ function get_max_upload_file_size($sitebytes = 0, $coursebytes = 0, $modulebytes
  * @param int $coursebytes Current course $course->maxbytes (in bytes)
  * @param int $modulebytes Current module ->maxbytes (in bytes)
  * @param stdClass $user The user
- * @param bool $usespost Does the upload we're getting the max size for use a post request?
+ * @param bool $unused This parameter has been deprecated and is not used any more.
  * @return int The maximum size for uploading files.
  */
 function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 0, $modulebytes = 0, $user = null,
-        $usespost = true) {
+        $unused = false) {
     global $USER;
 
     if (empty($user)) {
@@ -6319,10 +6326,10 @@ function get_user_max_upload_file_size($context, $sitebytes = 0, $coursebytes = 
     }
 
     if (has_capability('moodle/course:ignorefilesizelimits', $context, $user)) {
-        return get_max_upload_file_size(USER_CAN_IGNORE_FILE_SIZE_LIMITS, 0, 0, $usespost);
+        return USER_CAN_IGNORE_FILE_SIZE_LIMITS;
     }
 
-    return get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes, $usespost);
+    return get_max_upload_file_size($sitebytes, $coursebytes, $modulebytes);
 }
 
 /**

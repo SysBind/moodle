@@ -523,7 +523,7 @@ class core_user_externallib_testcase extends externallib_advanced_testcase {
 
         // Call without required capability
         $this->unassignUserCapability('moodle/user:create', $context->id, $roleid);
-        $this->setExpectedException('required_capability_exception');
+        $this->expectException('required_capability_exception');
         $createdusers = core_user_external::create_users(array($user1));
     }
 
@@ -554,7 +554,7 @@ class core_user_externallib_testcase extends externallib_advanced_testcase {
 
         // Call without required capability.
         $this->unassignUserCapability('moodle/user:delete', $context->id, $roleid);
-        $this->setExpectedException('required_capability_exception');
+        $this->expectException('required_capability_exception');
         core_user_external::delete_users(array($user1->id, $user2->id));
     }
 
@@ -565,6 +565,22 @@ class core_user_externallib_testcase extends externallib_advanced_testcase {
         global $USER, $CFG, $DB;
 
         $this->resetAfterTest(true);
+
+        $wsuser = self::getDataGenerator()->create_user();
+        self::setUser($wsuser);
+
+        $context = context_user::instance($USER->id);
+        $contextid = $context->id;
+        $filename = "reddot.png";
+        $filecontent = "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38"
+            . "GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
+
+        // Call the files api to create a file.
+        $draftfile = core_files_external::upload($contextid, 'user', 'draft', 0, '/',
+                $filename, $filecontent, null, null);
+        $draftfile = external_api::clean_returnvalue(core_files_external::upload_returns(), $draftfile);
+
+        $draftid = $draftfile['itemid'];
 
         $user1 = self::getDataGenerator()->create_user();
 
@@ -582,6 +598,7 @@ class core_user_externallib_testcase extends externallib_advanced_testcase {
             'email' => 'usertest1@example.com',
             'description' => 'This is a description for user 1',
             'city' => 'Perth',
+            'userpicture' => $draftid,
             'country' => 'AU'
             );
 
@@ -600,10 +617,24 @@ class core_user_externallib_testcase extends externallib_advanced_testcase {
         $this->assertEquals($dbuser->description, $user1['description']);
         $this->assertEquals($dbuser->city, $user1['city']);
         $this->assertEquals($dbuser->country, $user1['country']);
+        $this->assertNotEquals(0, $dbuser->picture, 'Picture must be set to the new icon itemid for this user');
+
+        // Confirm no picture change when parameter is not supplied.
+        unset($user1['userpicture']);
+        core_user_external::update_users(array($user1));
+        $dbusernopic = $DB->get_record('user', array('id' => $user1['id']));
+        $this->assertEquals($dbuser->picture, $dbusernopic->picture, 'Picture not change without the parameter.');
+
+        // Confirm delete of picture deletes the picture from the user record.
+        $user1['userpicture'] = 0;
+        core_user_external::update_users(array($user1));
+        $dbuserdelpic = $DB->get_record('user', array('id' => $user1['id']));
+        $this->assertEquals(0, $dbuserdelpic->picture, 'Picture must be deleted when sent as 0.');
+
 
         // Call without required capability.
         $this->unassignUserCapability('moodle/user:update', $context->id, $roleid);
-        $this->setExpectedException('required_capability_exception');
+        $this->expectException('required_capability_exception');
         core_user_external::update_users(array($user1));
     }
 
@@ -758,6 +789,69 @@ class core_user_externallib_testcase extends externallib_advanced_testcase {
         $result = core_user_external::remove_user_device($device['uuid']);
         $result = external_api::clean_returnvalue(core_user_external::remove_user_device_returns(), $result);
         $this->assertTrue($result['removed']);
+    }
+
+    /**
+     * Test get_user_preferences
+     */
+    public function test_get_user_preferences() {
+        $this->resetAfterTest(true);
+
+        $user = self::getDataGenerator()->create_user();
+        set_user_preference('calendar_maxevents', 1, $user);
+        set_user_preference('some_random_text', 'text', $user);
+
+        $this->setUser($user);
+
+        $result = core_user_external::get_user_preferences();
+        $result = external_api::clean_returnvalue(core_user_external::get_user_preferences_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        // Expect 3, _lastloaded is always returned.
+        $this->assertCount(3, $result['preferences']);
+
+        foreach ($result['preferences'] as $pref) {
+            if ($pref['name'] === '_lastloaded') {
+                continue;
+            }
+            // Check we receive the expected preferences.
+            $this->assertEquals(get_user_preferences($pref['name']), $pref['value']);
+        }
+
+        // Retrieve just one preference.
+        $result = core_user_external::get_user_preferences('some_random_text');
+        $result = external_api::clean_returnvalue(core_user_external::get_user_preferences_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertCount(1, $result['preferences']);
+        $this->assertEquals('text', $result['preferences'][0]['value']);
+
+        // Retrieve non-existent preference.
+        $result = core_user_external::get_user_preferences('non_existent');
+        $result = external_api::clean_returnvalue(core_user_external::get_user_preferences_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertCount(1, $result['preferences']);
+        $this->assertEquals(null, $result['preferences'][0]['value']);
+
+        // Check that as admin we can retrieve all the preferences for any user.
+        $this->setAdminUser();
+        $result = core_user_external::get_user_preferences('', $user->id);
+        $result = external_api::clean_returnvalue(core_user_external::get_user_preferences_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertCount(3, $result['preferences']);
+
+        foreach ($result['preferences'] as $pref) {
+            if ($pref['name'] === '_lastloaded') {
+                continue;
+            }
+            // Check we receive the expected preferences.
+            $this->assertEquals(get_user_preferences($pref['name'], null, $user), $pref['value']);
+        }
+
+        // Check that as a non admin user we cannot retrieve other users preferences.
+        $anotheruser = self::getDataGenerator()->create_user();
+        $this->setUser($anotheruser);
+
+        $this->setExpectedException('required_capability_exception');
+        $result = core_user_external::get_user_preferences('', $user->id);
     }
 
 }

@@ -8,13 +8,6 @@
     <licenseversion>2.1+</licenseversion>
   </library>
   <library>
-    <location>alfresco</location>
-    <name>Alfresco</name>
-    <license>GPL</license>
-    <version></version>
-    <licenseversion>2.0+</licenseversion>
-  </library>
-  <library>
     <location>bennu</location>
     <name>Bennu</name>
     <license>LGPL</license>
@@ -83,13 +76,6 @@
     <license>GPL</license>
     <version>3.2.18</version>
     <licenseversion>3.0+</licenseversion>
-  </library>
-  <library>
-    <location>password_compat</location>
-    <name>Compatible password hashing</name>
-    <license>MIT</license>
-    <version>1.0.4</version>
-    <licenseversion></licenseversion>
   </library>
   <library>
     <location>pear/Auth/RADIUS.php</location>
@@ -179,14 +165,7 @@
     <location>jquery</location>
     <name>jQuery</name>
     <license>MIT</license>
-    <version>1.12.1</version>
-    <licenseversion></licenseversion>
-  </library>
-  <library>
-    <location>jquery</location>
-    <name>jQuery Migrate</name>
-    <license>MIT</license>
-    <version>1.4.0</version>
+    <version>3.1.0</version>
     <licenseversion></licenseversion>
   </library>
   <library>
@@ -274,5 +253,11 @@
     <name>Spout</name>
     <license>GPL</license>
     <version>2.3.0</version>
+  </library>
+  <library>
+    <location>amd/src/chartjs-lazy.js</location>
+    <name>Chart.js</name>
+    <license>MIT</license>
+    <version>2.1.6</version>
   </library>
 </libraries>

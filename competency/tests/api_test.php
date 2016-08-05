@@ -166,6 +166,8 @@ class core_competency_api_testcase extends advanced_testcase {
 
     /**
      * Test updating a template.
+     *
+     * @expectedException coding_exception
      */
     public function test_update_template() {
         $cat = $this->getDataGenerator()->create_category();
@@ -184,7 +186,6 @@ class core_competency_api_testcase extends advanced_testcase {
         $this->assertEquals('success', $template->get_shortname());
 
         // Trying to change the context.
-        $this->setExpectedException('coding_exception');
         api::update_template((object) array('id' => $template->get_id(), 'contextid' => context_coursecat::instance($cat->id)));
     }
 
@@ -510,6 +511,9 @@ class core_competency_api_testcase extends advanced_testcase {
         }
     }
 
+    /**
+     * @expectedException coding_exception
+     */
     public function test_create_plan_from_template() {
         $this->resetAfterTest(true);
         $this->setAdminUser();
@@ -531,7 +535,6 @@ class core_competency_api_testcase extends advanced_testcase {
         $this->assertFalse($plan);
 
         // Check that api::create_plan cannot be used.
-        $this->setExpectedException('coding_exception');
         unset($record->id);
         $plan = api::create_plan($record);
     }
@@ -753,6 +756,8 @@ class core_competency_api_testcase extends advanced_testcase {
 
     /**
      * Test that the method to complete a plan.
+     *
+     * @expectedException coding_exception
      */
     public function test_complete_plan() {
         global $DB;
@@ -833,7 +838,6 @@ class core_competency_api_testcase extends advanced_testcase {
         }
 
         // Completing a plan that is completed throws an exception.
-        $this->setExpectedException('coding_exception');
         api::complete_plan($plan);
     }
 
@@ -2577,6 +2581,47 @@ class core_competency_api_testcase extends advanced_testcase {
         $this->assertEquals($coursectx->id, $ev4->get_contextid());
         $this->assertEquals(\core_competency\evidence::ACTION_COMPLETE, $ev4->get_action());
         $this->assertEquals(null, $ev4->get_actionuserid());
+    }
+
+    public function test_list_evidence_in_course() {
+        global $SITE;
+
+        $this->resetAfterTest(true);
+        $dg = $this->getDataGenerator();
+        $lpg = $dg->get_plugin_generator('core_competency');
+        $u1 = $dg->create_user();
+        $course = $dg->create_course();
+        $coursecontext = context_course::instance($course->id);
+
+        $this->setAdminUser();
+        $f = $lpg->create_framework();
+        $c = $lpg->create_competency(array('competencyframeworkid' => $f->get_id()));
+        $c2 = $lpg->create_competency(array('competencyframeworkid' => $f->get_id()));
+        $cc = api::add_competency_to_course($course->id, $c->get_id());
+        $cc2 = api::add_competency_to_course($course->id, $c2->get_id());
+
+        $pagegenerator = $this->getDataGenerator()->get_plugin_generator('mod_page');
+        $page = $pagegenerator->create_instance(array('course' => $course->id));
+
+        $cm = get_coursemodule_from_instance('page', $page->id);
+        $cmcontext = context_module::instance($cm->id);
+        // Add the competency to the course module.
+        $ccm = api::add_competency_to_course_module($cm, $c->get_id());
+
+        // Now add the evidence to the course.
+        $evidence1 = api::add_evidence($u1->id, $c->get_id(), $coursecontext->id, \core_competency\evidence::ACTION_LOG,
+            'invaliddata', 'error');
+
+        $result = api::list_evidence_in_course($u1->id, $course->id, $c->get_id());
+        $this->assertEquals($result[0]->get_id(), $evidence1->get_id());
+
+        // Now add the evidence to the course module.
+        $evidence2 = api::add_evidence($u1->id, $c->get_id(), $cmcontext->id, \core_competency\evidence::ACTION_LOG,
+            'invaliddata', 'error');
+
+        $result = api::list_evidence_in_course($u1->id, $course->id, $c->get_id(), 'timecreated', 'ASC');
+        $this->assertEquals($evidence1->get_id(), $result[0]->get_id());
+        $this->assertEquals($evidence2->get_id(), $result[1]->get_id());
     }
 
     public function test_list_course_modules_using_competency() {
@@ -4389,6 +4434,9 @@ class core_competency_api_testcase extends advanced_testcase {
         $this->assertTrue(evidence::record_exists($ev2->get_id()));
     }
 
+    /**
+     * @expectedException required_capability_exception
+     */
     public function test_delete_evidence_without_permissions() {
         $this->resetAfterTest();
         $dg = $this->getDataGenerator();
@@ -4401,7 +4449,6 @@ class core_competency_api_testcase extends advanced_testcase {
         $ev1 = $ccg->create_evidence(['usercompetencyid' => $uc1->get_id()]);
 
         $this->setUser($u1);
-        $this->setExpectedException('required_capability_exception');
 
         api::delete_evidence($ev1);
     }

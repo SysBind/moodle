@@ -51,8 +51,8 @@ class mod_lti_external extends external_api {
         return new external_single_structure(
             array(
                 'id' => new external_value(PARAM_INT, 'Tool type id'),
-                'name' => new external_value(PARAM_TEXT, 'Tool type name'),
-                'description' => new external_value(PARAM_TEXT, 'Tool type description'),
+                'name' => new external_value(PARAM_NOTAGS, 'Tool type name'),
+                'description' => new external_value(PARAM_NOTAGS, 'Tool type description'),
                 'urls' => new external_single_structure(
                     array(
                         'icon' => new external_value(PARAM_URL, 'Tool type icon URL'),
@@ -309,6 +309,7 @@ class mod_lti_external extends external_api {
                     list($module['intro'], $module['introformat']) =
                         external_format_text($lti->intro, $lti->introformat, $context->id, 'mod_lti', 'intro', $lti->id);
 
+                    $module['introfiles'] = external_util::get_area_files($context->id, 'mod_lti', 'intro', false, false);
                     $viewablefields = array('launchcontainer', 'showtitlelaunch', 'showdescriptionlaunch', 'icon', 'secureicon');
                 }
 
@@ -356,6 +357,7 @@ class mod_lti_external extends external_api {
                             'name' => new external_value(PARAM_RAW, 'LTI name'),
                             'intro' => new external_value(PARAM_RAW, 'The LTI intro', VALUE_OPTIONAL),
                             'introformat' => new external_format_value('intro', VALUE_OPTIONAL),
+                            'introfiles' => new external_files('Files in the introduction text', VALUE_OPTIONAL),
                             'timecreated' => new external_value(PARAM_INT, 'Time of creation', VALUE_OPTIONAL),
                             'timemodified' => new external_value(PARAM_INT, 'Time of last modification', VALUE_OPTIONAL),
                             'typeid' => new external_value(PARAM_INT, 'Type id', VALUE_OPTIONAL),
@@ -523,7 +525,7 @@ class mod_lti_external extends external_api {
         }
 
         if (!empty($capabilityoffered)) {
-            $config->lti_capabilities = $capabilitiesoffered;
+            $config->lti_capabilities = $capabilityoffered;
         }
 
         if (!empty($serviceoffered)) {
@@ -812,8 +814,8 @@ class mod_lti_external extends external_api {
         return new external_function_parameters(
             array(
                 'id' => new external_value(PARAM_INT, 'Tool type id'),
-                'name' => new external_value(PARAM_TEXT, 'Tool type name', VALUE_DEFAULT, null),
-                'description' => new external_value(PARAM_TEXT, 'Tool type description', VALUE_DEFAULT, null),
+                'name' => new external_value(PARAM_RAW, 'Tool type name', VALUE_DEFAULT, null),
+                'description' => new external_value(PARAM_RAW, 'Tool type description', VALUE_DEFAULT, null),
                 'state' => new external_value(PARAM_INT, 'Tool type state', VALUE_DEFAULT, null)
             )
         );

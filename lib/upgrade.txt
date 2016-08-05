@@ -3,7 +3,54 @@ information provided here is intended especially for developers.
 
 === 3.2 ===
 
+* Node.js versions >=4 are now required to run grunt.
+* JQuery has been updated to 3.1.0. JQuery migrate plugins are no longer shipped - please read
+  https://jquery.com/upgrade-guide/3.0/ and update your javascript.
 * New option 'blanktarget' added to format_text. This option adds target="_blank" to links
+* A new webservice structure `external_files` has been created which provides a standardised view of files in Moodle and
+  should be used for all file return descriptions.
+  Files matching this format can be retrieved via the new `external_util::get_area_files` method.
+  See MDL-54951 for further information.
+* The parameter $usepost of the following functions has been deprecated and is not used any more:
+  - get_max_upload_file_size()
+  - get_user_max_upload_file_size()
+* The following classes have been removed and should not be used any more:
+    - boxclient - See MDL-49599 for more information.
+* The following functions have been removed and should not be used any more:
+    - file_modify_html_header() - See MDL-29738 for more information.
+* core_grades_external::get_grades has been deprecated. Please do not call this function any more.
+  External function gradereport_user_external::get_grades_table can be used for retrieving the course grades table.
+  Please note that the information returned from that WS is intended for displaying (not for data consumption).
+* New option 'escape' added to format_string. When true (default), escapes HTML entities from the string
+* The following functions have been deprecated and are not used any more:
+  - get_records_csv() Please use csv_import_reader::load_csv_content() instead.
+  - put_records_csv() Please use download_as_dataformat (lib/dataformatlib.php) instead.
+  - zip_files()   - See MDL-24343 for more information.
+  - unzip_file()  - See MDL-24343 for more information.
+* The password_compat library was removed as it is no longer required.
+* Phpunit has been upgraded to 5.4.x and following has been deprecated and is not used any more:
+  - setExpectedException(), use @expectedException or $this->expectException() and $this->expectExceptionMessage()
+  - getMock(), use createMock() or getMockBuilder()->getMock()
+  - UnitTestCase class is removed.
+* The following methods have been finally deprecated and should no longer be used:
+  - course_modinfo::build_section_cache()
+  - cm_info::get_deprecated_group_members_only()
+  - cm_info::is_user_access_restricted_by_group()
+* The following methods in cm_info::standardmethods have also been finally deprecated and should no longer be used:
+  - cm_info::get_after_edit_icons()
+  - cm_info::get_after_link()
+  - cm_info::get_content()
+  - cm_info::get_custom_data()
+  - cm_info::get_extra_classes()
+  - cm_info::get_on_click()
+  - cm_info::get_url()
+  - cm_info::obtain_dynamic_data()
+  Calling them through the magic method __call() will throw a coding exception.
+* The alfresco library has been removed from core. It was an old version of
+  the library which was not compatible with newer versions of Alfresco.
+* Added down arrow: $OUTPUT->darrow.
+* All file_packer implementations now accept an additional parameter to allow a simple boolean return value instead of
+  an array of individual file statuses.
 
 === 3.1 ===
 

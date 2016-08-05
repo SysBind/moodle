@@ -23,9 +23,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
-require_once(dirname(__FILE__).'/locallib.php');
-require_once($CFG->dirroot . '/repository/lib.php');
+require(__DIR__.'/../../config.php');
+require_once(__DIR__.'/locallib.php');
 
 $cmid = required_param('cmid', PARAM_INT); // Course module id.
 $id = optional_param('id', 0, PARAM_INT); // Submission id.
@@ -181,7 +180,7 @@ if ($assess and $submission->id and !$isreviewer and $canallocate and $workshop-
 }
 
 if ($edit) {
-    require_once(dirname(__FILE__).'/submission_form.php');
+    require_once(__DIR__.'/submission_form.php');
 
     $submission = file_prepare_standard_editor($submission, 'content', $workshop->submission_content_options(),
         $workshop->context, 'mod_workshop', 'submission_content', $submission->id);
@@ -316,6 +315,7 @@ if ($edit) {
 $output = $PAGE->get_renderer('mod_workshop');
 echo $output->header();
 echo $output->heading(format_string($workshop->name), 2);
+echo $output->heading(get_string('mysubmission', 'workshop'), 3);
 
 // show instructions for submitting as thay may contain some list of questions and we need to know them
 // while reading the submitted answer

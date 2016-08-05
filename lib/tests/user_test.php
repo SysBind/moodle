@@ -308,10 +308,11 @@ class core_user_testcase extends advanced_testcase {
 
         // Try to fetch type of a non-existent properties.
         $nonexistingproperty = 'userfullname';
-        $this->setExpectedException('coding_exception', 'Invalid property requested: ' . $nonexistingproperty);
+        $this->expectException('coding_exception');
+        $this->expectExceptionMessage('Invalid property requested: ' . $nonexistingproperty);
         core_user::get_property_type($nonexistingproperty);
         $nonexistingproperty = 'mobilenumber';
-        $this->setExpectedException('coding_exception', 'Invalid property requested: ' . $nonexistingproperty);
+        $this->expectExceptionMessage('Invalid property requested: ' . $nonexistingproperty);
         core_user::get_property_type($nonexistingproperty);
     }
 
@@ -331,10 +332,11 @@ class core_user_testcase extends advanced_testcase {
 
         // Try to fetch type of a non-existent properties.
         $nonexistingproperty = 'lastnamefonetic';
-        $this->setExpectedException('coding_exception', 'Invalid property requested: ' . $nonexistingproperty);
+        $this->expectException('coding_exception');
+        $this->expectExceptionMessage('Invalid property requested: ' . $nonexistingproperty);
         core_user::get_property_null($nonexistingproperty);
         $nonexistingproperty = 'midlename';
-        $this->setExpectedException('coding_exception', 'Invalid property requested: ' . $nonexistingproperty);
+        $this->expectExceptionMessage('Invalid property requested: ' . $nonexistingproperty);
         core_user::get_property_null($nonexistingproperty);
     }
 
@@ -365,15 +367,20 @@ class core_user_testcase extends advanced_testcase {
 
         // Try to fetch type of a non-existent properties.
         $nonexistingproperty = 'language';
-        $this->setExpectedException('coding_exception', 'Invalid property requested: ' . $nonexistingproperty);
+        $this->expectException('coding_exception');
+        $this->expectExceptionMessage('Invalid property requested: ' . $nonexistingproperty);
         core_user::get_property_null($nonexistingproperty);
         $nonexistingproperty = 'coutries';
-        $this->setExpectedException('coding_exception', 'Invalid property requested: ' . $nonexistingproperty);
+        $this->expectExceptionMessage('Invalid property requested: ' . $nonexistingproperty);
         core_user::get_property_null($nonexistingproperty);
     }
 
     /**
      * Test get_property_default().
+     *
+     *
+     * @expectedException        coding_exception
+     * @expectedExceptionMessage Invalid property requested, or the property does not has a default value.
      */
     public function test_get_property_default() {
         global $CFG;
@@ -401,7 +408,30 @@ class core_user_testcase extends advanced_testcase {
         $timezone = core_user::get_property_default('timezone');
         $this->assertEquals('Pacific/Auckland', $timezone);
 
-        $this->setExpectedException('coding_exception', 'Invalid property requested, or the property does not has a default value.');
         core_user::get_property_default('firstname');
     }
+
+    /**
+     * Ensure that the noreply user is not cached.
+     */
+    public function test_get_noreply_user() {
+        global $CFG;
+
+        // Create a new fake language 'xx' with the 'noreplyname'.
+        $langfolder = $CFG->dataroot . '/lang/xx';
+        check_dir_exists($langfolder);
+        $langconfig = "<?php\n\defined('MOODLE_INTERNAL') || die();";
+        file_put_contents($langfolder . '/langconfig.php', $langconfig);
+        $langconfig = "<?php\n\$string['noreplyname'] = 'XXX';";
+        file_put_contents($langfolder . '/moodle.php', $langconfig);
+
+        $CFG->lang='en';
+        $enuser = \core_user::get_noreply_user();
+
+        $CFG->lang='xx';
+        $xxuser = \core_user::get_noreply_user();
+
+        $this->assertNotEquals($enuser, $xxuser);
+    }
+
 }

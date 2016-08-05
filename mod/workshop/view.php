@@ -26,8 +26,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
-require_once(dirname(__FILE__).'/locallib.php');
+require(__DIR__.'/../../config.php');
+require_once(__DIR__.'/locallib.php');
 require_once($CFG->libdir.'/completionlib.php');
 
 $id         = optional_param('id', 0, PARAM_INT); // course_module ID, or
@@ -84,7 +84,15 @@ if (!is_null($editmode) && $PAGE->user_allowed_editing()) {
     $USER->editing = $editmode;
 }
 
-$PAGE->set_title($workshop->name);
+$userplan = new workshop_user_plan($workshop, $USER->id);
+
+foreach ($userplan->phases as $phase) {
+    if ($phase->active) {
+        $currentphasetitle = $phase->title;
+    }
+}
+
+$PAGE->set_title($workshop->name . " (" . $currentphasetitle . ")");
 $PAGE->set_heading($course->fullname);
 
 if ($perpage and $perpage > 0 and $perpage <= 1000) {
@@ -101,12 +109,12 @@ if ($eval) {
 }
 
 $output = $PAGE->get_renderer('mod_workshop');
-$userplan = new workshop_user_plan($workshop, $USER->id);
 
 /// Output starts here
 
 echo $output->header();
 echo $output->heading_with_help(format_string($workshop->name), 'userplan', 'workshop');
+echo $output->heading(format_string($currentphasetitle), 3);
 echo $output->render($userplan);
 
 switch ($workshop->phase) {

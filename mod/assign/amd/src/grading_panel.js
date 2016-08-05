@@ -24,8 +24,9 @@
  * @since      3.1
  */
 define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
-        'core/ajax', 'core/str', 'mod_assign/grading_form_change_checker'],
-       function($, notification, templates, fragment, ajax, str, checker) {
+        'core/ajax', 'core/str', 'mod_assign/grading_form_change_checker',
+        'mod_assign/grading_events'],
+       function($, notification, templates, fragment, ajax, str, checker, GradingEvents) {
 
     /**
      * GradingPanel class.
@@ -38,11 +39,7 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
         this._region = $(selector);
         this._userCache = [];
 
-        $(document).on('user-changed', this._refreshGradingPanel.bind(this));
-        $(document).on('save-changes', this._submitForm.bind(this));
-        $(document).on('reset', this._resetForm.bind(this));
-
-        $(document).on('save-form-state', this._saveFormState.bind(this));
+        this.registerEventListeners();
     };
 
     /** @type {String} Selector for the page region containing the user navigation. */
@@ -100,6 +97,8 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
      * Make form submit via ajax.
      *
      * @private
+     * @param {Object} event
+     * @param {Integer} nextUserId
      * @method _submitForm
      */
     GradingPanel.prototype._submitForm = function(event, nextUserId) {
@@ -143,8 +142,8 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
             $(document).trigger('reset', [this._lastUserId, formdata]);
         } else {
             str.get_strings([
-                { key: 'changessaved', component: 'core' },
-                { key: 'gradechangessaveddetail', component: 'mod_assign' },
+                {key: 'changessaved', component: 'core'},
+                {key: 'gradechangessaveddetail', component: 'mod_assign'},
             ]).done(function(strs) {
                 notification.alert(strs[0], strs[1]);
             }).fail(notification.exception);
@@ -180,6 +179,7 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
      * Open a picker to choose an older attempt.
      *
      * @private
+     * @param {Object} e
      * @method _chooseAttempt
      */
     GradingPanel.prototype._chooseAttempt = function(e) {
@@ -193,9 +193,9 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
         var formhtml = formcopy.wrap($('<form/>')).html();
 
         str.get_strings([
-            { key: 'viewadifferentattempt', component: 'mod_assign' },
-            { key: 'view', component: 'core' },
-            { key: 'cancel', component: 'core' },
+            {key: 'viewadifferentattempt', component: 'mod_assign'},
+            {key: 'view', component: 'core'},
+            {key: 'cancel', component: 'core'},
         ]).done(function(strs) {
             notification.confirm(strs[0], formhtml, strs[1], strs[2], function() {
                 var attemptnumber = $("input:radio[name='select-attemptnumber']:checked").val();
@@ -210,7 +210,7 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
      *
      * @private
      * @method _addPopoutButtons
-     * @param {JQuery} region The region to add popout buttons to.
+     * @param {JQuery} selector The region selector to add popout buttons to.
      */
     GradingPanel.prototype._addPopoutButtons = function(selector) {
         var region = $(selector);
@@ -250,7 +250,8 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
      * @method _refreshGradingPanel
      * @param {Event} event
      * @param {Number} userid
-     * @param {String} serialised submission data.
+     * @param {String} submissiondata serialised submission data.
+     * @param {Integer} attemptnumber
      */
     GradingPanel.prototype._refreshGradingPanel = function(event, userid, submissiondata, attemptnumber) {
         var contextid = this._region.attr('data-contextid');
@@ -276,11 +277,16 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
                 if (userid > 0) {
                     this._region.show();
                     // Reload the grading form "fragment" for this user.
-                    var params = { userid: userid, attemptnumber: attemptnumber, jsonformdata: JSON.stringify(submissiondata) };
+                    var params = {userid: userid, attemptnumber: attemptnumber, jsonformdata: JSON.stringify(submissiondata)};
                     fragment.loadFragment('mod_assign', 'gradingpanel', contextid, params).done(function(html, js) {
                         this._niceReplaceNodeContents(this._region, html, js)
                         .done(function() {
                             checker.saveFormState('[data-region="grade-panel"] .gradeform');
+                            $(document).on('editor-content-restored', function() {
+                                // If the editor has some content that has been restored
+                                // then save the form state again for comparison.
+                                checker.saveFormState('[data-region="grade-panel"] .gradeform');
+                            });
                             $('[data-region="attempt-chooser"]').on('click', this._chooseAttempt.bind(this));
                             this._addPopoutButtons('[data-region="grade-panel"] .gradeform');
                             $(document).trigger('finish-loading-user');
@@ -301,6 +307,62 @@ define(['jquery', 'core/notification', 'core/templates', 'core/fragment',
                 }
             }.bind(this));
         }.bind(this)).fail(notification.exception);
+    };
+
+    /**
+     * Get the grade panel element.
+     *
+     * @method getPanelElement
+     * @return {jQuery}
+     */
+    GradingPanel.prototype.getPanelElement = function() {
+        return $('[data-region="grade-panel"]');
+    };
+
+    /**
+     * Hide the grade panel.
+     *
+     * @method collapsePanel
+     */
+    GradingPanel.prototype.collapsePanel = function() {
+        this.getPanelElement().addClass('collapsed');
+    };
+
+    /**
+     * Show the grade panel.
+     *
+     * @method expandPanel
+     */
+    GradingPanel.prototype.expandPanel = function() {
+        this.getPanelElement().removeClass('collapsed');
+    };
+
+    /**
+     * Register event listeners for the grade panel.
+     *
+     * @method registerEventListeners
+     */
+    GradingPanel.prototype.registerEventListeners = function() {
+        var docElement = $(document);
+
+        docElement.on('user-changed', this._refreshGradingPanel.bind(this));
+        docElement.on('save-changes', this._submitForm.bind(this));
+        docElement.on('reset', this._resetForm.bind(this));
+
+        docElement.on('save-form-state', this._saveFormState.bind(this));
+
+        docElement.on(GradingEvents.COLLAPSE_GRADE_PANEL, function() {
+            this.collapsePanel();
+        }.bind(this));
+
+        // We should expand if the review panel is collapsed.
+        docElement.on(GradingEvents.COLLAPSE_REVIEW_PANEL, function() {
+            this.expandPanel();
+        }.bind(this));
+
+        docElement.on(GradingEvents.EXPAND_GRADE_PANEL, function() {
+            this.expandPanel();
+        }.bind(this));
     };
 
     return GradingPanel;

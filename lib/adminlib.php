@@ -55,7 +55,7 @@
  *
  *  Next, in foo.php, your file structure would resemble the following:
  * <code>
- *         require(dirname(dirname(dirname(__FILE__))).'/config.php');
+ *         require(__DIR__.'/../../config.php');
  *         require_once($CFG->libdir.'/adminlib.php');
  *         admin_externalpage_setup('foo');
  *         // functionality like processing form submissions goes here
@@ -199,14 +199,14 @@ function uninstall_plugin($type, $name) {
     $DB->delete_records('event', array('modulename' => $pluginname));
 
     // Delete scheduled tasks.
-    $DB->delete_records('task_scheduled', array('component' => $pluginname));
+    $DB->delete_records('task_scheduled', array('component' => $component));
 
     // Delete Inbound Message datakeys.
     $DB->delete_records_select('messageinbound_datakeys',
-            'handler IN (SELECT id FROM {messageinbound_handlers} WHERE component = ?)', array($pluginname));
+            'handler IN (SELECT id FROM {messageinbound_handlers} WHERE component = ?)', array($component));
 
     // Delete Inbound Message handlers.
-    $DB->delete_records('messageinbound_handlers', array('component' => $pluginname));
+    $DB->delete_records('messageinbound_handlers', array('component' => $component));
 
     // delete all the logs
     $DB->delete_records('log', array('module' => $pluginname));
@@ -3526,21 +3526,24 @@ class admin_setting_configiplist extends admin_setting_configtextarea {
             return true;
         }
         $result = true;
+        $badips = array();
         foreach($ips as $ip) {
             $ip = trim($ip);
+            if (empty($ip)) {
+                continue;
+            }
             if (preg_match('#^(\d{1,3})(\.\d{1,3}){0,3}$#', $ip, $match) ||
                 preg_match('#^(\d{1,3})(\.\d{1,3}){0,3}(\/\d{1,2})$#', $ip, $match) ||
                 preg_match('#^(\d{1,3})(\.\d{1,3}){3}(-\d{1,3})$#', $ip, $match)) {
-                $result = true;
             } else {
                 $result = false;
-                break;
+                $badips[] = $ip;
             }
         }
         if($result) {
             return true;
         } else {
-            return get_string('validateerror', 'admin');
+            return get_string('validateiperror', 'admin', join(', ', $badips));
         }
     }
 }
@@ -9715,7 +9718,7 @@ class admin_setting_searchsetupinfo extends admin_setting {
 
         // Available areas.
         $row = array();
-        $url = new moodle_url('/admin/settings.php?section=manageglobalsearch#admin-searchengine');
+        $url = new moodle_url('/admin/searchareas.php');
         $row[0] = '2. ' . html_writer::tag('a', get_string('enablesearchareas', 'admin'),
                         array('href' => $url));
 
@@ -9738,7 +9741,11 @@ class admin_setting_searchsetupinfo extends admin_setting {
                             array('href' => $url));
             // Check the engine status.
             $searchengine = \core_search\manager::search_engine_instance();
-            $serverstatus = $searchengine->is_server_ready();
+            try {
+                $serverstatus = $searchengine->is_server_ready();
+            } catch (\moodle_exception $e) {
+                $serverstatus = $e->getMessage();
+            }
             if ($serverstatus === true) {
                 $status = html_writer::tag('span', get_string('yes'), array('class' => 'statusok'));
             } else {
@@ -9750,7 +9757,7 @@ class admin_setting_searchsetupinfo extends admin_setting {
 
         // Indexed data.
         $row = array();
-        $url = new moodle_url('/report/search/index.php#searchindexform');
+        $url = new moodle_url('/admin/searchareas.php');
         $row[0] = '4. ' . html_writer::tag('a', get_string('indexdata', 'admin'), array('href' => $url));
         if ($anyindexed) {
             $status = html_writer::tag('span', get_string('yes'), array('class' => 'statusok'));

@@ -14,6 +14,7 @@ YUI.add('moodle-gradereport_grader-gradereporttable', function (Y, NAME) {
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* eslint-disable no-unused-vars */
 
 /**
  * Grader Report Functionality.
@@ -155,6 +156,7 @@ Y.namespace('M.gradereport_grader').init = function(config) {
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global SELECTORS */
 
 /**
  * @module moodle-gradereport_grader-gradereporttable
@@ -180,7 +182,7 @@ CSS.FLOATING = 'floating';
 
 function FloatingHeaders() {}
 
-FloatingHeaders.ATTRS= {
+FloatingHeaders.ATTRS = {
 };
 
 FloatingHeaders.prototype = {
@@ -400,6 +402,11 @@ FloatingHeaders.prototype = {
         if (!this.firstUserCell) {
             // No need for floating elements, there are no users.
             return this;
+        }
+
+        if (M.cfg.behatsiterunning) {
+            // If the behat site is running we don't want floating elements.
+            return;
         }
 
         // Generate floating elements.
@@ -622,14 +629,14 @@ FloatingHeaders.prototype = {
         userColumn.each(function(node) {
             var height = node.getComputedStyle(HEIGHT);
             // Nasty hack to account for Internet Explorer
-            if(Y.UA.ie !== 0) {
+            if (Y.UA.ie !== 0) {
                 var allHeight = node.get('offsetHeight');
-                var marginHeight = parseInt(node.getComputedStyle('marginTop'),10) +
-                    parseInt(node.getComputedStyle('marginBottom'),10);
-                var paddingHeight = parseInt(node.getComputedStyle('paddingTop'),10) +
-                    parseInt(node.getComputedStyle('paddingBottom'),10);
-                var borderHeight = parseInt(node.getComputedStyle('borderTopWidth'),10) +
-                    parseInt(node.getComputedStyle('borderBottomWidth'),10);
+                var marginHeight = parseInt(node.getComputedStyle('marginTop'), 10) +
+                    parseInt(node.getComputedStyle('marginBottom'), 10);
+                var paddingHeight = parseInt(node.getComputedStyle('paddingTop'), 10) +
+                    parseInt(node.getComputedStyle('paddingBottom'), 10);
+                var borderHeight = parseInt(node.getComputedStyle('borderTopWidth'), 10) +
+                    parseInt(node.getComputedStyle('borderBottomWidth'), 10);
                 height = allHeight - marginHeight - paddingHeight - borderHeight;
             }
             // Create and configure the new container.
@@ -1076,17 +1083,17 @@ FloatingHeaders.prototype = {
         this.userColumn.all('.cell').each(function(cell, idx) {
             var height = userCells.item(idx).getComputedStyle(HEIGHT);
             // Nasty hack to account for Internet Explorer
-            if(Y.UA.ie !== 0) {
+            if (Y.UA.ie !== 0) {
                 var node = userCells.item(idx);
                 var allHeight = node.getDOMNode ?
                     node.getDOMNode().getBoundingClientRect().height :
                     node.get('offsetHeight');
-                var marginHeight = parseInt(node.getComputedStyle('marginTop'),10) +
-                    parseInt(node.getComputedStyle('marginBottom'),10);
-                var paddingHeight = parseInt(node.getComputedStyle('paddingTop'),10) +
-                    parseInt(node.getComputedStyle('paddingBottom'),10);
-                var borderHeight = parseInt(node.getComputedStyle('borderTopWidth'),10) +
-                    parseInt(node.getComputedStyle('borderBottomWidth'),10);
+                var marginHeight = parseInt(node.getComputedStyle('marginTop'), 10) +
+                    parseInt(node.getComputedStyle('marginBottom'), 10);
+                var paddingHeight = parseInt(node.getComputedStyle('paddingTop'), 10) +
+                    parseInt(node.getComputedStyle('paddingBottom'), 10);
+                var borderHeight = parseInt(node.getComputedStyle('borderTopWidth'), 10) +
+                    parseInt(node.getComputedStyle('borderBottomWidth'), 10);
                 height = allHeight - marginHeight - paddingHeight - borderHeight;
             }
             cell.setStyles({

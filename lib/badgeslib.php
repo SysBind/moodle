@@ -222,6 +222,10 @@ class badge {
 
         $fordb->timemodified = time();
         if ($DB->update_record_raw('badge', $fordb)) {
+            // Trigger event, badge updated.
+            $eventparams = array('objectid' => $this->id, 'context' => $this->get_context());
+            $event = \core\event\badge_updated::create($eventparams);
+            $event->trigger();
             return true;
         } else {
             throw new moodle_exception('error:save', 'badges');
@@ -236,7 +240,7 @@ class badge {
      * @return int ID of new badge.
      */
     public function make_clone() {
-        global $DB, $USER;
+        global $DB, $USER, $PAGE;
 
         $fordb = new stdClass();
         foreach (get_object_vars($this) as $k => $v) {
@@ -273,6 +277,11 @@ class badge {
             foreach ($this->criteria as $crit) {
                 $crit->make_clone($new);
             }
+
+            // Trigger event, badge duplicated.
+            $eventparams = array('objectid' => $new, 'context' => $PAGE->context);
+            $event = \core\event\badge_duplicated::create($eventparams);
+            $event->trigger();
 
             return $new;
         } else {
@@ -312,6 +321,17 @@ class badge {
     public function set_status($status = 0) {
         $this->status = $status;
         $this->save();
+        if ($status == BADGE_STATUS_ACTIVE) {
+            // Trigger event, badge enabled.
+            $eventparams = array('objectid' => $this->id, 'context' => $this->get_context());
+            $event = \core\event\badge_enabled::create($eventparams);
+            $event->trigger();
+        } else if ($status == BADGE_STATUS_INACTIVE) {
+            // Trigger event, badge disabled.
+            $eventparams = array('objectid' => $this->id, 'context' => $this->get_context());
+            $event = \core\event\badge_disabled::create($eventparams);
+            $event->trigger();
+        }
     }
 
     /**
@@ -628,6 +648,11 @@ class badge {
         if ($archive) {
             $this->status = BADGE_STATUS_ARCHIVED;
             $this->save();
+
+            // Trigger event, badge archived.
+            $eventparams = array('objectid' => $this->id, 'context' => $this->get_context());
+            $event = \core\event\badge_archived::create($eventparams);
+            $event->trigger();
             return;
         }
 
@@ -654,6 +679,14 @@ class badge {
 
         // Finally, remove badge itself.
         $DB->delete_records('badge', array('id' => $this->id));
+
+        // Trigger event, badge deleted.
+        $eventparams = array('objectid' => $this->id,
+            'context' => $this->get_context(),
+            'other' => array('badgetype' => $this->type, 'courseid' => $this->courseid)
+            );
+        $event = \core\event\badge_deleted::create($eventparams);
+        $event->trigger();
     }
 }
 
@@ -1005,7 +1038,7 @@ function print_badge_image(badge $badge, stdClass $context, $size = 'small') {
  */
 function badges_bake($hash, $badgeid, $userid = 0, $pathhash = false) {
     global $CFG, $USER;
-    require_once(dirname(dirname(__FILE__)) . '/badges/lib/bakerlib.php');
+    require_once(__DIR__ . '/../badges/lib/bakerlib.php');
 
     $badge = new badge($badgeid);
     $badge_context = $badge->get_context();
@@ -1066,7 +1099,7 @@ function badges_bake($hash, $badgeid, $userid = 0, $pathhash = false) {
  */
 function get_backpack_settings($userid, $refresh = false) {
     global $DB;
-    require_once(dirname(dirname(__FILE__)) . '/badges/lib/backpacklib.php');
+    require_once(__DIR__ . '/../badges/lib/backpacklib.php');
 
     // Try to get badges from cache first.
     $badgescache = cache::make('core', 'externalbadges');
@@ -1089,7 +1122,7 @@ function get_backpack_settings($userid, $refresh = false) {
                 $badges = $backpack->get_badges($collection->collectionid);
                 if (isset($badges->badges)) {
                     $out->badges = array_merge($out->badges, $badges->badges);
-                    $out->totalbadges += count($out->badges);
+                    $out->totalbadges += count($badges->badges);
                 } else {
                     $out->badges = array_merge($out->badges, array());
                 }

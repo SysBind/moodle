@@ -104,6 +104,7 @@ class mod_wiki_external extends external_api {
                 if (has_capability('mod/wiki:viewpage', $context)) {
                     list($module['intro'], $module['introformat']) =
                         external_format_text($wiki->intro, $wiki->introformat, $context->id, 'mod_wiki', 'intro', $wiki->id);
+                    $module['introfiles'] = external_util::get_area_files($context->id, 'mod_wiki', 'intro', false, false);
 
                     $viewablefields = array('firstpagetitle', 'wikimode', 'defaultformat', 'forceformat', 'editbegin', 'editend',
                                             'section', 'visible', 'groupmode', 'groupingid');
@@ -151,6 +152,7 @@ class mod_wiki_external extends external_api {
                             'name' => new external_value(PARAM_RAW, 'Wiki name.'),
                             'intro' => new external_value(PARAM_RAW, 'Wiki intro.', VALUE_OPTIONAL),
                             'introformat' => new external_format_value('Wiki intro format.', VALUE_OPTIONAL),
+                            'introfiles' => new external_files('Files in the introduction text', VALUE_OPTIONAL),
                             'timecreated' => new external_value(PARAM_INT, 'Time of creation.', VALUE_OPTIONAL),
                             'timemodified' => new external_value(PARAM_INT, 'Time of last modification.', VALUE_OPTIONAL),
                             'firstpagetitle' => new external_value(PARAM_RAW, 'First page title.', VALUE_OPTIONAL),
@@ -726,23 +728,7 @@ class mod_wiki_external extends external_api {
             throw new moodle_exception('cannotviewfiles', 'wiki');
         } else if ($subwiki->id != -1) {
             // The subwiki exists, let's get the files.
-            $fs = get_file_storage();
-            if ($files = $fs->get_area_files($context->id, 'mod_wiki', 'attachments', $subwiki->id, 'filename', false)) {
-                foreach ($files as $file) {
-                    $filename = $file->get_filename();
-                    $fileurl = moodle_url::make_webservice_pluginfile_url(
-                                    $context->id, 'mod_wiki', 'attachments', $subwiki->id, '/', $filename);
-
-                    $returnedfiles[] = array(
-                        'filename' => $filename,
-                        'mimetype' => $file->get_mimetype(),
-                        'fileurl'  => $fileurl->out(false),
-                        'filepath' => $file->get_filepath(),
-                        'filesize' => $file->get_filesize(),
-                        'timemodified' => $file->get_timemodified()
-                    );
-                }
-            }
+            $returnedfiles = external_util::get_area_files($context->id, 'mod_wiki', 'attachments', $subwiki->id);
         }
 
         $result = array();
@@ -761,18 +747,7 @@ class mod_wiki_external extends external_api {
 
         return new external_single_structure(
             array(
-                'files' => new external_multiple_structure(
-                    new external_single_structure(
-                        array(
-                            'filename' => new external_value(PARAM_FILE, 'File name.'),
-                            'filepath' => new external_value(PARAM_PATH, 'File path.'),
-                            'filesize' => new external_value(PARAM_INT, 'File size.'),
-                            'fileurl' => new external_value(PARAM_URL, 'Downloadable file url.'),
-                            'timemodified' => new external_value(PARAM_INT, 'Time modified.'),
-                            'mimetype' => new external_value(PARAM_RAW, 'File mime type.'),
-                        ), 'Files'
-                    )
-                ),
+                'files' => new external_files('Files'),
                 'warnings' => new external_warnings(),
             )
         );
@@ -822,7 +797,7 @@ class mod_wiki_external extends external_api {
         return new external_function_parameters (
             array(
                 'pageid' => new external_value(PARAM_INT, 'Page ID to edit.'),
-                'section' => new external_value(PARAM_TEXT, 'Section page title.', VALUE_DEFAULT, null)
+                'section' => new external_value(PARAM_RAW, 'Section page title.', VALUE_DEFAULT, null)
             )
         );
     }
@@ -1086,7 +1061,7 @@ class mod_wiki_external extends external_api {
             array(
                 'pageid' => new external_value(PARAM_INT, 'Page ID.'),
                 'content' => new external_value(PARAM_RAW, 'Page contents.'),
-                'section' => new external_value(PARAM_TEXT, 'Section page title.', VALUE_DEFAULT, null)
+                'section' => new external_value(PARAM_RAW, 'Section page title.', VALUE_DEFAULT, null)
             )
         );
     }
