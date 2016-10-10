@@ -30,6 +30,12 @@ defined('MOODLE_INTERNAL') || die;
 class mock_search_area extends \core_search\area\base {
 
     /**
+     * Multiple context level so we can test get_areas_user_accesses.
+     * @var int[]
+     */
+    protected static $levels = [CONTEXT_SYSTEM, CONTEXT_USER];
+
+    /**
      * To make things easier, base class required config stuff.
      *
      * @return bool
@@ -41,8 +47,21 @@ class mock_search_area extends \core_search\area\base {
     public function get_recordset_by_timestamp($modifiedfrom = 0) {
         global $DB;
 
-        // Filter by capability as we want this quick.
-        return $DB->get_recordset_sql("SELECT * FROM {temp_mock_search_area} WHERE timemodified >= ?", array($modifiedfrom));
+        $sql = "SELECT * FROM {temp_mock_search_area} WHERE timemodified >= ? ORDER BY timemodified ASC";
+        return $DB->get_recordset_sql($sql, array($modifiedfrom));
+    }
+
+
+    /**
+     * A helper function that will turn a record into 'data array', for use with document building.
+     */
+    public function convert_record_to_doc_array($record) {
+        $docdata = (array)unserialize($record->info);
+        $docdata['areaid'] = $this->get_area_id();
+        $docdata['itemid'] = $record->id;
+        $docdata['modified'] = $record->timemodified;
+
+        return $docdata;
     }
 
     public function get_document($record, $options = array()) {
@@ -54,6 +73,8 @@ class mock_search_area extends \core_search\area\base {
         $doc = \core_search\document_factory::instance($record->id, $this->componentname, $this->areaname);
         $doc->set('title', $info->title);
         $doc->set('content', $info->content);
+        $doc->set('description1', $info->description1);
+        $doc->set('description1', $info->description2);
         $doc->set('contextid', $info->contextid);
         $doc->set('courseid', $info->courseid);
         $doc->set('userid', $info->userid);

@@ -184,16 +184,17 @@ class file_storage {
      *
      * @param stored_file $file the file we want to preview
      * @param string $format The desired format - e.g. 'pdf'. Formats are specified by file extension.
+     * @param boolean $forcerefresh If true, the file will be converted every time (not cached).
      * @return stored_file|bool false if unable to create the conversion, stored file otherwise
      */
-    public function get_converted_document(stored_file $file, $format) {
+    public function get_converted_document(stored_file $file, $format, $forcerefresh = false) {
 
         $context = context_system::instance();
         $path = '/' . $format . '/';
         $conversion = $this->get_file($context->id, 'core', 'documentconversion', 0, $path, $file->get_contenthash());
 
-        if (!$conversion) {
-            $conversion = $this->create_converted_document($file, $format);
+        if (!$conversion || $forcerefresh) {
+            $conversion = $this->create_converted_document($file, $format, $forcerefresh);
             if (!$conversion) {
                 return false;
             }
@@ -238,21 +239,28 @@ class file_storage {
      */
     public static function can_convert_documents() {
         global $CFG;
+        $currentversion = 0;
+        $supportedversion = 0.7;
         $unoconvbin = \escapeshellarg($CFG->pathtounoconv);
         $command = "$unoconvbin --version";
         exec($command, $output);
-        preg_match('/([0-9]+\.[0-9]+)/', $output[0], $matches);
-        $currentversion = (float)$matches[0];
-        $supportedversion = 0.7;
-        if ($currentversion < $supportedversion) {
-            return false;
+        // If the command execution returned some output, then get the unoconv version.
+        if ($output) {
+            foreach ($output as $response) {
+                if (preg_match('/unoconv (\\d+\\.\\d+)/', $response, $matches)) {
+                    $currentversion = (float)$matches[1];
+                }
+            }
+            if ($currentversion < $supportedversion) {
+                return false;
+            }
+            return true;
         }
-
-        return true;
+        return false;
     }
 
     /**
-     * If the test pdf has been generated correctly and send it direct to the browser.
+     * Regenerate the test pdf and send it direct to the browser.
      */
     public static function send_test_pdf() {
         global $CFG;
@@ -279,7 +287,7 @@ class file_storage {
         }
 
         // Convert the doc file to pdf and send it direct to the browser.
-        $result = $fs->get_converted_document($testdocx, 'pdf');
+        $result = $fs->get_converted_document($testdocx, 'pdf', true);
         readfile_accel($result, 'application/pdf', true);
     }
 
@@ -327,7 +335,7 @@ class file_storage {
      * @param string $format The desired format - e.g. 'pdf'. Formats are specified by file extension.
      * @return stored_file|bool false if unable to create the conversion, stored file otherwise
      */
-    protected function create_converted_document(stored_file $file, $format) {
+    protected function create_converted_document(stored_file $file, $format, $forcerefresh = false) {
         global $CFG;
 
         if (empty($CFG->pathtounoconv) || !file_is_executable(trim($CFG->pathtounoconv))) {
@@ -347,9 +355,9 @@ class file_storage {
         // Copy the file to the tmp dir.
         $uniqdir = "core_file/conversions/" . uniqid($file->get_id() . "-", true);
         $tmp = make_temp_directory($uniqdir);
-        $localfilename = $file->get_filename();
+        $ext = pathinfo($file->get_filename(), PATHINFO_EXTENSION);
         // Safety.
-        $localfilename = clean_param($localfilename, PARAM_FILE);
+        $localfilename = $file->get_id() . '.' . $ext;
 
         $filename = $tmp . '/' . $localfilename;
         try {
@@ -358,7 +366,7 @@ class file_storage {
                 throw new file_exception('storedfileproblem', 'Could not copy file contents to temp file.');
             }
         } catch (file_exception $fe) {
-            remove_dir($uniqdir);
+            remove_dir($tmp);
             throw $fe;
         }
 
@@ -379,25 +387,34 @@ class file_storage {
         chdir($tmp);
         $result = exec($cmd, $output);
         chdir($currentdir);
-        if (!file_exists($newtmpfile)) {
-            remove_dir($uniqdir);
+        touch($newtmpfile);
+        if (filesize($newtmpfile) === 0) {
+            remove_dir($tmp);
             // Cleanup.
             return false;
         }
 
         $context = context_system::instance();
+        $path = '/' . $format . '/';
         $record = array(
             'contextid' => $context->id,
             'component' => 'core',
             'filearea'  => 'documentconversion',
             'itemid'    => 0,
-            'filepath'  => '/' . $format . '/',
+            'filepath'  => $path,
             'filename'  => $file->get_contenthash(),
         );
 
+        if ($forcerefresh) {
+            $existing = $this->get_file($context->id, 'core', 'documentconversion', 0, $path, $file->get_contenthash());
+            if ($existing) {
+                $existing->delete();
+            }
+        }
+
         $convertedfile = $this->create_file_from_pathname($record, $newtmpfile);
         // Cleanup.
-        remove_dir($uniqdir);
+        remove_dir($tmp);
         return $convertedfile;
     }
 

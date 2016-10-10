@@ -58,28 +58,22 @@ class webservice_xmlrpc_server extends webservice_base_server {
         // Retrieve and clean the POST/GET parameters from the parameters specific to the server.
         parent::set_web_service_call_settings();
 
-        // Get GET and POST parameters.
-        $methodvariables = array_merge($_GET, $_POST);
-
         if ($this->authmethod == WEBSERVICE_AUTHMETHOD_USERNAME) {
-            $this->username = isset($methodvariables['wsusername']) ? $methodvariables['wsusername'] : null;
-            unset($methodvariables['wsusername']);
-
-            $this->password = isset($methodvariables['wspassword']) ? $methodvariables['wspassword'] : null;
-            unset($methodvariables['wspassword']);
+            $this->username = isset($_GET['wsusername']) ? $_GET['wsusername'] : null;
+            $this->password = isset($_GET['wspassword']) ? $_GET['wspassword'] : null;
         } else {
-            $this->token = isset($methodvariables['wstoken']) ? $methodvariables['wstoken'] : null;
-            unset($methodvariables['wstoken']);
+            $this->token = isset($_GET['wstoken']) ? $_GET['wstoken'] : null;
         }
 
         // Get the XML-RPC request data.
-        $rawpostdata = file_get_contents("php://input");
+        $rawpostdata = $this->fetch_input_content();
         $methodname = null;
 
         // Decode the request to get the decoded parameters and the name of the method to be called.
-        $decodedparams = xmlrpc_decode_request($rawpostdata, $methodname);
+        $decodedparams = xmlrpc_decode_request($rawpostdata, $methodname, 'UTF-8');
         $methodinfo = external_api::external_function_info($methodname);
         $methodparams = array_keys($methodinfo->parameters_desc->keys);
+        $methodvariables = [];
 
         // Add the decoded parameters to the methodvariables array.
         if (is_array($decodedparams)) {
@@ -95,6 +89,15 @@ class webservice_xmlrpc_server extends webservice_base_server {
     }
 
     /**
+     * Fetch content from the client.
+     *
+     * @return string
+     */
+    protected function fetch_input_content() {
+        return file_get_contents('php://input');
+    }
+
+    /**
      * Prepares the response.
      */
     protected function prepare_response() {
@@ -102,8 +105,10 @@ class webservice_xmlrpc_server extends webservice_base_server {
             if (!empty($this->function->returns_desc)) {
                 $validatedvalues = external_api::clean_returnvalue($this->function->returns_desc, $this->returns);
                 $encodingoptions = array(
-                    "encoding" => "utf-8",
-                    "verbosity" => "no_white_space"
+                    "encoding" => "UTF-8",
+                    "verbosity" => "no_white_space",
+                    // See MDL-54868.
+                    "escaping" => ["markup"]
                 );
                 // We can now convert the response to the requested XML-RPC format.
                 $this->response = xmlrpc_encode_request(null, $validatedvalues, $encodingoptions);
@@ -186,8 +191,10 @@ class webservice_xmlrpc_server extends webservice_base_server {
         );
 
         $encodingoptions = array(
-            "encoding" => "utf-8",
-            "verbosity" => "no_white_space"
+            "encoding" => "UTF-8",
+            "verbosity" => "no_white_space",
+            // See MDL-54868.
+            "escaping" => ["markup"]
         );
 
         return xmlrpc_encode_request(null, $fault, $encodingoptions);

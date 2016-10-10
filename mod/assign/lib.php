@@ -649,13 +649,14 @@ function assign_print_recent_activity($course, $viewfullnames, $timestart) {
 
     $dbparams = array($timestart, $course->id, 'assign', ASSIGN_SUBMISSION_STATUS_SUBMITTED);
     $namefields = user_picture::fields('u', null, 'userid');
-    if (!$submissions = $DB->get_records_sql("SELECT asb.id, asb.timemodified, cm.id AS cmid,
+    if (!$submissions = $DB->get_records_sql("SELECT asb.id, asb.timemodified, cm.id AS cmid, um.id as recordid,
                                                      $namefields
                                                 FROM {assign_submission} asb
                                                      JOIN {assign} a      ON a.id = asb.assignment
                                                      JOIN {course_modules} cm ON cm.instance = a.id
                                                      JOIN {modules} md        ON md.id = cm.module
                                                      JOIN {user} u            ON u.id = asb.userid
+                                                LEFT JOIN {assign_user_mapping} um ON um.userid = u.id AND um.assignment = a.id
                                                WHERE asb.timemodified > ? AND
                                                      asb.latest = 1 AND
                                                      a.course = ? AND
@@ -735,7 +736,10 @@ function assign_print_recent_activity($course, $viewfullnames, $timestart) {
         // Obscure first and last name if blind marking enabled.
         if ($assign->is_blind_marking()) {
             $submission->firstname = get_string('participant', 'mod_assign');
-            $submission->lastname = $assign->get_uniqueid_for_user($submission->userid);
+            if (empty($submission->recordid)) {
+                $submission->recordid = $assign->get_uniqueid_for_user($submission->userid);
+            }
+            $submission->lastname = $submission->recordid;
         }
         print_recent_activity_note($submission->timemodified,
                                    $submission,
@@ -1411,7 +1415,11 @@ function assign_get_completion_state($course, $cm, $userid, $type) {
 
     // If completion option is enabled, evaluate it and return true/false.
     if ($assign->get_instance()->completionsubmit) {
-        $submission = $assign->get_user_submission($userid, false);
+        if ($assign->get_instance()->teamsubmission) {
+            $submission = $assign->get_group_submission($userid, 0, false);
+        } else {
+            $submission = $assign->get_user_submission($userid, false);
+        }
         return $submission && $submission->status == ASSIGN_SUBMISSION_STATUS_SUBMITTED;
     } else {
         // Completion option is not enabled so just return $type.

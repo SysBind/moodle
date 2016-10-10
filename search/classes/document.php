@@ -277,7 +277,7 @@ class document implements \renderable, \templatable {
             $this->data[$fieldname] = intval($value);
         } else {
             // Replace all groups of line breaks and spaces by single spaces.
-            $this->data[$fieldname] = preg_replace("/\s+/", " ", $value);
+            $this->data[$fieldname] = preg_replace("/\s+/u", " ", $value);
         }
 
         return $this->data[$fieldname];
@@ -555,6 +555,9 @@ class document implements \renderable, \templatable {
      * Although content is a required field when setting up the document, it accepts '' (empty) values
      * as they may be the result of striping out HTML.
      *
+     * SECURITY NOTE: It is the responsibility of the document to properly escape any text to be displayed.
+     * The renderer will output the content without any further cleaning.
+     *
      * @param renderer_base $output The renderer.
      * @return array
      */
@@ -563,6 +566,8 @@ class document implements \renderable, \templatable {
 
         $title = $this->is_set('title') ? $this->format_text($this->get('title')) : '';
         $data = [
+            'componentname' => $componentname,
+            'areaname' => $areaname,
             'courseurl' => course_get_url($this->get('courseid')),
             'coursefullname' => format_string($this->get('coursefullname'), true, array('context' => $this->get('contextid'))),
             'modified' => userdate($this->get('modified')),
@@ -580,13 +585,13 @@ class document implements \renderable, \templatable {
             if (count($files) > 1) {
                 $filenames = array();
                 foreach ($files as $file) {
-                    $filenames[] = $file->get_filename();
+                    $filenames[] = format_string($file->get_filename(), true, array('context' => $this->get('contextid')));
                 }
                 $data['multiplefiles'] = true;
                 $data['filenames'] = $filenames;
             } else {
                 $file = reset($files);
-                $data['filename'] = $file->get_filename();
+                $data['filename'] = format_string($file->get_filename(), true, array('context' => $this->get('contextid')));
             }
         }
 

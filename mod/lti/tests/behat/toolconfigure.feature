@@ -33,11 +33,11 @@ Feature: Configure tool types
     And I press "Add"
     Then I should see "Enter your consumer key and shared secret"
     And I press "Save changes"
-    And I should see "Failed to create new tool. Please check the url and try again."
+    And I should see "Failed to create new tool. Please check the URL and try again."
 
   @javascript
   Scenario: Attempt to add a tool type from a configuration URL, then cancel
-    When I set the field "url" to local url "/mod/lti/tests/fixtures/tool_provider.html"
+    When I set the field "url" to local url "/mod/lti/tests/fixtures/tool_provider.php"
     And I press "Add"
     Then I should see "Cancel"
     And I press "cancel-external-registration"

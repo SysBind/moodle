@@ -52,7 +52,8 @@ class mod_lti_external_testcase extends externallib_advanced_testcase {
 
         // Setup test data.
         $this->course = $this->getDataGenerator()->create_course();
-        $this->lti = $this->getDataGenerator()->create_module('lti', array('course' => $this->course->id));
+        $this->lti = $this->getDataGenerator()->create_module('lti',
+            array('course' => $this->course->id, 'toolurl' => 'http://localhost/not/real/tool.php'));
         $this->context = context_module::instance($this->lti->cmid);
         $this->cm = get_coursemodule_from_instance('lti', $this->lti->id);
 
@@ -285,10 +286,12 @@ class mod_lti_external_testcase extends externallib_advanced_testcase {
      * Test create tool proxy
      */
     public function test_mod_lti_create_tool_proxy() {
-        $proxy = mod_lti_external::create_tool_proxy('Test proxy', $this->getExternalTestFileUrl('/test.html'), array(), array());
+        $capabilities = ['AA', 'BB'];
+        $proxy = mod_lti_external::create_tool_proxy('Test proxy', $this->getExternalTestFileUrl('/test.html'), $capabilities, []);
         $this->assertEquals('Test proxy', $proxy->name);
         $this->assertEquals($this->getExternalTestFileUrl('/test.html'), $proxy->regurl);
         $this->assertEquals(LTI_TOOL_PROXY_STATE_PENDING, $proxy->state);
+        $this->assertEquals(implode("\n", $capabilities), $proxy->capabilityoffered);
     }
 
     /*

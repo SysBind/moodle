@@ -1,3 +1,5 @@
+/* global TOOLBOX, BODY, SELECTOR, INDENTLIMITS */
+
 /**
  * Resource and activity toolbox class.
  *
@@ -128,7 +130,6 @@ Y.extend(RESOURCETOOLBOX, TOOLBOX, {
                 break;
             case 'move':
             case 'update':
-            case 'duplicate':
             case 'assignroles':
                 break;
             default:

@@ -14,6 +14,7 @@ YUI.add('moodle-assignfeedback_editpdf-editor', function (Y, NAME) {
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* eslint-disable no-unused-vars */
 
 /**
  * A list of globals used by this module.
@@ -412,6 +413,7 @@ M.assignfeedback_editpdf.edit = EDIT;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global SELECTOR */
 
 /**
  * Provides an in browser PDF editor.
@@ -524,6 +526,7 @@ M.assignfeedback_editpdf.drawable = DRAWABLE;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global STROKEWEIGHT, SELECTOR, SELECTEDBORDERCOLOUR, SELECTEDFILLCOLOUR */
 
 /**
  * Provides an in browser PDF editor.
@@ -864,6 +867,7 @@ M.assignfeedback_editpdf.annotation = ANNOTATION;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global STROKEWEIGHT, ANNOTATIONCOLOUR */
 
 /**
  * Provides an in browser PDF editor.
@@ -984,6 +988,7 @@ M.assignfeedback_editpdf.annotationline = ANNOTATIONLINE;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global STROKEWEIGHT, ANNOTATIONCOLOUR */
 
 /**
  * Provides an in browser PDF editor.
@@ -1098,6 +1103,7 @@ M.assignfeedback_editpdf.annotationrectangle = ANNOTATIONRECTANGLE;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global STROKEWEIGHT, ANNOTATIONCOLOUR */
 
 /**
  * Provides an in browser PDF editor.
@@ -1212,6 +1218,7 @@ M.assignfeedback_editpdf.annotationoval = ANNOTATIONOVAL;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global STROKEWEIGHT, ANNOTATIONCOLOUR */
 
 /**
  * Provides an in browser PDF editor.
@@ -1372,6 +1379,7 @@ M.assignfeedback_editpdf.annotationpen = ANNOTATIONPEN;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global ANNOTATIONCOLOUR */
 
 /**
  * Provides an in browser PDF editor.
@@ -1525,6 +1533,7 @@ M.assignfeedback_editpdf.annotationhighlight = ANNOTATIONHIGHLIGHT;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global SELECTOR */
 
 /**
  * Provides an in browser PDF editor.
@@ -1576,10 +1585,13 @@ Y.extend(ANNOTATIONSTAMP, M.assignfeedback_editpdf.annotation, {
         node.setY(position.y);
         drawable.store_position(node, position.x, position.y);
 
-        // Pass throught the event handlers on the div.
-        node.on('gesturemovestart', this.editor.edit_start, null, this.editor);
-        node.on('gesturemove', this.editor.edit_move, null, this.editor);
-        node.on('gesturemoveend', this.editor.edit_end, null, this.editor);
+        // Bind events only when editing.
+        if (!this.editor.get('readonly')) {
+            // Pass through the event handlers on the div.
+            node.on('gesturemovestart', this.editor.edit_start, null, this.editor);
+            node.on('gesturemove', this.editor.edit_move, null, this.editor);
+            node.on('gesturemoveend', this.editor.edit_end, null, this.editor);
+        }
 
         drawable.nodes.push(node);
 
@@ -2172,6 +2184,8 @@ Y.extend(COMMENTMENU, M.assignfeedback_editpdf.dropdown, {
 
 M.assignfeedback_editpdf = M.assignfeedback_editpdf || {};
 M.assignfeedback_editpdf.commentmenu = COMMENTMENU;
+/* eslint-disable no-unused-vars */
+/* global SELECTOR */
 var COMMENTSEARCHNAME = "commentsearch",
     COMMENTSEARCH;
 
@@ -2362,6 +2376,7 @@ M.assignfeedback_editpdf.commentsearch = COMMENTSEARCH;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global SELECTOR, COMMENTCOLOUR, COMMENTTEXTCOLOUR */
 
 /**
  * Provides an in browser PDF editor.
@@ -2546,7 +2561,7 @@ var COMMENT = function(editor, gradeid, pageno, x, y, width, colour, rawtext) {
         drawable.store_position(container, position.x, position.y);
         drawable.nodes.push(container);
         node.set('value', this.rawtext);
-        scrollheight = node.get('scrollHeight'),
+        scrollheight = node.get('scrollHeight');
         node.setStyles({
             'height' : scrollheight + 'px',
             'overflow': 'hidden'
@@ -2615,43 +2630,50 @@ var COMMENT = function(editor, gradeid, pageno, x, y, width, colour, rawtext) {
         });
 
         node.on('gesturemovestart', function(e) {
-            node.setData('dragging', true);
-            node.setData('offsetx', e.clientX - node.getX());
-            node.setData('offsety', e.clientY - node.getY());
+            if (editor.currentedit.tool === 'select') {
+                e.preventDefault();
+                node.setData('dragging', true);
+                node.setData('offsetx', e.clientX - node.getX());
+                node.setData('offsety', e.clientY - node.getY());
+            }
         });
         node.on('gesturemoveend', function() {
-            node.setData('dragging', false);
-            this.editor.save_current_page();
+            if (editor.currentedit.tool === 'select') {
+                node.setData('dragging', false);
+                this.editor.save_current_page();
+            }
         }, null, this);
         node.on('gesturemove', function(e) {
-            var x = e.clientX - node.getData('offsetx'),
-                y = e.clientY - node.getData('offsety'),
-                nodewidth,
-                nodeheight,
-                newlocation,
-                windowlocation,
-                bounds;
+            if (editor.currentedit.tool === 'select') {
+                var x = e.clientX - node.getData('offsetx'),
+                    y = e.clientY - node.getData('offsety'),
+                    nodewidth,
+                    nodeheight,
+                    newlocation,
+                    windowlocation,
+                    bounds;
 
-            nodewidth = parseInt(node.getStyle('width'), 10);
-            nodeheight = parseInt(node.getStyle('height'), 10);
+                nodewidth = parseInt(node.getStyle('width'), 10);
+                nodeheight = parseInt(node.getStyle('height'), 10);
 
-            newlocation = this.editor.get_canvas_coordinates(new M.assignfeedback_editpdf.point(x, y));
-            bounds = this.editor.get_canvas_bounds(true);
-            bounds.x = 0;
-            bounds.y = 0;
+                newlocation = this.editor.get_canvas_coordinates(new M.assignfeedback_editpdf.point(x, y));
+                bounds = this.editor.get_canvas_bounds(true);
+                bounds.x = 0;
+                bounds.y = 0;
 
-            bounds.width -= nodewidth + 42;
-            bounds.height -= nodeheight + 8;
-            // Clip to the window size - the comment size.
-            newlocation.clip(bounds);
+                bounds.width -= nodewidth + 42;
+                bounds.height -= nodeheight + 8;
+                // Clip to the window size - the comment size.
+                newlocation.clip(bounds);
 
-            this.x = newlocation.x;
-            this.y = newlocation.y;
+                this.x = newlocation.x;
+                this.y = newlocation.y;
 
-            windowlocation = this.editor.get_window_coordinates(newlocation);
-            node.ancestor().setX(windowlocation.x);
-            node.ancestor().setY(windowlocation.y);
-            this.drawable.store_position(node.ancestor(), windowlocation.x, windowlocation.y);
+                windowlocation = this.editor.get_window_coordinates(newlocation);
+                node.ancestor().setX(windowlocation.x);
+                node.ancestor().setY(windowlocation.y);
+                this.drawable.store_position(node.ancestor(), windowlocation.x, windowlocation.y);
+            }
         }, null, this);
 
         this.menu = new M.assignfeedback_editpdf.commentmenu({
@@ -2869,6 +2891,7 @@ M.assignfeedback_editpdf.quickcomment = QUICKCOMMENT;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* global AJAXBASE */
 
 /**
  * Provides an in browser PDF editor.
@@ -3069,6 +3092,8 @@ M.assignfeedback_editpdf.quickcommentlist = QUICKCOMMENTLIST;
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+/* eslint-disable no-unused-vars */
+/* global SELECTOR, TOOLSELECTOR, AJAXBASE, COMMENTCOLOUR, ANNOTATIONCOLOUR, AJAXBASEPROGRESS, CLICKTIMEOUT */
 
 /**
  * Provides an in browser PDF editor.
@@ -4163,7 +4188,7 @@ EDITOR.prototype = {
         drawingcanvas.setStyle('height', page.height + 'px');
 
         // Update page select.
-        this.get_dialogue_element(SELECTOR.PAGESELECT).set('value', this.currentpage);
+        this.get_dialogue_element(SELECTOR.PAGESELECT).set('selectedIndex', this.currentpage);
 
         this.resize(); // Internally will call 'redraw', after checking the dialogue size.
     },
