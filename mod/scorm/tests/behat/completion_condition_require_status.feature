@@ -21,7 +21,7 @@ Feature: Scorm multi-sco completion
     When I log in as "teacher1"
     And I follow "Course 1"
     And I turn editing mode on
-    And I click on "Edit settings" "link" in the "Administration" "block"
+    And I navigate to "Edit settings" in current page administration
     And I set the following fields to these values:
       | Enable completion tracking | Yes |
     And I press "Save and display"
@@ -45,6 +45,7 @@ Feature: Scorm multi-sco completion
     And I should see "Play of the game"
     And I switch to the main frame
     And I follow "Exit activity"
+    And I wait until the page is ready
     Then I should see "Basic Multi-sco SCORM package"
     And I log out
     And I log in as "teacher1"
@@ -56,7 +57,7 @@ Feature: Scorm multi-sco completion
     When I log in as "teacher1"
     And I follow "Course 1"
     And I turn editing mode on
-    And I click on "Edit settings" "link" in the "Administration" "block"
+    And I navigate to "Edit settings" in current page administration
     And I set the following fields to these values:
       | Enable completion tracking | Yes |
     And I press "Save and display"
@@ -80,6 +81,7 @@ Feature: Scorm multi-sco completion
     And I should see "Play of the game"
     And I switch to the main frame
     And I follow "Exit activity"
+    And I wait until the page is ready
     Then I should see "ADV Multi-sco SCORM package"
     And I log out
     And I log in as "teacher1"
@@ -180,6 +182,7 @@ Feature: Scorm multi-sco completion
     And I should see "Knowledge Check"
     And I switch to the main frame
     And I follow "Exit activity"
+    And I wait until the page is ready
     Then I should see "ADV Multi-sco SCORM package"
     And I log out
     And I log in as "teacher1"

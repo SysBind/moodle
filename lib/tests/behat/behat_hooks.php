@@ -111,6 +111,11 @@ class behat_hooks extends behat_base {
      * @BeforeSuite
      */
     public static function before_suite_hook(BeforeSuiteScope $scope) {
+        // If behat has been initialised then no need to do this again.
+        if (self::$initprocessesfinished) {
+            return;
+        }
+
         try {
             self::before_suite($scope);
         } catch (behat_stop_exception $e) {
@@ -309,14 +314,23 @@ class behat_hooks extends behat_base {
             behat_context_helper::set_environment($scope->getEnvironment());
 
             // We need the Mink session to do it and we do it only before the first scenario.
-            $behatselectorclass = 'behat_selectors';
-            if ($suitename !== 'default') {
-                $behatselectorclass = behat_config_util::get_behat_theme_selector_override_classname($suitename, true);
+            $namedpartialclass = 'behat_partial_named_selector';
+            $namedexactclass = 'behat_exact_named_selector';
+
+            // If override selector exist, then set it as default behat selectors class.
+            $overrideclass = behat_config_util::get_behat_theme_selector_override_classname($suitename, 'named_partial', true);
+            if (class_exists($overrideclass)) {
+                $namedpartialclass = $overrideclass;
             }
-            if (class_exists($behatselectorclass)) {
-                $behatselectorclass = new $behatselectorclass();
-                $behatselectorclass::register_moodle_selectors($session);
+
+            // If override selector exist, then set it as default behat selectors class.
+            $overrideclass = behat_config_util::get_behat_theme_selector_override_classname($suitename, 'named_exact', true);
+            if (class_exists($overrideclass)) {
+                $namedexactclass = $overrideclass;
             }
+
+            $this->getSession()->getSelectorsHandler()->registerSelector('named_partial', new $namedpartialclass());
+            $this->getSession()->getSelectorsHandler()->registerSelector('named_exact', new $namedexactclass());
         }
 
         // Reset mink session between the scenarios.
@@ -325,7 +339,12 @@ class behat_hooks extends behat_base {
         // Reset $SESSION.
         \core\session\manager::init_empty_session();
 
+        // Ignore E_NOTICE and E_WARNING during reset, as this might be caused because of some existing process
+        // running ajax. This will be investigated in another issue.
+        $errorlevel = error_reporting();
+        error_reporting($errorlevel & ~E_NOTICE & ~E_WARNING);
         behat_util::reset_all_data();
+        error_reporting($errorlevel);
 
         // Assign valid data to admin user (some generator-related code needs a valid user).
         $user = $DB->get_record('user', array('username' => 'admin'));
@@ -365,6 +384,28 @@ class behat_hooks extends behat_base {
 
         // Run all test with medium (1024x768) screen size, to avoid responsive problems.
         $this->resize_window('medium');
+    }
+
+    /**
+     * Executed after scenario to go to a page where no JS is executed.
+     * This will ensure there are no unwanted ajax calls from browser and
+     * site can be reset safely.
+     *
+     * @param AfterScenarioScope $scope scope passed by event fired after scenario.
+     * @AfterScenario
+     */
+    public function after_scenario(AfterScenarioScope $scope) {
+        try {
+            $this->wait_for_pending_js();
+            $this->getSession()->reset();
+        } catch (DriverException $e) {
+            // Try restart session, if DriverException caught.
+            try {
+                $this->getSession()->restart();
+            } catch (DriverException $e) {
+                // Do nothing, as this will be caught while starting session in before_scenario.
+            }
+        }
     }
 
     /**
@@ -579,7 +620,7 @@ class behat_hooks extends behat_base {
      *
      * @Given /^I look for exceptions$/
      * @throw Exception Unknown type, depending on what we caught in the hook or basic \Exception.
-     * @see Moodle\BehatExtension\Tester\MoodleStepTester
+     * @see Moodle\BehatExtension\EventDispatcher\Tester\ChainedStepTester
      */
     public function i_look_for_exceptions() {
         // If the step already failed in a hook throw the exception.
@@ -609,4 +650,5 @@ class behat_hooks extends behat_base {
  * @copyright  2016 Rajesh Taneja <rajesh@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class behat_stop_exception extends \Exception{}
+class behat_stop_exception extends \Exception {
+}

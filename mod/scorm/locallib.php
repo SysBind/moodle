@@ -538,7 +538,7 @@ function scorm_insert_track($userid, $scormid, $scoid, $attempt, $element, $valu
 
     // Trigger updating grades based on a given set of SCORM CMI elements.
     $scorm = false;
-    if (strstr($element, '.score.raw') ||
+    if (in_array($element, array('cmi.core.score.raw', 'cmi.score.raw')) ||
         (in_array($element, array('cmi.completion_status', 'cmi.core.lesson_status', 'cmi.success_status'))
          && in_array($track->value, array('completed', 'passed')))) {
         $scorm = $DB->get_record('scorm', array('id' => $scormid));
@@ -547,7 +547,7 @@ function scorm_insert_track($userid, $scormid, $scoid, $attempt, $element, $valu
     }
 
     // Trigger CMI element events.
-    if (strstr($element, '.score.raw') ||
+    if (in_array($element, array('cmi.core.score.raw', 'cmi.score.raw')) ||
         (in_array($element, array('cmi.completion_status', 'cmi.core.lesson_status', 'cmi.success_status'))
         && in_array($track->value, array('completed', 'failed', 'passed')))) {
         if (!$scorm) {
@@ -560,7 +560,7 @@ function scorm_insert_track($userid, $scormid, $scoid, $attempt, $element, $valu
             'context' => context_module::instance($cm->id),
             'relateduserid' => $userid
         );
-        if (strstr($element, '.score.raw')) {
+        if (in_array($element, array('cmi.core.score.raw', 'cmi.score.raw'))) {
             // Create score submitted event.
             $event = \mod_scorm\event\scoreraw_submitted::create($data);
         } else {
@@ -897,7 +897,7 @@ function scorm_print_launch ($user, $scorm, $action, $cm) {
     $organization = optional_param('organization', '', PARAM_INT);
 
     if ($scorm->displaycoursestructure == 1) {
-        echo $OUTPUT->box_start('generalbox boxaligncenter toc', 'toc');
+        echo $OUTPUT->box_start('generalbox boxaligncenter toc container', 'toc');
         echo html_writer::div(get_string('contents', 'scorm'), 'structurehead');
     }
     if (empty($organization)) {
@@ -946,14 +946,17 @@ function scorm_print_launch ($user, $scorm, $action, $cm) {
             echo html_writer::start_div('scorm-center');
             echo html_writer::start_tag('form', array('id' => 'scormviewform',
                                                         'method' => 'post',
-                                                        'action' => $CFG->wwwroot.'/mod/scorm/player.php'));
+                                                        'action' => $CFG->wwwroot.'/mod/scorm/player.php',
+                                                        'class' => 'container'));
         if ($scorm->hidebrowse == 0) {
             print_string('mode', 'scorm');
-            echo ': '.html_writer::empty_tag('input', array('type' => 'radio', 'id' => 'b', 'name' => 'mode', 'value' => 'browse')).
+            echo ': '.html_writer::empty_tag('input', array('type' => 'radio', 'id' => 'b', 'name' => 'mode',
+                    'value' => 'browse', 'class' => 'm-r-1')).
                         html_writer::label(get_string('browse', 'scorm'), 'b');
             echo html_writer::empty_tag('input', array('type' => 'radio',
                                                         'id' => 'n', 'name' => 'mode',
-                                                        'value' => 'normal', 'checked' => 'checked')).
+                                                        'value' => 'normal', 'checked' => 'checked',
+                                                        'class' => 'm-x-1')).
                     html_writer::label(get_string('normal', 'scorm'), 'n');
 
         } else {
@@ -976,7 +979,8 @@ function scorm_print_launch ($user, $scorm, $action, $cm) {
         echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'scoid', 'value' => $scorm->launch));
         echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'cm', 'value' => $cm->id));
         echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'currentorg', 'value' => $orgidentifier));
-        echo html_writer::empty_tag('input', array('type' => 'submit', 'value' => get_string('enter', 'scorm')));
+        echo html_writer::empty_tag('input', array('type' => 'submit', 'value' => get_string('enter', 'scorm'),
+                'class' => 'btn btn-primary'));
         echo html_writer::end_tag('form');
         echo html_writer::end_div();
     }
@@ -1868,7 +1872,7 @@ function scorm_get_toc($user, $scorm, $cmid, $toclink=TOCJSLINK, $currentorg='',
 
     if ($tocheader) {
         $result->toc = html_writer::start_div('yui3-g-r', array('id' => 'scorm_layout'));
-        $result->toc .= html_writer::start_div('yui3-u-1-5', array('id' => 'scorm_toc'));
+        $result->toc .= html_writer::start_div('yui3-u-1-5 loading', array('id' => 'scorm_toc'));
         $result->toc .= html_writer::div('', '', array('id' => 'scorm_toc_title'));
         $result->toc .= html_writer::start_div('', array('id' => 'scorm_tree'));
     }
@@ -1928,7 +1932,7 @@ function scorm_get_toc($user, $scorm, $cmid, $toclink=TOCJSLINK, $currentorg='',
 
     if ($tocheader) {
         $result->toc .= html_writer::end_div().html_writer::end_div();
-        $result->toc .= html_writer::start_div('', array('id' => 'scorm_toc_toggle'));
+        $result->toc .= html_writer::start_div('loading', array('id' => 'scorm_toc_toggle'));
         $result->toc .= html_writer::tag('button', '', array('id' => 'scorm_toc_toggle_btn')).html_writer::end_div();
         $result->toc .= html_writer::start_div('', array('id' => 'scorm_content'));
         $result->toc .= html_writer::div('', '', array('id' => 'scorm_navpanel'));

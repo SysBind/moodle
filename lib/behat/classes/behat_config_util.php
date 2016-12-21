@@ -71,9 +71,9 @@ class behat_config_util {
     private $componentswithtests;
 
     /**
-     * @var bool keep track of theme to return suite with all core features included or not.
+     * @var array|string keep track of theme to return suite with all core features included or not.
      */
-    private $themesuitewithallfeatures = false;
+    private $themesuitewithallfeatures = array();
 
     /**
      * @var string filter features which have tags.
@@ -91,13 +91,26 @@ class behat_config_util {
     private $currentrun = 0;
 
     /**
+     * @var string used to specify if behat should be initialised with all themes.
+     */
+    const ALL_THEMES_TO_RUN = 'ALL';
+
+    /**
      * Set value for theme suite to include all core features. This should be used if your want all core features to be
      * run with theme.
      *
-     * @param bool $val
+     * @param bool $themetoset
      */
-    public function set_theme_suite_to_include_core_features($val) {
-        $this->themesuitewithallfeatures = $val;
+    public function set_theme_suite_to_include_core_features($themetoset) {
+        // If no value passed to --add-core-features-to-theme or ALL is passed, then set core features for all themes.
+        if (!empty($themetoset)) {
+            if (is_number($themetoset) || is_bool($themetoset) || (self::ALL_THEMES_TO_RUN === strtoupper($themetoset))) {
+                $this->themesuitewithallfeatures = self::ALL_THEMES_TO_RUN;
+            } else {
+                $this->themesuitewithallfeatures = explode(',', $themetoset);
+                $this->themesuitewithallfeatures = array_map('trim', $this->themesuitewithallfeatures);
+            }
+        }
     }
 
     /**
@@ -208,9 +221,24 @@ class behat_config_util {
             $features = array_merge($features, $additionalfeatures);
         }
 
-        $this->features = $features;
+        // Sanitize feature key.
+        $cleanfeatures = array();
+        foreach ($features as $featurepath) {
+            list($key, $path) = $this->get_clean_feature_key_and_path($featurepath);
+            $cleanfeatures[$key] = $path;
+        }
 
-        return $this->filtered_features_with_tags($features, $tags);
+        // Sort feature list.
+        ksort($cleanfeatures);
+
+        $this->features = $cleanfeatures;
+
+        // If tags are passed then filter features which has sepecified tags.
+        if (!empty($tags)) {
+            $cleanfeatures = $this->filtered_features_with_tags($cleanfeatures, $tags);
+        }
+
+        return $cleanfeatures;
     }
 
     /**
@@ -223,17 +251,13 @@ class behat_config_util {
         global $CFG;
 
         // Fix directory path.
-        $featurepath = str_replace('\\', DIRECTORY_SEPARATOR, $featurepath);
-        $featurepath = str_replace('/', DIRECTORY_SEPARATOR, $featurepath);
-
-        if (testing_is_cygwin()) {
-            $featurepath = str_replace('\\', '/', $featurepath);
-        }
+        $featurepath = testing_cli_fix_directory_separator($featurepath);
+        $dirroot = testing_cli_fix_directory_separator($CFG->dirroot . DIRECTORY_SEPARATOR);
 
         $key = basename($featurepath, '.feature');
 
         // Get relative path.
-        $featuredirname = str_replace($CFG->dirroot . DIRECTORY_SEPARATOR , '', $featurepath);
+        $featuredirname = str_replace($dirroot , '', $featurepath);
         // Get 5 levels of feature path to ensure we have a unique key.
         for ($i = 0; $i < 5; $i++) {
             if (($featuredirname = dirname($featuredirname)) && $featuredirname !== '.') {
@@ -305,6 +329,9 @@ class behat_config_util {
             }
         }
 
+        // Sort contexts with there name.
+        ksort($this->contexts);
+
         return $this->get_component_contexts($component);
     }
 
@@ -355,6 +382,11 @@ class behat_config_util {
 
         $config = $this->merge_behat_profiles($config);
 
+        // Return config array for phpunit, so it can be tested.
+        if (defined('PHPUNIT_TEST') && PHPUNIT_TEST) {
+            return $config;
+        }
+
         return Symfony\Component\Yaml\Yaml::dump($config, 10, 2);
     }
 
@@ -394,7 +426,7 @@ class behat_config_util {
             $andtags[] = preg_replace('/,.*/', '', $tag);
         }
 
-        foreach ($features as $featurefile) {
+        foreach ($features as $key => $featurefile) {
             $contents = file_get_contents($featurefile);
             $includefeature = true;
             foreach ($andtags as $tag) {
@@ -422,7 +454,7 @@ class behat_config_util {
             }
 
             if ($includefeature) {
-                $newfeaturelist[] = $featurefile;
+                $newfeaturelist[$key] = $featurefile;
             }
         }
         return $newfeaturelist;
@@ -470,10 +502,14 @@ class behat_config_util {
 
         // Remove selectors from step definitions.
         $themes = $this->get_list_of_themes();
+        $selectortypes = ['named_partial', 'named_exact'];
         foreach ($themes as $theme) {
-            $selectorclass = self::get_behat_theme_selector_override_classname($theme);
-            if (isset($allcontexts[$selectorclass])) {
-                unset($allcontexts[$selectorclass]);
+            foreach ($selectortypes as $selectortype) {
+                // Don't include selector classes.
+                $selectorclass = self::get_behat_theme_selector_override_classname($theme, $selectortype);
+                if (isset($allcontexts[$selectorclass])) {
+                    unset($allcontexts[$selectorclass]);
+                }
             }
         }
 
@@ -524,20 +560,31 @@ class behat_config_util {
 
         // If parallel run, then only divide features.
         if (!empty($currentrun) && !empty($parallelruns)) {
-            // Attempt to split into weighted buckets using timing information, if available.
-            if ($alloc = $this->profile_guided_allocate($features, max(1, $parallelruns), $currentrun)) {
-                $allocatedfeatures = $alloc;
-            } else {
-                // Divide the list of feature files amongst the parallel runners.
-                // Pull out the features for just this worker.
-                if (count($features)) {
-                    $features = array_chunk($features, ceil(count($features) / max(1, $parallelruns)));
 
-                    // Check if there is any feature file for this process.
-                    if (!empty($features[$currentrun - 1])) {
-                        $allocatedfeatures = $features[$currentrun - 1];
-                    } else {
-                        $allocatedfeatures = array();
+            $featurestodivide['withtags'] = $features;
+            $allocatedfeatures = array();
+
+            // If tags are set then split features with tags first.
+            if (!empty($this->tags)) {
+                $featurestodivide['withtags'] = $this->filtered_features_with_tags($features);
+                $featurestodivide['withouttags'] = $this->remove_blacklisted_features_from_list($features,
+                    $featurestodivide['withtags']);
+            }
+
+            // Attempt to split into weighted buckets using timing information, if available.
+            foreach ($featurestodivide as $tagfeatures) {
+                if ($alloc = $this->profile_guided_allocate($tagfeatures, max(1, $parallelruns), $currentrun)) {
+                    $allocatedfeatures = array_merge($allocatedfeatures, $alloc);
+                } else {
+                    // Divide the list of feature files amongst the parallel runners.
+                    // Pull out the features for just this worker.
+                    if (count($tagfeatures)) {
+                        $splitfeatures = array_chunk($tagfeatures, ceil(count($tagfeatures) / max(1, $parallelruns)));
+
+                        // Check if there is any feature file for this process.
+                        if (!empty($splitfeatures[$currentrun - 1])) {
+                            $allocatedfeatures = array_merge($allocatedfeatures, $splitfeatures[$currentrun - 1]);
+                        }
                     }
                 }
             }
@@ -623,6 +670,11 @@ class behat_config_util {
      * @return array|bool Feature files array, sorted into allocations
      */
     public function profile_guided_allocate($features, $nbuckets, $instance) {
+
+        // No profile guided allocation is required in phpunit.
+        if (defined('PHPUNIT_TEST')) {
+            return false;
+        }
 
         $behattimingfile = defined('BEHAT_FEATURE_TIMING_FILE') &&
         @filesize(BEHAT_FEATURE_TIMING_FILE) ? BEHAT_FEATURE_TIMING_FILE : false;
@@ -837,13 +889,18 @@ class behat_config_util {
      * Return context name of behat_theme selector to use.
      *
      * @param string $themename name of the theme.
+     * @param string $selectortype The type of selector (partial or exact at this stage)
      * @param bool $includeclass if class should be included.
      * @return string
      */
-    public static final function get_behat_theme_selector_override_classname($themename, $includeclass = false) {
+    public static final function get_behat_theme_selector_override_classname($themename, $selectortype, $includeclass = false) {
         global $CFG;
 
-        $overridebehatclassname = 'behat_theme_'.$themename.'_behat_selectors';
+        if ($selectortype !== 'named_partial' && $selectortype !== 'named_exact') {
+            throw new coding_exception("Unknown selector override type '{$selectortype}'");
+        }
+
+        $overridebehatclassname = "behat_theme_{$themename}_behat_{$selectortype}_selectors";
 
         if ($includeclass) {
             $themeoverrideselector = $CFG->dirroot . DIRECTORY_SEPARATOR . 'theme' . DIRECTORY_SEPARATOR . $themename .
@@ -862,7 +919,7 @@ class behat_config_util {
      *
      * @return array
      */
-    private function get_components_with_tests() {
+    protected function get_components_with_tests() {
         if (empty($this->componentswithtests)) {
             $this->componentswithtests = tests_finder::get_components_with_tests('behat');
         }
@@ -901,9 +958,7 @@ class behat_config_util {
             if (isset($features[$key])) {
                 $features[$key] = null;
                 unset($features[$key]);
-            } else if (empty($this->tags)) {
-                // If tags not set, then ensure we have a blacklisted feature in core. Else, let user know that
-                // blacklisted feature is invalid.
+            } else {
                 $featurestocheck = $this->get_components_features();
                 if (!isset($featurestocheck[$key]) && !defined('PHPUNIT_TEST')) {
                     behat_error(BEHAT_EXITCODE_REQUIREMENT, 'Blacklisted feature "' . $blacklistpath . '" not found.');
@@ -924,7 +979,6 @@ class behat_config_util {
      */
     protected function get_behat_suites($parallelruns = 0, $currentrun = 0) {
         $features = $this->get_components_features();
-        $contexts = $this->get_components_contexts();
 
         // Get number of parallel runs and current run.
         if (!empty($parallelruns) && !empty($currentrun)) {
@@ -934,9 +988,7 @@ class behat_config_util {
             $currentrun = $this->get_current_run();;
         }
 
-        $blacklistedfeatures = array();
         $themefeatures = array();
-        $themesuitecontexts = array();
         $themecontexts = array();
 
         $themes = $this->get_list_of_themes();
@@ -944,76 +996,83 @@ class behat_config_util {
         // Create list of theme suite features and contexts.
         foreach ($themes as $theme) {
             // Get theme features.
-            list($blacklistedfeatures[$theme], $themefeatures[$theme]) = $this->get_behat_features_for_theme($theme);
+            $themefeatures[$theme] = $this->get_behat_features_for_theme($theme);
 
-            list($themecontexts[$theme], $themesuitecontexts[$theme]) = $this->get_behat_contexts_for_theme($theme);
+            $themecontexts[$theme] = $this->get_behat_contexts_for_theme($theme);
         }
 
         // Remove list of theme features for default suite, as default suite should not run theme specific features.
-        foreach ($themefeatures as $removethemefeatures) {
-            $features = $this->remove_blacklisted_features_from_list($features, $removethemefeatures);
+        foreach ($themefeatures as $themename => $removethemefeatures) {
+            if (!empty($removethemefeatures['features'])) {
+                $features = $this->remove_blacklisted_features_from_list($features, $removethemefeatures['features']);
+            }
         }
 
-        // Remove list of theme features for default suite, as default suite should not run theme specific features.
-        foreach ($themecontexts as $theme => $themeblacklistcontexts) {
-            if ($themeblacklistcontexts) {
-                foreach ($themeblacklistcontexts as $c) {
-                    // Remove theme specific contexts from default contexts.
-                    unset($contexts[$c]);
-
+        // Remove list of theme contexts form other suite contexts, as suite don't require other theme specific contexts.
+        foreach ($themecontexts as $themename => $themecontext) {
+            if (!empty($themecontext['contexts'])) {
+                foreach ($themecontext['contexts'] as $contextkey => $contextpath) {
                     // Remove theme specific contexts from other themes.
                     foreach ($themes as $currenttheme) {
-                        if (($currenttheme != $theme) && isset($themesuitecontexts[$currenttheme][$c])) {
-                            unset($themesuitecontexts[$currenttheme][$c]);
+                        if (($currenttheme != $themename) && isset($themecontexts[$currenttheme]['suitecontexts'][$contextkey])) {
+                            unset($themecontexts[$currenttheme]['suitecontexts'][$contextkey]);
                         }
                     }
                 }
             }
         }
 
-        // Return sub-set of features if parallel run.
-        $featuresforrun = $this->get_features_for_the_run($features, $parallelruns, $currentrun);
-
-        // Default suite.
-        $suites = array(
-            'default' => array(
-                'paths' => array_values($featuresforrun),
-                'contexts' => array_keys($contexts),
-            )
-        );
-
         // Set suite for each theme.
+        $suites = array();
         foreach ($themes as $theme) {
             // Get list of features which will be included in theme.
-            // If theme suite with all features is set, then we want all core features to be part of theme suite.
-            if ($this->themesuitewithallfeatures) {
+            // If theme suite with all features or default theme, then we want all core features to be part of theme suite.
+            if ((is_string($this->themesuitewithallfeatures) && ($this->themesuitewithallfeatures === self::ALL_THEMES_TO_RUN)) ||
+                in_array($theme, $this->themesuitewithallfeatures) || ($this->get_default_theme() === $theme)) {
                 // If there is no theme specific feature. Then it's just core features.
-                if (empty($themefeatures[$theme])) {
+                if (empty($themefeatures[$theme]['features'])) {
                     $themesuitefeatures = $features;
                 } else {
-                    $themesuitefeatures = array_merge($features, $themefeatures[$theme]);
+                    $themesuitefeatures = array_merge($features, $themefeatures[$theme]['features']);
                 }
             } else {
-                $themesuitefeatures = $themefeatures[$theme];
+                $themesuitefeatures = $themefeatures[$theme]['features'];
             }
 
             // Remove blacklisted features.
-            $themesuitefeatures = $this->remove_blacklisted_features_from_list($themesuitefeatures, $blacklistedfeatures[$theme]);
+            $themesuitefeatures = $this->remove_blacklisted_features_from_list($themesuitefeatures,
+                $themefeatures[$theme]['blacklistfeatures']);
 
             // Return sub-set of features if parallel run.
             $themesuitefeatures = $this->get_features_for_the_run($themesuitefeatures, $parallelruns, $currentrun);
 
+            // Default theme is part of default suite.
+            if ($this->get_default_theme() === $theme) {
+                $suitename = 'default';
+            } else {
+                $suitename = $theme;
+            }
+
             // Add suite no matter what. If there is no feature in suite then it will just exist successfully with no
             // scenarios. But if we don't set this then the user has to know which run doesn't have suite and which run do.
             $suites = array_merge($suites, array(
-                $theme => array(
+                $suitename => array(
                     'paths'    => array_values($themesuitefeatures),
-                    'contexts' => array_keys($themesuitecontexts[$theme]),
+                    'contexts' => array_keys($themecontexts[$theme]['suitecontexts']),
                 )
             ));
         }
 
         return $suites;
+    }
+
+    /**
+     * Return name of default theme.
+     *
+     * @return string
+     */
+    protected function get_default_theme() {
+        return theme_config::DEFAULT_THEME;
     }
 
     /**
@@ -1045,14 +1104,24 @@ class behat_config_util {
                 // designer mode is switched off we will respect that decision.
                 continue;
             }
-            if ($themename == theme_config::DEFAULT_THEME) {
-                // Don't include default theme, as default suite will be running with this theme.
-                continue;
-            }
             $selectablethemes[] = $themename;
         }
 
         return $selectablethemes;
+    }
+
+    /**
+     * Return theme directory.
+     *
+     * @param string $themename
+     * @return string theme directory
+     */
+    protected function get_theme_test_directory($themename) {
+        global $CFG;
+
+        $themetestdir = "/theme/" . $themename;
+
+        return $CFG->dirroot . $themetestdir  . self::get_behat_tests_path();
     }
 
     /**
@@ -1069,8 +1138,7 @@ class behat_config_util {
             'contexts' => '|behat_.*\.php$|',
             'features' => '|.*\.feature$|',
         );
-        $themetestdir = "/theme/" . $theme . '/tests/behat';
-        $themetestdirfullpath = $CFG->dirroot . $themetestdir;
+        $themetestdirfullpath = $this->get_theme_test_directory($theme);
 
         // If test directory doesn't exist then return.
         if (!is_dir($themetestdirfullpath)) {
@@ -1080,7 +1148,7 @@ class behat_config_util {
         $directoriestosearch = glob($themetestdirfullpath . DIRECTORY_SEPARATOR . '*' , GLOB_ONLYDIR);
 
         // Include theme directory to find tests.
-        $dirs[realpath($themetestdirfullpath)] = trim(str_replace('/', '_', $themetestdir), '_');
+        $dirs[realpath($themetestdirfullpath)] = trim(str_replace('/', '_', $themetestdirfullpath), '_');
 
         // Search for tests in valid directories.
         foreach ($directoriestosearch as $dir) {
@@ -1107,10 +1175,8 @@ class behat_config_util {
      * @return array list of blacklisted contexts or features
      */
     protected function get_blacklisted_tests_for_theme($theme, $testtype) {
-        global $CFG;
 
-        $themetestpath = $CFG->dirroot . DIRECTORY_SEPARATOR . "theme" . DIRECTORY_SEPARATOR . $theme .
-            self::get_behat_tests_path();
+        $themetestpath = $this->get_theme_test_directory($theme);
 
         if (file_exists($themetestpath . DIRECTORY_SEPARATOR . 'blacklist.json')) {
             // Blacklist file exist. Leave it for last to clear the feature and contexts.
@@ -1167,22 +1233,57 @@ class behat_config_util {
      * Return list of blacklisted behat features for theme and features defined by theme only.
      *
      * @param string $theme theme name.
-     * @return array ($themeblacklistfeatures, $themefeatures)
+     * @return array ($blacklistfeatures, $blacklisttags, $features)
      */
     protected function get_behat_features_for_theme($theme) {
 
         // Get list of features defined by theme.
         $themefeatures = $this->get_tests_for_theme($theme, 'features');
         $themeblacklistfeatures = $this->get_blacklisted_tests_for_theme($theme, 'features');
+        $themeblacklisttags = $this->get_blacklisted_tests_for_theme($theme, 'tags');
 
-        // If tags are specified then we just want features with specified tags.
-        if (!empty($this->tags)) {
-            if (!empty($themefeatures)) {
-                $themefeatures = $this->filtered_features_with_tags($themefeatures);
+        // Clean feature key and path.
+        $features = array();
+        $blacklistfeatures = array();
+
+        foreach ($themefeatures as $themefeature) {
+            list($featurekey, $featurepath) = $this->get_clean_feature_key_and_path($themefeature);
+            $features[$featurekey] = $featurepath;
+        }
+
+        foreach ($themeblacklistfeatures as $themeblacklistfeature) {
+            list($blacklistfeaturekey, $blacklistfeaturepath) = $this->get_clean_feature_key_and_path($themeblacklistfeature);
+            $blacklistfeatures[$blacklistfeaturekey] = $blacklistfeaturepath;
+        }
+
+        // If blacklist tags then add those features to list.
+        if (!empty($themeblacklisttags)) {
+            // Remove @ if given, so we are sure we have only tag names.
+            $themeblacklisttags = array_map(function($v) {
+                return ltrim($v, '@');
+            }, $themeblacklisttags);
+
+            $themeblacklisttags = '@' . implode(',@', $themeblacklisttags);
+            $blacklistedfeatureswithtag = $this->filtered_features_with_tags($this->get_components_features(),
+                $themeblacklisttags);
+
+            // Add features with blacklisted tags.
+            if (!empty($blacklistedfeatureswithtag)) {
+                foreach ($blacklistedfeatureswithtag as $themeblacklistfeature) {
+                    list($key, $path) = $this->get_clean_feature_key_and_path($themeblacklistfeature);
+                    $blacklistfeatures[$key] = $path;
+                }
             }
         }
 
-        return array($themeblacklistfeatures, $themefeatures);
+        ksort($features);
+
+        $retval = array(
+            'blacklistfeatures' => $blacklistfeatures,
+            'features' => $features
+        );
+
+        return $retval;
     }
 
     /**
@@ -1208,7 +1309,10 @@ class behat_config_util {
 
         // If we already have this list then just return. This will not change by run.
         if (!empty($this->themecontexts[$theme]) && !empty($this->themesuitecontexts)) {
-            return array(array_keys($this->themecontexts[$theme]), $this->themesuitecontexts[$theme]);
+            return array(
+                'contexts' => $this->themecontexts[$theme],
+                'suitecontexts' => $this->themesuitecontexts[$theme],
+            );
         }
 
         if (empty($this->overriddenthemescontexts)) {
@@ -1237,11 +1341,14 @@ class behat_config_util {
                 $this->overriddenthemescontexts[$context] = $path;
             }
 
-            // Don't include behat_selectors.
-            if ($context === self::get_behat_theme_selector_override_classname($theme)) {
-                unset($this->contexts[$context]);
-                unset($themesuitecontexts[$context]);
-                continue;
+            $selectortypes = ['named_partial', 'named_exact'];
+            foreach ($selectortypes as $selectortype) {
+                // Don't include selector classes.
+                if ($context === self::get_behat_theme_selector_override_classname($theme, $selectortype)) {
+                    unset($this->contexts[$context]);
+                    unset($themesuitecontexts[$context]);
+                    continue;
+                }
             }
 
             // Add theme specific contexts with suffix to steps definitions.
@@ -1259,6 +1366,11 @@ class behat_config_util {
         $this->themesuitecontexts[$theme] = $themesuitecontexts;
         $this->themecontexts[$theme] = $themecontexts;
 
-        return array(array_keys($themecontexts), $themesuitecontexts);
+        $retval = array(
+            'contexts' => $themecontexts,
+            'suitecontexts' => $themesuitecontexts,
+        );
+
+        return $retval;
     }
 }

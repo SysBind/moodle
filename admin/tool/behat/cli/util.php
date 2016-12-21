@@ -56,12 +56,15 @@ list($options, $unrecognized) = cli_get_params(
         'updatesteps' => false,
         'fromrun'     => 1,
         'torun'       => 0,
-        'run-with-theme' => false,
+        'optimize-runs' => '',
+        'add-core-features-to-theme' => false,
     ),
     array(
         'h' => 'help',
         'j' => 'parallel',
         'm' => 'maxruns',
+        'o' => 'optimize-runs',
+        'a' => 'add-core-features-to-theme',
     )
 );
 
@@ -81,8 +84,9 @@ Options:
 --updatesteps  Update feature step file.
 
 -j, --parallel Number of parallel behat run operation
--m, --maxruns  Max parallel processes to be executed at one time.
---run-with-theme Run all core features with specified theme.
+-m, --maxruns Max parallel processes to be executed at one time.
+-o, --optimize-runs Split features with specified tags in all parallel runs.
+-a, --add-core-features-to-theme Add all core features to specified theme's
 
 -h, --help     Print out this help
 
@@ -178,14 +182,14 @@ if ($options['diag'] || $options['enable'] || $options['disable']) {
 } else if ($options['updatesteps']) {
     // Rewrite config file to ensure we have all the features covered.
     if (empty($options['parallel'])) {
-        behat_config_manager::update_config_file('', true, '', $options['run-with-theme'], false, false);
+        behat_config_manager::update_config_file('', true, '', $options['add-core-features-to-theme'], false, false);
     } else {
         // Update config file, ensuring we have up-to-date behat.yml.
         for ($i = $options['fromrun']; $i <= $options['torun']; $i++) {
             $CFG->behatrunprocess = $i;
 
             // Update config file for each run.
-            behat_config_manager::update_config_file('', true, '', $options['run-with-theme'],
+            behat_config_manager::update_config_file('', true, $options['optimize-runs'], $options['add-core-features-to-theme'],
                 $options['parallel'], $i);
         }
         unset($CFG->behatrunprocess);
@@ -267,7 +271,7 @@ function commands_to_execute($options) {
         if ($options[$option]) {
             $extra .= " --$option";
             if ($value) {
-                $extra .= "=$value";
+                $extra .= "=\"$value\"";
             }
         }
     }

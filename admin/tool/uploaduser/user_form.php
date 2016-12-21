@@ -211,11 +211,13 @@ class admin_uploaduser_form2 extends moodleform {
         $mform->addRule('username', get_string('requiredtemplate', 'tool_uploaduser'), 'required', null, 'client');
         $mform->disabledIf('username', 'uutype', 'eq', UU_USER_ADD_UPDATE);
         $mform->disabledIf('username', 'uutype', 'eq', UU_USER_UPDATE);
+        $mform->setForceLtr('username');
 
         $mform->addElement('text', 'email', get_string('email'), 'maxlength="100" size="30"');
         $mform->setType('email', PARAM_RAW); // No cleaning here. The process verifies it later.
         $mform->disabledIf('email', 'uutype', 'eq', UU_USER_ADD_UPDATE);
         $mform->disabledIf('email', 'uutype', 'eq', UU_USER_UPDATE);
+        $mform->setForceLtr('email');
 
         // only enabled and known to work plugins
         $choices = uu_supported_auths();
@@ -281,6 +283,7 @@ class admin_uploaduser_form2 extends moodleform {
 
         $mform->addElement('text', 'idnumber', get_string('idnumber'), 'maxlength="255" size="25"');
         $mform->setType('idnumber', PARAM_NOTAGS);
+        $mform->setForceLtr('idnumber');
 
         $mform->addElement('text', 'institution', get_string('institution'), 'maxlength="255" size="25"');
         $mform->setType('institution', PARAM_TEXT);
@@ -293,10 +296,12 @@ class admin_uploaduser_form2 extends moodleform {
         $mform->addElement('text', 'phone1', get_string('phone1'), 'maxlength="20" size="25"');
         $mform->setType('phone1', PARAM_NOTAGS);
         $mform->setAdvanced('phone1');
+        $mform->setForceLtr('phone1');
 
         $mform->addElement('text', 'phone2', get_string('phone2'), 'maxlength="20" size="25"');
         $mform->setType('phone2', PARAM_NOTAGS);
         $mform->setAdvanced('phone2');
+        $mform->setForceLtr('phone2');
 
         $mform->addElement('text', 'address', get_string('address'), 'maxlength="255" size="25"');
         $mform->setType('address', PARAM_TEXT);
@@ -345,6 +350,7 @@ class admin_uploaduser_form2 extends moodleform {
         $errors = parent::validation($data, $files);
         $columns = $this->_customdata['columns'];
         $optype  = $data['uutype'];
+        $updatetype = $data['uuupdatetype'];
 
         // detect if password column needed in file
         if (!in_array('password', $columns)) {
@@ -375,6 +381,12 @@ class admin_uploaduser_form2 extends moodleform {
                     }
                     break;
              }
+        }
+
+        // If the 'Existing user details' value is set we need to ensure that the
+        // 'Upload type' is not set to something invalid.
+        if (!empty($updatetype) && ($optype == UU_USER_ADDNEW || $optype == UU_USER_ADDINC)) {
+            $errors['uuupdatetype'] = get_string('invalidupdatetype', 'tool_uploaduser');
         }
 
         // look for other required data

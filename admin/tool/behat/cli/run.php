@@ -26,7 +26,6 @@ if (isset($_SERVER['REMOTE_ADDR'])) {
     die(); // No access from web!
 }
 
-define('BEHAT_UTIL', true);
 define('CLI_SCRIPT', true);
 define('ABORT_AFTER_CONFIG', true);
 define('CACHE_DISABLE_ALL', true);
@@ -55,7 +54,6 @@ list($options, $unrecognised) = cli_get_params(
         'fromrun'  => 1,
         'torun'    => 0,
         'single-run' => false,
-        'run-with-theme' => false,
     ),
     array(
         'h' => 'help',
@@ -79,7 +77,6 @@ Options:
 --replace          Replace args string with run process number, useful for output.
 --fromrun          Execute run starting from (Used for parallel runs on different vms)
 --torun            Execute run till (Used for parallel runs on different vms)
---run-with-theme   Run all core features with specified theme.
 
 -h, --help         Print out this help
 
@@ -119,8 +116,6 @@ array_walk($unrecognised, function (&$v) {
     }
 });
 $extraopts = $unrecognised;
-
-$tags = '';
 
 if ($options['profile']) {
     $profile = $options['profile'];
@@ -174,33 +169,6 @@ if (empty($parallelrun)) {
     exit($code);
 }
 
-// Update config file if tags defined.
-if ($tags) {
-    define('ABORT_AFTER_CONFIG_CANCEL', true);
-    require("$CFG->dirroot/lib/setup.php");
-    // Hack to set proper dataroot and wwwroot.
-    $behatdataroot = $CFG->behat_dataroot;
-    $behatwwwroot  = $CFG->behat_wwwroot;
-    for ($i = 1; $i <= $parallelrun; $i++) {
-        $CFG->behatrunprocess = $i;
-
-        if (!empty($CFG->behat_parallel_run[$i - 1]['behat_wwwroot'])) {
-            $CFG->behat_wwwroot = $CFG->behat_parallel_run[$i - 1]['behat_wwwroot'];
-        } else {
-            $CFG->behat_wwwroot = $behatwwwroot . "/" . BEHAT_PARALLEL_SITE_NAME . $i;
-        }
-        if (!empty($CFG->behat_parallel_run[$i - 1]['behat_dataroot'])) {
-            $CFG->behat_dataroot = $CFG->behat_parallel_run[$i - 1]['behat_dataroot'];
-        } else {
-            $CFG->behat_dataroot = $behatdataroot . $i;
-        }
-        behat_config_manager::update_config_file('', true, $tags, $options['run-with-theme'], $parallelrun);
-    }
-    $CFG->behat_dataroot = $behatdataroot;
-    $CFG->behat_wwwroot = $behatwwwroot;
-    unset($CFG->behatrunprocess);
-}
-
 $cmds = array();
 echo "Running " . ($options['torun'] - $options['fromrun'] + 1) . " parallel behat sites:" . PHP_EOL;
 
@@ -229,8 +197,8 @@ if (!behat_config_manager::create_parallel_site_links($options['fromrun'], $opti
     exit(1);
 }
 
-// Execute all commands.
-$processes = cli_execute_parallel($cmds, __DIR__);
+// Execute all commands, relative to moodle root directory.
+$processes = cli_execute_parallel($cmds, __DIR__ . "/../../../../");
 $stoponfail = empty($options['stop-on-failure']) ? false : true;
 
 // Print header.
