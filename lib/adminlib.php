@@ -2946,6 +2946,8 @@ class admin_setting_configmulticheckbox2 extends admin_setting_configmulticheckb
 class admin_setting_configselect extends admin_setting {
     /** @var array Array of choices value=>label */
     public $choices;
+    /** @var array Array of choices grouped using optgroups */
+    public $optgroups;
 
     /**
      * Constructor
@@ -2956,7 +2958,18 @@ class admin_setting_configselect extends admin_setting {
      * @param array $choices array of $value=>$label for each selection
      */
     public function __construct($name, $visiblename, $description, $defaultsetting, $choices) {
-        $this->choices = $choices;
+        // Look for optgroup and single options.
+        if (is_array($choices)) {
+            foreach ($choices as $key => $val) {
+                if (is_array($val)) {
+                    $this->optgroups[$key] = $val;
+                    $this->choices = array_merge($this->choices, $val);
+                } else {
+                    $this->choices[$key] = $val;
+                }
+            }
+        }
+
         parent::__construct($name, $visiblename, $description, $defaultsetting);
     }
 
@@ -3089,6 +3102,27 @@ class admin_setting_configselect extends admin_setting {
         }
 
         $options = [];
+        $template = 'core_admin/setting_configselect';
+
+        if (!empty($this->optgroups)) {
+            $optgroups = [];
+            foreach ($this->optgroups as $label => $choices) {
+                $optgroup = array('label' => $label, 'options' => []);
+                foreach ($choices as $value => $name) {
+                    $optgroup['options'][] = [
+                        'value' => $value,
+                        'name' => $name,
+                        'selected' => (string) $value == $data
+                    ];
+                    unset($this->choices[$value]);
+                }
+                $optgroups[] = $optgroup;
+            }
+            $context->options = $options;
+            $context->optgroups = $optgroups;
+            $template = 'core_admin/setting_configselect_optgroup';
+        }
+
         foreach ($this->choices as $value => $name) {
             $options[] = [
                 'value' => $value,
@@ -3098,7 +3132,7 @@ class admin_setting_configselect extends admin_setting {
         }
         $context->options = $options;
 
-        $element = $OUTPUT->render_from_template('core_admin/setting_configselect', $context);
+        $element = $OUTPUT->render_from_template($template, $context);
 
         return format_admin_setting($this, $this->visiblename, $element, $this->description, true, $warning, $defaultinfo, $query);
     }
@@ -3221,6 +3255,29 @@ class admin_setting_configmultiselect extends admin_setting_configselect {
 
         $defaults = [];
         $options = [];
+        $template = 'core_admin/setting_configmultiselect';
+
+        if (!empty($this->optgroups)) {
+            $optgroups = [];
+            foreach ($this->optgroups as $label => $choices) {
+                $optgroup = array('label' => $label, 'options' => []);
+                foreach ($choices as $value => $name) {
+                    if (in_array($value, $default)) {
+                        $defaults[] = $name;
+                    }
+                    $optgroup['options'][] = [
+                        'value' => $value,
+                        'name' => $name,
+                        'selected' => in_array($value, $data)
+                    ];
+                    unset($this->choices[$value]);
+                }
+                $optgroups[] = $optgroup;
+            }
+            $context->optgroups = $optgroups;
+            $template = 'core_admin/setting_configmultiselect_optgroup';
+        }
+
         foreach ($this->choices as $value => $name) {
             if (in_array($value, $default)) {
                 $defaults[] = $name;
@@ -3241,7 +3298,7 @@ class admin_setting_configmultiselect extends admin_setting_configselect {
             $defaultinfo = get_string('none');
         }
 
-        $element = $OUTPUT->render_from_template('core_admin/setting_configmultiselect', $context);
+        $element = $OUTPUT->render_from_template($template, $context);
 
         return format_admin_setting($this, $this->visiblename, $element, $this->description, true, '', $defaultinfo, $query);
     }
@@ -10179,4 +10236,42 @@ class admin_setting_searchsetupinfo extends admin_setting {
         return highlight($query, $return);
     }
 
+}
+
+/**
+ * Used to validate the contents of SCSS code and ensuring they are parsable.
+ *
+ * It does not attempt to detect undefined SCSS variables because it is designed
+ * to be used without knowledge of other config/scss included.
+ *
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright 2016 Dan Poltawski <dan@moodle.com>
+ */
+class admin_setting_scsscode extends admin_setting_configtextarea {
+
+    /**
+     * Validate the contents of the SCSS to ensure its parsable. Does not
+     * attempt to detect undefined scss variables.
+     *
+     * @param string $data The scss code from text field.
+     * @return mixed bool true for success or string:error on failure.
+     */
+    public function validate($data) {
+        if (empty($data)) {
+            return true;
+        }
+
+        $scss = new core_scss();
+        try {
+            $scss->compile($data);
+        } catch (Leafo\ScssPhp\Exception\ParserException $e) {
+            return get_string('scssinvalid', 'admin', $e->getMessage());
+        } catch (Leafo\ScssPhp\Exception\CompilerException $e) {
+            // Silently ignore this - it could be a scss variable defined from somewhere
+            // else which we are not examining here.
+            return true;
+        }
+
+        return true;
+    }
 }

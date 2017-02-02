@@ -1644,12 +1644,6 @@ class core_course_external extends external_api {
                 }
             }
 
-            // Check category depth is <= maxdepth (do not check for user who can manage categories).
-            if ((!empty($CFG->maxcategorydepth) && count($parents) > $CFG->maxcategorydepth)
-                    and !has_capability('moodle/category:manage', $context)) {
-                $excludedcats[$category->id] = 'depth';
-            }
-
             // Check the user can use the category context.
             $context = context_coursecat::instance($category->id);
             try {
@@ -2018,7 +2012,7 @@ class core_course_external extends external_api {
     /**
      * Describes the parameters for delete_modules.
      *
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since Moodle 2.5
      */
     public static function delete_modules_parameters() {
@@ -2404,6 +2398,16 @@ class core_course_external extends external_api {
                 'timemodified' => new external_value(PARAM_INT, 'Last time  the course was updated', VALUE_OPTIONAL),
                 'requested' => new external_value(PARAM_INT, 'If is a requested course', VALUE_OPTIONAL),
                 'cacherev' => new external_value(PARAM_INT, 'Cache revision number', VALUE_OPTIONAL),
+                'filters' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'filter'  => new external_value(PARAM_PLUGIN, 'Filter plugin name'),
+                            'localstate' => new external_value(PARAM_INT, 'Filter state: 1 for on, -1 for off, 0 if inherit'),
+                            'inheritedstate' => new external_value(PARAM_INT, '1 or 0 to use when localstate is set to inherit'),
+                        )
+                    ),
+                    'Course filters', VALUE_OPTIONAL
+                ),
             );
             $coursestructure = array_merge($coursestructure, $extra);
         }
@@ -2929,6 +2933,7 @@ class core_course_external extends external_api {
     public static function get_courses_by_field($field = '', $value = '') {
         global $DB, $CFG;
         require_once($CFG->libdir . '/coursecatlib.php');
+        require_once($CFG->libdir . '/filterlib.php');
 
         $params = self::validate_parameters(self::get_courses_by_field_parameters(),
             array(
@@ -2990,6 +2995,9 @@ class core_course_external extends external_api {
             $coursefields = array('format', 'showgrades', 'newsitems', 'startdate', 'maxbytes', 'showreports', 'visible',
                 'groupmode', 'groupmodeforce', 'defaultgroupingid', 'enablecompletion', 'completionnotify', 'lang', 'theme',
                 'sortorder', 'marker');
+
+            // Course filters.
+            $coursesdata[$course->id]['filters'] = filter_get_available_in_context($context);
 
             // Information for managers only.
             if ($canupdatecourse) {
@@ -3152,5 +3160,79 @@ class core_course_external extends external_api {
                 'warnings' => new external_warnings()
             )
         );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.3
+     */
+    public static function get_updates_since_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'Course id to check'),
+                'since' => new external_value(PARAM_INT, 'Check updates since this time stamp'),
+                'filter' => new external_multiple_structure(
+                    new external_value(PARAM_ALPHANUM, 'Area name: configuration, fileareas, completion, ratings, comments,
+                                                        gradeitems, outcomes'),
+                    'Check only for updates in these areas', VALUE_DEFAULT, array()
+                )
+            )
+        );
+    }
+
+    /**
+     * Check if there are updates affecting the user for the given course since the given time stamp.
+     *
+     * This function is a wrapper of self::check_updates for retrieving all the updates since a given time for all the activities.
+     *
+     * @param int $courseid the list of modules to check
+     * @param int $since check updates since this time stamp
+     * @param array $filter check only for updates in these areas
+     * @return array list of updates and warnings
+     * @throws moodle_exception
+     * @since Moodle 3.3
+     */
+    public static function get_updates_since($courseid, $since, $filter = array()) {
+        global $CFG, $DB;
+
+        $params = self::validate_parameters(
+            self::get_updates_since_parameters(),
+            array(
+                'courseid' => $courseid,
+                'since' => $since,
+                'filter' => $filter,
+            )
+        );
+
+        $course = get_course($params['courseid']);
+        $modinfo = get_fast_modinfo($course);
+        $tocheck = array();
+
+        // Retrieve all the visible course modules for the current user.
+        $cms = $modinfo->get_cms();
+        foreach ($cms as $cm) {
+            if (!$cm->uservisible) {
+                continue;
+            }
+            $tocheck[] = array(
+                'id' => $cm->id,
+                'contextlevel' => 'module',
+                'since' => $params['since'],
+            );
+        }
+
+        return self::check_updates($course->id, $tocheck, $params['filter']);
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.3
+     */
+    public static function get_updates_since_returns() {
+        return self::check_updates_returns();
     }
 }

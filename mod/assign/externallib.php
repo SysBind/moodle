@@ -70,7 +70,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for get_grades
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.4
      */
     public static function get_grades_parameters() {
@@ -660,7 +660,7 @@ class mod_assign_external extends external_api {
     /**
      * Describes the parameters for get_submissions
      *
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since Moodle 2.5
      */
     public static function get_submissions_parameters() {
@@ -895,7 +895,7 @@ class mod_assign_external extends external_api {
                             'locked'           => new external_value(PARAM_INT, 'locked', VALUE_OPTIONAL),
                             'mailed'           => new external_value(PARAM_INT, 'mailed', VALUE_OPTIONAL),
                             'extensionduedate' => new external_value(PARAM_INT, 'extension due date', VALUE_OPTIONAL),
-                            'workflowstate'    => new external_value(PARAM_TEXT, 'marking workflow state', VALUE_OPTIONAL),
+                            'workflowstate'    => new external_value(PARAM_ALPHA, 'marking workflow state', VALUE_OPTIONAL),
                             'allocatedmarker'  => new external_value(PARAM_INT, 'allocated marker', VALUE_OPTIONAL)
                         )
                     )
@@ -1147,7 +1147,7 @@ class mod_assign_external extends external_api {
                             'locked'           => new external_value(PARAM_INT, 'locked'),
                             'mailed'           => new external_value(PARAM_INT, 'mailed'),
                             'extensionduedate' => new external_value(PARAM_INT, 'extension due date'),
-                            'workflowstate'    => new external_value(PARAM_TEXT, 'marking workflow state', VALUE_OPTIONAL),
+                            'workflowstate'    => new external_value(PARAM_ALPHA, 'marking workflow state', VALUE_OPTIONAL),
                             'allocatedmarker'  => new external_value(PARAM_INT, 'allocated marker')
                         )
                     )
@@ -1317,7 +1317,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for lock_submissions
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function lock_submissions_parameters() {
@@ -1374,7 +1374,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for revert_submissions_to_draft
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function revert_submissions_to_draft_parameters() {
@@ -1431,7 +1431,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for unlock_submissions
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function unlock_submissions_parameters() {
@@ -1488,7 +1488,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for submit_grading_form webservice.
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 3.1
      */
     public static function submit_grading_form_parameters() {
@@ -1566,7 +1566,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the return for submit_grading_form
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 3.1
      */
     public static function submit_grading_form_returns() {
@@ -1575,7 +1575,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for submit_for_grading
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function submit_for_grading_parameters() {
@@ -1630,7 +1630,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for save_user_extensions
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function save_user_extensions_parameters() {
@@ -1703,7 +1703,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for reveal_identities
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function reveal_identities_parameters() {
@@ -1752,7 +1752,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for save_submission
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function save_submission_parameters() {
@@ -1828,7 +1828,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for save_grade
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.6
      */
     public static function save_grade_parameters() {
@@ -1964,7 +1964,7 @@ class mod_assign_external extends external_api {
 
     /**
      * Describes the parameters for save_grades
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since  Moodle 2.7
      */
     public static function save_grades_parameters() {
@@ -2220,7 +2220,7 @@ class mod_assign_external extends external_api {
     /**
      * Describes the parameters for view_submission_status.
      *
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since Moodle 3.1
      */
     public static function view_submission_status_parameters() {
@@ -2274,7 +2274,7 @@ class mod_assign_external extends external_api {
     /**
      * Describes the parameters for get_submission_status.
      *
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since Moodle 3.1
      */
     public static function get_submission_status_parameters() {
@@ -2827,7 +2827,7 @@ class mod_assign_external extends external_api {
     /**
      * Describes the parameters for view_assign.
      *
-     * @return external_external_function_parameters
+     * @return external_function_parameters
      * @since Moodle 3.2
      */
     public static function view_assign_parameters() {

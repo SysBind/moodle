@@ -3499,7 +3499,7 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
 
     // Mark the forum post as read if required
     if ($istracked && !$CFG->forum_usermarksread && !$postisread) {
-        forum_tp_mark_post_read($USER->id, $post, $forum->id);
+        forum_tp_mark_post_read($USER->id, $post);
     }
 
     if ($return) {
@@ -4393,7 +4393,7 @@ function forum_add_new_post($post, $mform, $unused = null) {
     $DB->set_field("forum_discussions", "usermodified", $post->userid, array("id" => $post->discussion));
 
     if (forum_tp_can_track_forums($forum) && forum_tp_is_tracked($forum)) {
-        forum_tp_mark_post_read($post->userid, $post, $post->forum);
+        forum_tp_mark_post_read($post->userid, $post);
     }
 
     // Let Moodle know that assessable content is uploaded (eg for plagiarism detection)
@@ -4405,25 +4405,41 @@ function forum_add_new_post($post, $mform, $unused = null) {
 /**
  * Update a post.
  *
- * @param   stdClass    $post       The post to update
+ * @param   stdClass    $newpost    The post to update
  * @param   mixed       $mform      The submitted form
  * @param   string      $unused
  * @return  bool
  */
-function forum_update_post($post, $mform, $unused = null) {
-    global $DB;
+function forum_update_post($newpost, $mform, $unused = null) {
+    global $DB, $USER;
 
+    $post       = $DB->get_record('forum_posts', array('id' => $newpost->id));
     $discussion = $DB->get_record('forum_discussions', array('id' => $post->discussion));
     $forum      = $DB->get_record('forum', array('id' => $discussion->forum));
     $cm         = get_coursemodule_from_instance('forum', $forum->id);
     $context    = context_module::instance($cm->id);
 
+    // Allowed modifiable fields.
+    $modifiablefields = [
+        'subject',
+        'message',
+        'messageformat',
+        'messagetrust',
+        'timestart',
+        'timeend',
+        'pinned',
+        'attachments',
+    ];
+    foreach ($modifiablefields as $field) {
+        if (isset($newpost->{$field})) {
+            $post->{$field} = $newpost->{$field};
+        }
+    }
     $post->modified = time();
 
-    $DB->update_record('forum_posts', $post);
-
-    $discussion->timemodified = $post->modified; // last modified tracking
-    $discussion->usermodified = $post->userid;   // last modified tracking
+    // Last post modified tracking.
+    $discussion->timemodified = $post->modified;
+    $discussion->usermodified = $post->userid;
 
     if (!$post->parent) {   // Post is a discussion starter - update discussion title and times too
         $discussion->name      = $post->subject;
@@ -4434,16 +4450,15 @@ function forum_update_post($post, $mform, $unused = null) {
             $discussion->pinned = $post->pinned;
         }
     }
-    $post->message = file_save_draft_area_files($post->itemid, $context->id, 'mod_forum', 'post', $post->id,
+    $post->message = file_save_draft_area_files($newpost->itemid, $context->id, 'mod_forum', 'post', $post->id,
             mod_forum_post_form::editor_options($context, $post->id), $post->message);
-    $DB->set_field('forum_posts', 'message', $post->message, array('id'=>$post->id));
-
+    $DB->update_record('forum_posts', $post);
     $DB->update_record('forum_discussions', $discussion);
 
     forum_add_attachment($post, $forum, $cm, $mform);
 
     if (forum_tp_can_track_forums($forum) && forum_tp_is_tracked($forum)) {
-        forum_tp_mark_post_read($post->userid, $post, $post->forum);
+        forum_tp_mark_post_read($USER->id, $post);
     }
 
     // Let Moodle know that assessable content is uploaded (eg for plagiarism detection)
@@ -4521,7 +4536,7 @@ function forum_add_discussion($discussion, $mform=null, $unused=null, $userid=nu
     }
 
     if (forum_tp_can_track_forums($forum) && forum_tp_is_tracked($forum)) {
-        forum_tp_mark_post_read($post->userid, $post, $post->forum);
+        forum_tp_mark_post_read($post->userid, $post);
     }
 
     // Let Moodle know that assessable content is uploaded (eg for plagiarism detection)
@@ -4776,12 +4791,13 @@ function forum_post_subscription($fromform, $forum, $discussion) {
  *      Any strings not passed in are taken from the $defaultmessages array
  *      at the top of the function.
  * @param bool $cantaccessagroup
- * @param bool $fakelink
+ * @param bool $unused1
  * @param bool $backtoindex
- * @param array $subscribed_forums
+ * @param array $unused2
  * @return string
  */
-function forum_get_subscribe_link($forum, $context, $messages = array(), $cantaccessagroup = false, $fakelink=true, $backtoindex=false, $subscribed_forums=null) {
+function forum_get_subscribe_link($forum, $context, $messages = array(), $cantaccessagroup = false, $unused1 = true,
+    $backtoindex = false, $unused2 = null) {
     global $CFG, $USER, $PAGE, $OUTPUT;
     $defaultmessages = array(
         'subscribed' => get_string('unsubscribe', 'forum'),
@@ -4820,22 +4836,11 @@ function forum_get_subscribe_link($forum, $context, $messages = array(), $cantac
         } else {
             $backtoindexlink = '';
         }
-        $link = '';
 
-        if ($fakelink) {
-            $PAGE->requires->js('/mod/forum/forum.js');
-            $PAGE->requires->js_function_call('forum_produce_subscribe_link', array($forum->id, $backtoindexlink, $linktext, $linktitle));
-            $link = "<noscript>";
-        }
         $options['id'] = $forum->id;
         $options['sesskey'] = sesskey();
         $url = new moodle_url('/mod/forum/subscribe.php', $options);
-        $link .= $OUTPUT->single_button($url, $linktext, 'get', array('title'=>$linktitle));
-        if ($fakelink) {
-            $link .= '</noscript>';
-        }
-
-        return $link;
+        return $OUTPUT->single_button($url, $linktext, 'get', array('title' => $linktitle));
     }
 }
 
@@ -6187,9 +6192,12 @@ function forum_tp_add_read_record($userid, $postid) {
 /**
  * If its an old post, do nothing. If the record exists, the maintenance will clear it up later.
  *
+ * @param   int     $userid The ID of the user to mark posts read for.
+ * @param   object  $post   The post record for the post to mark as read.
+ * @param   mixed   $unused
  * @return bool
  */
-function forum_tp_mark_post_read($userid, $post, $forumid) {
+function forum_tp_mark_post_read($userid, $post, $unused = null) {
     if (!forum_tp_is_post_old($post)) {
         return forum_tp_add_read_record($userid, $post->id);
     } else {

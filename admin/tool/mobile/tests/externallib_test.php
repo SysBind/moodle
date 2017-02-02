@@ -83,6 +83,8 @@ class tool_mobile_external_testcase extends externallib_advanced_testcase {
             'maintenanceenabled' => $CFG->maintenance_enabled,
             'maintenancemessage' => $maintenancemessage,
             'typeoflogin' => api::LOGIN_VIA_APP,
+            'mobilecssurl' => '',
+            'tool_mobile_disabledfeatures' => '',
             'warnings' => array()
         );
         $this->assertEquals($expected, $result);
@@ -143,6 +145,10 @@ class tool_mobile_external_testcase extends externallib_advanced_testcase {
             array('name' => 'commentsperpage', 'value' => $CFG->commentsperpage),
             array('name' => 'disableuserimages', 'value' => $CFG->disableuserimages),
             array('name' => 'mygradesurl', 'value' => user_mygrades_url()->out(false)),
+            array('name' => 'tool_mobile_forcelogout', 'value' => 0),
+            array('name' => 'tool_mobile_customlangstrings', 'value' => ''),
+            array('name' => 'tool_mobile_disabledfeatures', 'value' => ''),
+            array('name' => 'tool_mobile_custommenuitems', 'value' => ''),
         );
         $this->assertCount(0, $result['warnings']);
         $this->assertEquals($expected, $result['settings']);
@@ -150,8 +156,8 @@ class tool_mobile_external_testcase extends externallib_advanced_testcase {
         // Change a value and retrieve filtering by section.
         set_config('commentsperpage', 1);
         $expected[10]['value'] = 1;
-        unset($expected[11]);
-        unset($expected[12]);
+        // Remove not expected elements.
+        array_splice($expected, 11);
 
         $result = external::get_config('frontpagesettings');
         $result = external_api::clean_returnvalue(external::get_config_returns(), $result);
