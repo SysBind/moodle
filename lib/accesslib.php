@@ -366,7 +366,11 @@ function has_capability($capability, context $context, $user = null, $doanything
     global $USER, $CFG, $SCRIPT, $ACCESSLIB_PRIVATE;
 
     if (during_initial_install()) {
-        if ($SCRIPT === "/$CFG->admin/index.php" or $SCRIPT === "/$CFG->admin/cli/install.php" or $SCRIPT === "/$CFG->admin/cli/install_database.php") {
+        if ($SCRIPT === "/$CFG->admin/index.php"
+                or $SCRIPT === "/$CFG->admin/cli/install.php"
+                or $SCRIPT === "/$CFG->admin/cli/install_database.php"
+                or (defined('BEHAT_UTIL') and BEHAT_UTIL)
+                or (defined('PHPUNIT_UTIL') and PHPUNIT_UTIL)) {
             // we are in an installer - roles can not work yet
             return true;
         } else {
@@ -3985,9 +3989,13 @@ function get_users_by_capability(context $context, $capability, $fields = '', $s
                 } else {
                     $unions[] = "SELECT userid
                                    FROM {role_assignments}
-                                  WHERE contextid IN ($ctxids)
-                                        AND roleid IN (".implode(',', array_keys($needed[$cap])) .")
-                                        AND roleid NOT IN (".implode(',', array_keys($prohibited[$cap])) .")";
+                                  WHERE contextid IN ($ctxids) AND roleid IN (".implode(',', array_keys($needed[$cap])) .")
+                                        AND userid NOT IN (
+                                            SELECT userid
+                                              FROM {role_assignments}
+                                             WHERE contextid IN ($ctxids)
+                                                    AND roleid IN (" . implode(',', array_keys($prohibited[$cap])) . ")
+                                                        )";
                 }
             }
         }
