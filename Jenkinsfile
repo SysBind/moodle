@@ -1,6 +1,6 @@
 node{
     stage ('Prepear Env') {
-        git branch: '$BRANCH_NAME', url: 'git@gitlab.sysbind.biz:Developers/moe-alt.git'
+        git branch: '$BRANCH_NAME', url: 'git@gitlab.sysbind.biz:Developers/Moodle.git'
         sh 'cp config-dist.php config.php'
         sh 'sed -i -e "s%= \'moodle\'%= \'$JOB_BASE_NAME$BUILD_ID\'%" -e "s%= \'password\'%= \'1234\'%" config.php'
         sh 'sed -i -e "s%http:/p/example.com/moodle%http://localhost%" -e "s%/home/example/moodledata%/home/jenkins-slave/workspace/$JOB_BASE_NAME/$BRANCH_NAME/target/moodledata%" config.php'
