@@ -113,6 +113,13 @@ $currentgroup = groups_get_activity_group($cm);
 $exportdata = data_get_exportdata($data->id, $fields, $selectedfields, $currentgroup, $context,
                                   $exportuser, $exporttime, $exportapproval);
 $count = count($exportdata);
+// Clean html tags from textarea;
+
+foreach ($exportdata as &$line) {
+    foreach ($line as $key => $value) {
+        $line[$key] = strip_tags($value);
+    }
+}
 switch ($formdata['exporttype']) {
     case 'csv':
         data_export_csv($exportdata, $formdata['delimiter_name'], $data->name, $count);
