@@ -200,7 +200,13 @@ EOD;
                         $record->filename = $plugin->get_type() . '-' . $filename;
 
                         $htmlfile = $fs->create_file_from_string($record, $file);
-                        $convertedfile = $fs->get_converted_document($htmlfile, 'pdf');
+                        try {
+                            $convertedfile = $fs->get_converted_document($htmlfile, 'pdf');
+                        } catch (\Exception $e) {
+                            // Let us delete the file and re-throw the exception.
+                            $htmlfile->delete();
+                            throw $e;
+                        }
                         $htmlfile->delete();
                         if ($convertedfile) {
                             $files[$filename] = $convertedfile;
@@ -448,7 +454,12 @@ EOD;
 
         $files = array();
         for ($i = 0; $i < $pagecount; $i++) {
-            $image = $pdf->get_image($i);
+            try {
+                $image = $pdf->get_image($i);
+            } catch (\moodle_exception $e) {
+                // We catch only moodle_exception here as other exceptions indicate issue with setup not the pdf.
+                $image = pdf::get_error_image($tmpdir, $i);
+            }
             $record->filename = basename($image);
             $files[$i] = $fs->create_file_from_pathname($record, $tmpdir . '/' . $image);
             @unlink($tmpdir . '/' . $image);
