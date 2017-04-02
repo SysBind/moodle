@@ -3033,7 +3033,7 @@ function data_get_exportdata($dataid, $fields, $selectedfields, $currentgroup=0,
                 if(isset($content[$field->field->id])) {
                     $contents = $field->export_text_value($content[$field->field->id]);
                 }
-                $exportdata[$line][] = ($striptag)? strip_tags($contents) : $contents;
+                $exportdata[$line][] = ($striptag) ? strip_tags($contents) : $contents;
             }
             if ($userdetails) { // Add user details to the export data
                 $userdata = get_complete_user_data('id', $record->userid);
