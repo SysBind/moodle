@@ -2982,7 +2982,7 @@ function data_export_ods($export, $dataname, $count) {
  * @return array
  */
 function data_get_exportdata($dataid, $fields, $selectedfields, $currentgroup=0, $context=null,
-                             $userdetails=false, $time=false, $approval=false) {
+                             $userdetails=false, $time=false, $approval=false, $striptag=false) {
     global $DB;
 
     if (is_null($context)) {
@@ -3034,7 +3034,7 @@ function data_get_exportdata($dataid, $fields, $selectedfields, $currentgroup=0,
                 if(isset($content[$field->field->id])) {
                     $contents = $field->export_text_value($content[$field->field->id]);
                 }
-                $exportdata[$line][] = strip_tags($contents);
+                $exportdata[$line][] = ($striptag) ? strip_tags($contents) : $contents;
             }
             if ($userdetails) { // Add user details to the export data
                 $userdata = get_complete_user_data('id', $record->userid);
