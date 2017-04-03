@@ -47,7 +47,8 @@ class mod_data_export_form extends moodleform {
         //temporarily commenting out Excel export option. See MDL-19864
         //$typesarray[] = $mform->createElement('radio', 'exporttype', null, get_string('excel', 'data'), 'xls');
         $typesarray[] = $mform->createElement('radio', 'exporttype', null, get_string('ods', 'data'), 'ods');
-        $typesarray[] = $mform->createElement('advcheckbox', 'striptags', null, get_string('striptags', 'data'), array(), array(0, 1));
+        $typesarray[] = $mform->createElement('advcheckbox', 'striptags', null, get_string('striptags', 'data'),
+            array(), array(0, 1));
         $mform->addGroup($typesarray, 'exportar', '', array(''), false);
         $mform->addRule('exportar', null, 'required');
         $mform->setDefault('exporttype', 'csv');
