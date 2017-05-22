@@ -662,6 +662,11 @@ class pix_icon implements renderable, templatable {
             $this->attributes['class'] = '';
         }
 
+        // Set an additional class for big icons so that they can be styled properly.
+        if (substr($pix, 0, 2) === 'b/') {
+            $this->attributes['class'] .= ' iconsize-big';
+        }
+
         // If the alt is empty, don't place it in the attributes, otherwise it will override parent alt text.
         if (!is_null($alt)) {
             $this->attributes['alt'] = $alt;
@@ -3056,6 +3061,121 @@ class paging_bar implements renderable, templatable {
                 'url' => (new moodle_url($this->baseurl, [$this->pagevar => $this->page + 1]))->out(false)
             ];
         }
+
+        return $data;
+    }
+}
+
+/**
+ * Component representing initials bar.
+ *
+ * @copyright 2017 Ilya Tregubov
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @since Moodle 3.3
+ * @package core
+ * @category output
+ */
+class initials_bar implements renderable, templatable {
+
+    /**
+     * @var string Currently selected letter.
+     */
+    public $current;
+
+    /**
+     * @var string Class name to add to this initial bar.
+     */
+    public $class;
+
+    /**
+     * @var string The name to put in front of this initial bar.
+     */
+    public $title;
+
+    /**
+     * @var string URL parameter name for this initial.
+     */
+    public $urlvar;
+
+    /**
+     * @var string URL object.
+     */
+    public $url;
+
+    /**
+     * @var array An array of letters in the alphabet.
+     */
+    public $alpha;
+
+    /**
+     * Constructor initials_bar with only the required params.
+     *
+     * @param string $current the currently selected letter.
+     * @param string $class class name to add to this initial bar.
+     * @param string $title the name to put in front of this initial bar.
+     * @param string $urlvar URL parameter name for this initial.
+     * @param string $url URL object.
+     * @param array $alpha of letters in the alphabet.
+     */
+    public function __construct($current, $class, $title, $urlvar, $url, $alpha = null) {
+        $this->current       = $current;
+        $this->class    = $class;
+        $this->title    = $title;
+        $this->urlvar    = $urlvar;
+        $this->url    = $url;
+        $this->alpha    = $alpha;
+    }
+
+    /**
+     * Export for template.
+     *
+     * @param renderer_base $output The renderer.
+     * @return stdClass
+     */
+    public function export_for_template(renderer_base $output) {
+        $data = new stdClass();
+
+        if ($this->alpha == null) {
+            $this->alpha = explode(',', get_string('alphabet', 'langconfig'));
+        }
+
+        if ($this->current == 'all') {
+            $this->current = '';
+        }
+
+        // We want to find a letter grouping size which suits the language so
+        // find the largest group size which is less than 15 chars.
+        // The choice of 15 chars is the largest number of chars that reasonably
+        // fits on the smallest supported screen size. By always using a max number
+        // of groups which is a factor of 2, we always get nice wrapping, and the
+        // last row is always the shortest.
+        $groupsize = count($this->alpha);
+        $groups = 1;
+        while ($groupsize > 15) {
+            $groups *= 2;
+            $groupsize = ceil(count($this->alpha) / $groups);
+        }
+
+        $groupsizelimit = 0;
+        $groupnumber = 0;
+        foreach ($this->alpha as $letter) {
+            if ($groupsizelimit++ > 0 && $groupsizelimit % $groupsize == 1) {
+                $groupnumber++;
+            }
+            $groupletter = new stdClass();
+            $groupletter->name = $letter;
+            $groupletter->url = $this->url->out(false, array($this->urlvar => $letter));
+            if ($letter == $this->current) {
+                $groupletter->selected = $this->current;
+            }
+            $data->group[$groupnumber]->letter[] = $groupletter;
+        }
+
+        $data->class = $this->class;
+        $data->title = $this->title;
+        $data->url = $this->url->out(false, array($this->urlvar => ''));
+        $data->current = $this->current;
+        $data->all = get_string('all');
 
         return $data;
     }

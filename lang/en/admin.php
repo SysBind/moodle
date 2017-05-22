@@ -180,7 +180,7 @@ Moodle community|https://moodle.org
 -Moodle development|https://moodle.org/development
 Moodle.com|http://moodle.com/
 </pre>';
-$string['configcustomusermenuitems'] = 'You can configure the contents of the user menu (with the exception of the log out link, which is automatically added). Each line is separated by | characters and consists of 1) a string in "langstringname, componentname" form or as plain text, 2) a URL, and 3) an icon either as a pix icon or as a URL. Dividers can be used by adding a line of one or more # characters where desired.';
+$string['configcustomusermenuitems'] = 'You can configure the contents of the user menu (with the exception of the log out link, which is automatically added). Each line is separated by pipe characters and consists of 1) a string in "langstringname, componentname" form or as plain text, 2) a URL, and 3) an icon either as a pix icon (in the folder pix/t, or prefix the icon name with ../ if icon is in another pix folder) or as a URL. Dividers can be used by adding a line of one or more # characters where desired.';
 $string['configdbsessions'] = 'If enabled, this setting will use the database to store information about current sessions. Note that changing this setting now will log out all current users (including you). If you are using MySQL please make sure that \'max_allowed_packet\' in my.cnf (or my.ini) is at least 4M. Other session drivers can be configured directly in config.php, see config-dist.php for more information. This option disappears if you specify session driver in config.php file.';
 $string['configdebug'] = 'If you turn this on, then PHP\'s error_reporting will be increased so that more warnings are printed.  This is only useful for developers.';
 $string['configdebugdisplay'] = 'Set to on, the error reporting will go to the HTML page. This is practical, but breaks XHTML, JS, cookies and HTTP headers in general. Set to off, it will send the output to your server logs, allowing better debugging. The PHP setting error_log controls which log this goes to.';
@@ -383,7 +383,7 @@ $string['courseswithsummarieslimit'] = 'Courses with summaries limit';
 $string['creatornewroleid'] = 'Creators\' role in new courses';
 $string['creatornewroleid_help'] = 'If the user does not already have the permission to manage the new course, the user is automatically enrolled using this role.';
 $string['cron'] = 'Cron';
-$string['cron_help'] = 'The cron.php maintenance script assists some of Moodle\'s modules to perform tasks on a scheduled basis, such as mailing out copies of new forum posts. A mechanism is required to run the script regularly e.g. every 5 minutes.';
+$string['cron_help'] = 'The cron.php script runs a number of tasks at different scheduled intervals, such as sending forum post notification emails. The script should be run regularly - ideally every minute.';
 $string['cron_link'] = 'admin/cron';
 $string['cronclionly'] = 'Cron execution via command line only';
 $string['cronerrorclionly'] = 'Sorry, internet access to this page has been disabled by the administrator.';
@@ -622,6 +622,7 @@ $string['iplookupinfo'] = 'By default Moodle uses the free online NetGeo (The In
 It is recommended to install local copy of free GeoLite2 City database from MaxMind.<br />
 IP address location is displayed on simple map or using Google Maps. Please note that you need to have a Google account and apply for free Google Maps API key to enable interactive maps.';
 $string['iplookupmaxmindnote'] = 'This product includes GeoLite2 data created by MaxMind, available from <a href="http://www.maxmind.com">http://www.maxmind.com</a>.';
+$string['ishttpswarning'] = 'It has been detected that your site is not secured using HTTPS. It is strongly recommended to migrate your site to HTTPS for increased security and improved integration with other systems.';
 $string['keeptagnamecase'] = 'Keep tag name casing';
 $string['lang'] = 'Default language';
 $string['langcache'] = 'Cache language menu';
@@ -795,9 +796,12 @@ $string['notifyloginthreshold'] = 'Threshold for email notifications';
 $string['notloggedinroleid'] = 'Role for visitors';
 $string['numberofmissingstrings'] = 'Number of missing strings: {$a}';
 $string['numberofstrings'] = 'Total number of strings: {$a->strings}<br />Missing: {$a->missing} ({$a->missingpercent}&nbsp;%)';
+$string['oauthrefreshtokenexpired'] = 'The refresh token for one of the OAuth services {$a->issuer} on your site {$a->siteurl} has expired. This will limit the functionality of any plugins that use this service. To fix this issue, visit the OAuth 2 Services configuration page and click on the "Connect system account" icon in the table row for this service. Be sure to login using the same service account for the OAuth system each time.';
+$string['oauthrefreshtokenexpiredshort'] = 'OAuth refresh token expired for {$a->issuer} on your site {$a->siteurl}.';
 $string['onlynoreply'] = 'Only when from a no-reply address';
 $string['opcacherecommended'] = 'PHP opcode caching improves performance and lowers memory requirements, OPcache extension is recommended and fully supported.';
 $string['opensslrecommended'] = 'Installing the optional OpenSSL library is highly recommended -- it enables Moodle Networking functionality.';
+$string['opensslrequired'] = 'The OpenSSL PHP extension is now required by Moodle to provide stronger cryptographic services.';
 $string['opentogoogle'] = 'Open to Google';
 $string['optionalmaintenancemessage'] = 'Optional maintenance message';
 $string['order1'] = 'First';
@@ -1094,6 +1098,7 @@ $string['taskpasswordresetcleanup'] = 'Cleanup password reset attempts';
 $string['taskplagiarismcron'] = 'Background processing for legacy cron in plagiarism plugins';
 $string['taskportfoliocron'] = 'Background processing for portfolio plugins';
 $string['taskquestioncron'] = 'Background processing for question engine';
+$string['taskrefreshsystemtokens'] = 'Refresh OAuth tokens for service accounts';
 $string['taskregistrationcron'] = 'Site registration';
 $string['tasksendfailedloginnotifications'] = 'Send failed login notifications';
 $string['tasksendnewuserpasswords'] = 'Send new user passwords';

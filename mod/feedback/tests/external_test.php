@@ -29,6 +29,7 @@ defined('MOODLE_INTERNAL') || die();
 global $CFG;
 
 require_once($CFG->dirroot . '/webservice/tests/helpers.php');
+require_once($CFG->dirroot . '/mod/feedback/lib.php');
 
 use mod_feedback\external\feedback_summary_exporter;
 
@@ -315,7 +316,7 @@ class mod_feedback_external_testcase extends externallib_advanced_testcase {
         global $DB;
 
         // Force non anonymous.
-        $DB->set_field('feedback', 'anonymous', 0, array('id' => $this->feedback->id));
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_NO, array('id' => $this->feedback->id));
         // Add a completed_tmp record.
         $record = [
             'feedback' => $this->feedback->id,
@@ -323,7 +324,7 @@ class mod_feedback_external_testcase extends externallib_advanced_testcase {
             'guestid' => '',
             'timemodified' => time() - DAYSECS,
             'random_response' => 0,
-            'anonymous_response' => 2,
+            'anonymous_response' => FEEDBACK_ANONYMOUS_NO,
             'courseid' => $this->course->id,
         ];
         $record['id'] = $DB->insert_record('feedback_completedtmp', (object) $record);
@@ -386,7 +387,7 @@ class mod_feedback_external_testcase extends externallib_advanced_testcase {
 
         // Now, try a feedback that we attempted.
         // Force non anonymous.
-        $DB->set_field('feedback', 'anonymous', 0, array('id' => $this->feedback->id));
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_NO, array('id' => $this->feedback->id));
         // Add a completed_tmp record.
         $record = [
             'feedback' => $this->feedback->id,
@@ -394,7 +395,7 @@ class mod_feedback_external_testcase extends externallib_advanced_testcase {
             'guestid' => '',
             'timemodified' => time() - DAYSECS,
             'random_response' => 0,
-            'anonymous_response' => 2,
+            'anonymous_response' => FEEDBACK_ANONYMOUS_NO,
             'courseid' => $this->course->id,
         ];
         $record['id'] = $DB->insert_record('feedback_completedtmp', (object) $record);
@@ -627,5 +628,312 @@ class mod_feedback_external_testcase extends externallib_advanced_testcase {
                 $this->assertEquals('abc', $r['value']);
             }
         }
+    }
+
+    /**
+     * Test get_finished_responses.
+     */
+    public function test_get_finished_responses() {
+        // Test user with full capabilities.
+        $this->setUser($this->student);
+
+        // Create a very simple feedback.
+        $feedbackgenerator = $this->getDataGenerator()->get_plugin_generator('mod_feedback');
+        $numericitem = $feedbackgenerator->create_item_numeric($this->feedback);
+        $textfielditem = $feedbackgenerator->create_item_textfield($this->feedback);
+
+        $pagedata = [
+            ['name' => $numericitem->typ .'_'. $numericitem->id, 'value' => 5],
+            ['name' => $textfielditem->typ .'_'. $textfielditem->id, 'value' => 'abc'],
+        ];
+
+        // Process the feedback, there is only one page so the feedback will be completed.
+        $result = mod_feedback_external::process_page($this->feedback->id, 0, $pagedata);
+        $result = external_api::clean_returnvalue(mod_feedback_external::process_page_returns(), $result);
+        $this->assertTrue($result['completed']);
+
+        // Retrieve the responses.
+        $result = mod_feedback_external::get_finished_responses($this->feedback->id);
+        $result = external_api::clean_returnvalue(mod_feedback_external::get_finished_responses_returns(), $result);
+        // Check that ids and responses match.
+        foreach ($result['responses'] as $r) {
+            if ($r['item'] == $numericitem->id) {
+                $this->assertEquals(5, $r['value']);
+            } else {
+                $this->assertEquals($textfielditem->id, $r['item']);
+                $this->assertEquals('abc', $r['value']);
+            }
+        }
+    }
+
+    /**
+     * Test get_non_respondents (student trying to get this information).
+     */
+    public function test_get_non_respondents_no_permissions() {
+        $this->setUser($this->student);
+        $this->setExpectedException('moodle_exception');
+        mod_feedback_external::get_non_respondents($this->feedback->id);
+    }
+
+    /**
+     * Test get_non_respondents from an anonymous feedback.
+     */
+    public function test_get_non_respondents_from_anonymous_feedback() {
+        $this->setUser($this->student);
+        $this->expectException('moodle_exception');
+        $this->expectExceptionMessage(get_string('anonymous', 'feedback'));
+        mod_feedback_external::get_non_respondents($this->feedback->id);
+    }
+
+    /**
+     * Test get_non_respondents.
+     */
+    public function test_get_non_respondents() {
+        global $DB;
+
+        // Force non anonymous.
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_NO, array('id' => $this->feedback->id));
+
+        // Create another student.
+        $anotherstudent = self::getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($anotherstudent->id, $this->course->id, $this->studentrole->id, 'manual');
+        $this->setUser($anotherstudent);
+
+        // Test user with full capabilities.
+        $this->setUser($this->student);
+
+        // Create a very simple feedback.
+        $feedbackgenerator = $this->getDataGenerator()->get_plugin_generator('mod_feedback');
+        $numericitem = $feedbackgenerator->create_item_numeric($this->feedback);
+
+        $pagedata = [
+            ['name' => $numericitem->typ .'_'. $numericitem->id, 'value' => 5],
+        ];
+
+        // Process the feedback, there is only one page so the feedback will be completed.
+        $result = mod_feedback_external::process_page($this->feedback->id, 0, $pagedata);
+        $result = external_api::clean_returnvalue(mod_feedback_external::process_page_returns(), $result);
+        $this->assertTrue($result['completed']);
+
+        // Retrieve the non-respondent users.
+        $this->setUser($this->teacher);
+        $result = mod_feedback_external::get_non_respondents($this->feedback->id);
+        $result = external_api::clean_returnvalue(mod_feedback_external::get_non_respondents_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertCount(1, $result['users']);
+        $this->assertEquals($anotherstudent->id, $result['users'][0]['userid']);
+
+        // Create another student.
+        $anotherstudent2 = self::getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($anotherstudent2->id, $this->course->id, $this->studentrole->id, 'manual');
+        $this->setUser($anotherstudent2);
+        $this->setUser($this->teacher);
+        $result = mod_feedback_external::get_non_respondents($this->feedback->id);
+        $result = external_api::clean_returnvalue(mod_feedback_external::get_non_respondents_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertCount(2, $result['users']);
+
+        // Test pagination.
+        $result = mod_feedback_external::get_non_respondents($this->feedback->id, 0, 'lastaccess', 0, 1);
+        $result = external_api::clean_returnvalue(mod_feedback_external::get_non_respondents_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertCount(1, $result['users']);
+    }
+
+    /**
+     * Helper function that completes the feedback for two students.
+     */
+    protected function complete_basic_feedback() {
+        global $DB;
+
+        $generator = $this->getDataGenerator();
+        // Create separated groups.
+        $DB->set_field('course', 'groupmode', SEPARATEGROUPS);
+        $DB->set_field('course', 'groupmodeforce', 1);
+        assign_capability('moodle/site:accessallgroups', CAP_PROHIBIT, $this->teacherrole->id, $this->context);
+        accesslib_clear_all_caches_for_unit_testing();
+
+        $group1 = $generator->create_group(array('courseid' => $this->course->id));
+        $group2 = $generator->create_group(array('courseid' => $this->course->id));
+
+        // Create another students.
+        $anotherstudent1 = self::getDataGenerator()->create_user();
+        $anotherstudent2 = self::getDataGenerator()->create_user();
+        $generator->enrol_user($anotherstudent1->id, $this->course->id, $this->studentrole->id, 'manual');
+        $generator->enrol_user($anotherstudent2->id, $this->course->id, $this->studentrole->id, 'manual');
+
+        $generator->create_group_member(array('groupid' => $group1->id, 'userid' => $this->student->id));
+        $generator->create_group_member(array('groupid' => $group1->id, 'userid' => $this->teacher->id));
+        $generator->create_group_member(array('groupid' => $group1->id, 'userid' => $anotherstudent1->id));
+        $generator->create_group_member(array('groupid' => $group2->id, 'userid' => $anotherstudent2->id));
+
+        // Test user with full capabilities.
+        $this->setUser($this->student);
+
+        // Create a very simple feedback.
+        $feedbackgenerator = $generator->get_plugin_generator('mod_feedback');
+        $numericitem = $feedbackgenerator->create_item_numeric($this->feedback);
+        $textfielditem = $feedbackgenerator->create_item_textfield($this->feedback);
+
+        $pagedata = [
+            ['name' => $numericitem->typ .'_'. $numericitem->id, 'value' => 5],
+            ['name' => $textfielditem->typ .'_'. $textfielditem->id, 'value' => 'abc'],
+        ];
+
+        // Process the feedback, there is only one page so the feedback will be completed.
+        $result = mod_feedback_external::process_page($this->feedback->id, 0, $pagedata);
+        $result = external_api::clean_returnvalue(mod_feedback_external::process_page_returns(), $result);
+        $this->assertTrue($result['completed']);
+
+        $this->setUser($anotherstudent1);
+
+        $pagedata = [
+            ['name' => $numericitem->typ .'_'. $numericitem->id, 'value' => 10],
+            ['name' => $textfielditem->typ .'_'. $textfielditem->id, 'value' => 'def'],
+        ];
+
+        $result = mod_feedback_external::process_page($this->feedback->id, 0, $pagedata);
+        $result = external_api::clean_returnvalue(mod_feedback_external::process_page_returns(), $result);
+        $this->assertTrue($result['completed']);
+
+        $this->setUser($anotherstudent2);
+
+        $pagedata = [
+            ['name' => $numericitem->typ .'_'. $numericitem->id, 'value' => 10],
+            ['name' => $textfielditem->typ .'_'. $textfielditem->id, 'value' => 'def'],
+        ];
+
+        $result = mod_feedback_external::process_page($this->feedback->id, 0, $pagedata);
+        $result = external_api::clean_returnvalue(mod_feedback_external::process_page_returns(), $result);
+        $this->assertTrue($result['completed']);
+    }
+
+    /**
+     * Test get_responses_analysis for anonymous feedback.
+     */
+    public function test_get_responses_analysis_anonymous() {
+        self::complete_basic_feedback();
+
+        // Retrieve the responses analysis.
+        $this->setUser($this->teacher);
+        $result = mod_feedback_external::get_responses_analysis($this->feedback->id);
+        $result = external_api::clean_returnvalue(mod_feedback_external::get_responses_analysis_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertEquals(0, $result['totalattempts']);
+        $this->assertEquals(2, $result['totalanonattempts']);   // Only see my groups.
+
+        foreach ($result['attempts'] as $attempt) {
+            $this->assertEmpty($attempt['userid']); // Is anonymous.
+        }
+    }
+
+    /**
+     * Test get_responses_analysis for non-anonymous feedback.
+     */
+    public function test_get_responses_analysis_non_anonymous() {
+        global $DB;
+
+        // Force non anonymous.
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_NO, array('id' => $this->feedback->id));
+
+        self::complete_basic_feedback();
+        // Retrieve the responses analysis.
+        $this->setUser($this->teacher);
+        $result = mod_feedback_external::get_responses_analysis($this->feedback->id);
+        $result = external_api::clean_returnvalue(mod_feedback_external::get_responses_analysis_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertEquals(2, $result['totalattempts']);
+        $this->assertEquals(0, $result['totalanonattempts']);   // Only see my groups.
+
+        foreach ($result['attempts'] as $attempt) {
+            $this->assertNotEmpty($attempt['userid']);  // Is not anonymous.
+        }
+    }
+
+    /**
+     * Test get_last_completed for feedback anonymous not completed.
+     */
+    public function test_get_last_completed_anonymous_not_completed() {
+        global $DB;
+
+        // Force anonymous.
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_YES, array('id' => $this->feedback->id));
+
+        // Test user with full capabilities that didn't complete the feedback.
+        $this->setUser($this->student);
+
+        $this->expectExceptionMessage(get_string('anonymous', 'feedback'));
+        $this->expectException('moodle_exception');
+        mod_feedback_external::get_last_completed($this->feedback->id);
+    }
+
+    /**
+     * Test get_last_completed for feedback anonymous and completed.
+     */
+    public function test_get_last_completed_anonymous_completed() {
+        global $DB;
+
+        // Force anonymous.
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_YES, array('id' => $this->feedback->id));
+        // Add one completion record..
+        $record = [
+            'feedback' => $this->feedback->id,
+            'userid' => $this->student->id,
+            'timemodified' => time() - DAYSECS,
+            'random_response' => 0,
+            'anonymous_response' => FEEDBACK_ANONYMOUS_YES,
+            'courseid' => $this->course->id,
+        ];
+        $record['id'] = $DB->insert_record('feedback_completed', (object) $record);
+
+        // Test user with full capabilities.
+        $this->setUser($this->student);
+
+        $this->expectExceptionMessage(get_string('anonymous', 'feedback'));
+        $this->expectException('moodle_exception');
+        mod_feedback_external::get_last_completed($this->feedback->id);
+    }
+
+    /**
+     * Test get_last_completed for feedback not anonymous and completed.
+     */
+    public function test_get_last_completed_not_anonymous_completed() {
+        global $DB;
+
+        // Force non anonymous.
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_NO, array('id' => $this->feedback->id));
+        // Add one completion record..
+        $record = [
+            'feedback' => $this->feedback->id,
+            'userid' => $this->student->id,
+            'timemodified' => time() - DAYSECS,
+            'random_response' => 0,
+            'anonymous_response' => FEEDBACK_ANONYMOUS_NO,
+            'courseid' => $this->course->id,
+        ];
+        $record['id'] = $DB->insert_record('feedback_completed', (object) $record);
+
+        // Test user with full capabilities.
+        $this->setUser($this->student);
+        $result = mod_feedback_external::get_last_completed($this->feedback->id);
+        $result = external_api::clean_returnvalue(mod_feedback_external::get_last_completed_returns(), $result);
+        $this->assertEquals($record, $result['completed']);
+    }
+
+    /**
+     * Test get_last_completed for feedback not anonymous and not completed.
+     */
+    public function test_get_last_completed_not_anonymous_not_completed() {
+        global $DB;
+
+        // Force anonymous.
+        $DB->set_field('feedback', 'anonymous', FEEDBACK_ANONYMOUS_NO, array('id' => $this->feedback->id));
+
+        // Test user with full capabilities that didn't complete the feedback.
+        $this->setUser($this->student);
+
+        $this->expectExceptionMessage(get_string('not_completed_yet', 'feedback'));
+        $this->expectException('moodle_exception');
+        mod_feedback_external::get_last_completed($this->feedback->id);
     }
 }

@@ -21,8 +21,7 @@ Feature: Sections can be edited and deleted in topics format
       | user     | course | role           |
       | teacher1 | C1     | editingteacher |
     And I log in as "teacher1"
-    And I follow "Course 1"
-    And I turn editing mode on
+    And I am on "Course 1" course homepage with editing mode on
 
   Scenario: View the default name of the general section in topics format
     When I click on "Edit section" "link" in the "li#section-0" "css_element"
@@ -62,7 +61,7 @@ Feature: Sections can be edited and deleted in topics format
     Then I should not see "Topic 1" in the "region-main" "region"
     And "New name for topic" "field" should not exist
     And I should see "Midterm evaluation" in the "li#section-1" "css_element"
-    And I follow "Course 1"
+    And I am on "Course 1" course homepage
     And I should not see "Topic 1" in the "region-main" "region"
     And I should see "Midterm evaluation" in the "li#section-1" "css_element"
 
@@ -71,9 +70,7 @@ Feature: Sections can be edited and deleted in topics format
     Then I should see "Are you absolutely sure you want to completely delete \"Topic 5\" and all the activities it contains?"
     And I press "Delete"
     And I should not see "Topic 5"
-    And I navigate to "Edit settings" node in "Course administration"
-    And I expand all fieldsets
-    And the field "Number of sections" matches value "4"
+    And I should see "Topic 4"
 
   Scenario: Deleting the middle section in topics format
     When I delete section "4"
@@ -81,31 +78,19 @@ Feature: Sections can be edited and deleted in topics format
     Then I should not see "Topic 5"
     And I should not see "Test chat name"
     And I should see "Test choice name" in the "li#section-4" "css_element"
-    And I navigate to "Edit settings" node in "Course administration"
-    And I expand all fieldsets
-    And the field "Number of sections" matches value "4"
+    And I should see "Topic 4"
 
-  Scenario: Deleting the orphaned section in topics format
-    When I follow "Reduce the number of sections"
-    Then I should see "Orphaned activities (section 5)" in the "li#section-5" "css_element"
-    And I delete section "5"
-    And I press "Delete"
-    And I should not see "Topic 5"
-    And I should not see "Orphaned activities"
-    And "li#section-5" "css_element" should not exist
-    And I navigate to "Edit settings" node in "Course administration"
-    And I expand all fieldsets
-    And the field "Number of sections" matches value "4"
-
-  Scenario: Deleting a section when orphaned section is present in topics format
-    When I follow "Reduce the number of sections"
-    Then I should see "Orphaned activities (section 5)" in the "li#section-5" "css_element"
-    And "li#section-5.orphaned" "css_element" should exist
-    And "li#section-4.orphaned" "css_element" should not exist
-    And I delete section "1"
-    And I press "Delete"
-    And I should not see "Test book name"
-    And I should see "Orphaned activities (section 4)" in the "li#section-4" "css_element"
-    And "li#section-5" "css_element" should not exist
-    And "li#section-4.orphaned" "css_element" should exist
-    And "li#section-3.orphaned" "css_element" should not exist
+  @javascript
+  Scenario: Adding sections in topics format
+    When I follow "Add topics"
+    Then the field "Number of sections" matches value "1"
+    And I press "Add topics"
+    And I should see "Topic 6" in the "li#section-6" "css_element"
+    And "li#section-7" "css_element" should not exist
+    And I follow "Add topics"
+    And I set the field "Number of sections" to "3"
+    And I press "Add topics"
+    And I should see "Topic 7" in the "li#section-7" "css_element"
+    And I should see "Topic 8" in the "li#section-8" "css_element"
+    And I should see "Topic 9" in the "li#section-9" "css_element"
+    And "li#section-10" "css_element" should not exist

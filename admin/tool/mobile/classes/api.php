@@ -58,6 +58,13 @@ class api {
         global $CFG;
         require_once($CFG->libdir . '/adminlib.php');
 
+        // Check if we can return this from cache.
+        $cache = \cache::make('tool_mobile', 'plugininfo');
+        $pluginsinfo = $cache->get('mobileplugins');
+        if ($pluginsinfo !== false) {
+            return (array)$pluginsinfo;
+        }
+
         $pluginsinfo = [];
         $plugintypes = core_component::get_plugin_types();
 
@@ -69,7 +76,7 @@ class api {
                 $component = $plugintype . '_' . $plugin;
                 $version = get_component_version($component);
 
-                require_once("$path/db/mobile.php");
+                require("$path/db/mobile.php");
                 foreach ($addons as $addonname => $addoninfo) {
                     $plugininfo = array(
                         'component' => $component,
@@ -92,6 +99,9 @@ class api {
                 }
             }
         }
+
+        $cache->set('mobileplugins', $pluginsinfo);
+
         return $pluginsinfo;
     }
 
@@ -139,18 +149,22 @@ class api {
         // Check if the user can sign-up to return the launch URL in that case.
         $cansignup = signup_is_enabled();
 
-        if ($typeoflogin == self::LOGIN_VIA_BROWSER or
-                $typeoflogin == self::LOGIN_VIA_EMBEDDED_BROWSER or
-                $cansignup) {
-            $url = new moodle_url("/$CFG->admin/tool/mobile/launch.php");
-            $settings['launchurl'] = $url->out(false);
-        }
+        $url = new moodle_url("/$CFG->admin/tool/mobile/launch.php");
+        $settings['launchurl'] = $url->out(false);
 
         if ($logourl = $OUTPUT->get_logo_url()) {
             $settings['logourl'] = $logourl->out(false);
         }
         if ($compactlogourl = $OUTPUT->get_compact_logo_url()) {
             $settings['compactlogourl'] = $compactlogourl->out(false);
+        }
+
+        // Identity providers.
+        $authsequence = get_enabled_auth_plugins(true);
+        $identityproviders = \auth_plugin_base::get_identity_providers($authsequence);
+        $identityprovidersdata = \auth_plugin_base::prepare_identity_providers_for_output($identityproviders, $OUTPUT);
+        if (!empty($identityprovidersdata)) {
+            $settings['identityproviders'] = $identityprovidersdata;
         }
 
         return $settings;
@@ -185,7 +199,7 @@ class api {
             $settings->frontpageloggedin = $CFG->frontpageloggedin;
             $settings->maxcategorydepth = $CFG->maxcategorydepth;
             $settings->frontpagecourselimit = $CFG->frontpagecourselimit;
-            $settings->numsections = course_get_format($SITE)->get_course()->numsections;
+            $settings->numsections = course_get_format($SITE)->get_last_section_number();
             $settings->newsitems = $SITE->newsitems;
             $settings->commentsperpage = $CFG->commentsperpage;
 
@@ -273,8 +287,8 @@ class api {
 
         $availablemods = core_plugin_manager::instance()->get_plugins_of_type('mod');
         $coursemodules = array();
-        $appsupportedmodules = array('assign', 'book', 'chat', 'choice', 'folder', 'forum', 'glossary', 'imscp', 'label',
-                                        'lti', 'page', 'quiz', 'resource', 'scorm', 'survey', 'url', 'wiki');
+        $appsupportedmodules = array('assign', 'book', 'chat', 'choice', 'data', 'feedback', 'folder', 'forum', 'glossary', 'imscp',
+                                        'label', 'lesson', 'lti', 'page', 'quiz', 'resource', 'scorm', 'survey', 'url', 'wiki');
         foreach ($availablemods as $mod) {
             if (in_array($mod->name, $appsupportedmodules)) {
                 $coursemodules['$mmCourseDelegate_mmaMod' . ucfirst($mod->name)] = $mod->displayname;

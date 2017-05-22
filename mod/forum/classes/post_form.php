@@ -50,7 +50,7 @@ class mod_forum_post_form extends moodleform {
             'maxbytes' => $maxbytes,
             'maxfiles' => $forum->maxattachments,
             'accepted_types' => '*',
-            'return_types' => FILE_INTERNAL
+            'return_types' => FILE_INTERNAL | FILE_CONTROLLED_LINK
         );
     }
 
@@ -236,6 +236,13 @@ class mod_forum_post_form extends moodleform {
             $mform->addElement('hidden', 'timeend');
             $mform->setType('timeend', PARAM_INT);
             $mform->setConstants(array('timestart' => 0, 'timeend' => 0));
+        }
+
+        if (core_tag_tag::is_enabled('mod_forum', 'forum_posts')) {
+            $mform->addElement('header', 'tagshdr', get_string('tags', 'tag'));
+
+            $mform->addElement('tags', 'tags', get_string('tags'),
+                array('itemtype' => 'forum_posts', 'component' => 'mod_forum'));
         }
 
         //-------------------------------------------------------------------------------

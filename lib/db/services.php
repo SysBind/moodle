@@ -56,7 +56,8 @@ $functions = array(
         'description' => 'Create calendar events',
         'classpath' => 'calendar/externallib.php',
         'type' => 'write',
-        'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries'
+        'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries',
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'core_calendar_delete_calendar_events' => array(
         'classname' => 'core_calendar_external',
@@ -64,7 +65,8 @@ $functions = array(
         'description' => 'Delete calendar events',
         'classpath' => 'calendar/externallib.php',
         'type' => 'write',
-        'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries'
+        'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries',
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'core_calendar_get_calendar_events' => array(
         'classname' => 'core_calendar_external',
@@ -73,6 +75,36 @@ $functions = array(
         'classpath' => 'calendar/externallib.php',
         'type' => 'read',
         'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries',
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'core_calendar_get_action_events_by_timesort' => array(
+        'classname' => 'core_calendar_external',
+        'methodname' => 'get_calendar_action_events_by_timesort',
+        'description' => 'Get calendar action events by tiemsort',
+        'classpath' => 'calendar/externallib.php',
+        'type' => 'read',
+        'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries',
+        'ajax' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'core_calendar_get_action_events_by_course' => array(
+        'classname' => 'core_calendar_external',
+        'methodname' => 'get_calendar_action_events_by_course',
+        'description' => 'Get calendar action events by course',
+        'classpath' => 'calendar/externallib.php',
+        'type' => 'read',
+        'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries',
+        'ajax' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'core_calendar_get_action_events_by_courses' => array(
+        'classname' => 'core_calendar_external',
+        'methodname' => 'get_calendar_action_events_by_courses',
+        'description' => 'Get calendar action events by courses',
+        'classpath' => 'calendar/externallib.php',
+        'type' => 'read',
+        'capabilities' => 'moodle/calendar:manageentries, moodle/calendar:manageownentries, moodle/calendar:managegroupentries',
+        'ajax' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'core_cohort_add_cohort_members' => array(
@@ -330,7 +362,8 @@ $functions = array(
         'classname' => 'core_course_external',
         'methodname' => 'get_activities_overview',
         'classpath' => 'course/externallib.php',
-        'description' => 'Return activities overview for the given courses.',
+        'description' => '** DEPRECATED ** Please do not call this function any more.
+                          Return activities overview for the given courses.',
         'type' => 'read',
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
@@ -1912,7 +1945,17 @@ $functions = array(
         'description' => 'Return some site info / user info / list web service functions',
         'type' => 'read',
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-    )
+    ),
+
+    // Blocks functions.
+    'core_block_get_course_blocks' => array(
+        'classname'     => 'core_block_external',
+        'methodname'    => 'get_course_blocks',
+        'description'   => 'Returns blocks information for a course.',
+        'type'          => 'read',
+        'capabilities'  => '',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
 );
 
 $services = array(

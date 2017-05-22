@@ -109,4 +109,36 @@ $functions = array(
         'capabilities'  => 'mod/feedback:view',
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
     ),
+    'mod_feedback_get_finished_responses' => array(
+        'classname'     => 'mod_feedback_external',
+        'methodname'    => 'get_finished_responses',
+        'description'   => 'Retrieves responses from the last finished attempt.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/feedback:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+    'mod_feedback_get_non_respondents' => array(
+        'classname'     => 'mod_feedback_external',
+        'methodname'    => 'get_non_respondents',
+        'description'   => 'Retrieves a list of students who didn\'t submit the feedback.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/feedback:viewreports',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+    'mod_feedback_get_responses_analysis' => array(
+        'classname'     => 'mod_feedback_external',
+        'methodname'    => 'get_responses_analysis',
+        'description'   => 'Return the feedback user responses analysis.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/feedback:viewreports',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+    'mod_feedback_get_last_completed' => array(
+        'classname'     => 'mod_feedback_external',
+        'methodname'    => 'get_last_completed',
+        'description'   => 'Retrieves the last completion record for the current user.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/feedback:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
 );

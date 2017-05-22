@@ -53,9 +53,9 @@ class mod_feedback_completion extends mod_feedback_structure {
     /**
      * Constructor
      *
-     * @param stdClass $feedback feedback object, in case of the template
-     *     this is the current feedback the template is accessed from
+     * @param stdClass $feedback feedback object
      * @param cm_info $cm course module object corresponding to the $feedback
+     *     (at least one of $feedback or $cm is required)
      * @param int $courseid current course (for site feedbacks only)
      * @param bool $iscompleted has feedback been already completed? If yes either completedid or userid must be specified.
      * @param int $completedid id in the table feedback_completed, may be omitted if userid is specified
@@ -66,17 +66,15 @@ class mod_feedback_completion extends mod_feedback_structure {
      */
     public function __construct($feedback, $cm, $courseid, $iscompleted = false, $completedid = null, $userid = null) {
         global $DB;
-        // Make sure courseid is always set for site feedback and never for course feedback.
-        if ($feedback->course == SITEID) {
-            $courseid = $courseid ?: SITEID;
-        } else {
-            $courseid = 0;
-        }
         parent::__construct($feedback, $cm, $courseid, 0);
+        // Make sure courseid is always set for site feedback.
+        if ($this->feedback->course == SITEID && !$this->courseid) {
+            $this->courseid = SITEID;
+        }
         if ($iscompleted) {
             // Retrieve information about the completion.
             $this->iscompleted = true;
-            $params = array('feedback' => $feedback->id);
+            $params = array('feedback' => $this->feedback->id);
             if (!$userid && !$completedid) {
                 throw new coding_exception('Either $completedid or $userid must be specified for completed feedbacks');
             }
@@ -254,6 +252,22 @@ class mod_feedback_completion extends mod_feedback_structure {
     }
 
     /**
+     * Retrieves responses from an finished attempt.
+     *
+     * @return array the responses (from the feedback_value table)
+     * @since  Moodle 3.3
+     */
+    public function get_finished_responses() {
+        global $DB;
+        $responses = array();
+
+        if ($this->completed) {
+            $responses = $DB->get_records('feedback_value', ['completed' => $this->completed->id]);
+        }
+        return $responses;
+    }
+
+    /**
      * Returns all completed values for this feedback or just a value for an item
      * @param stdClass $item
      * @return array
@@ -261,11 +275,10 @@ class mod_feedback_completion extends mod_feedback_structure {
     protected function get_values($item = null) {
         global $DB;
         if ($this->values === null) {
-            if ($this->completed) {
-                $this->values = $DB->get_records_menu('feedback_value',
-                        ['completed' => $this->completed->id], '', 'item, value');
-            } else {
-                $this->values = array();
+            $this->values = array();
+            $responses = $this->get_finished_responses();
+            foreach ($responses as $r) {
+                $this->values[$r->item] = $r->value;
             }
         }
         if ($item) {
@@ -443,6 +456,21 @@ class mod_feedback_completion extends mod_feedback_structure {
     }
 
     /**
+     * If user has already completed the feedback, create the temproray values from last completed attempt
+     *
+     * @return stdClass record from feedback_completedtmp or false if not found
+     */
+    public function create_completed_tmp_from_last_completed() {
+        if (!$this->get_current_completed_tmp()) {
+            $lastcompleted = $this->find_last_completed();
+            if ($lastcompleted) {
+                $this->completedtmp = feedback_set_tmp_values($lastcompleted);
+            }
+        }
+        return $this->completedtmp;
+    }
+
+    /**
      * Saves unfinished response to the temporary table
      *
      * This is called when user proceeds to the next/previous page in the complete form
@@ -524,7 +552,7 @@ class mod_feedback_completion extends mod_feedback_structure {
 
         // Send email.
         if ($this->feedback->anonymous == FEEDBACK_ANONYMOUS_NO) {
-            feedback_send_email($this->cm, $this->feedback, $this->cm->get_course(), $USER);
+            feedback_send_email($this->cm, $this->feedback, $this->cm->get_course(), $USER, $this->completed);
         } else {
             feedback_send_email_anonym($this->cm, $this->feedback, $this->cm->get_course());
         }
@@ -556,9 +584,9 @@ class mod_feedback_completion extends mod_feedback_structure {
      *
      * @return stdClass record from feedback_completed or false if not found
      */
-    protected function find_last_completed() {
+    public function find_last_completed() {
         global $USER, $DB;
-        if (isloggedin() || isguestuser()) {
+        if (!isloggedin() || isguestuser()) {
             // Not possible to retrieve completed feedback for guests.
             return false;
         }
@@ -566,7 +594,7 @@ class mod_feedback_completion extends mod_feedback_structure {
             // Not possible to retrieve completed anonymous feedback.
             return false;
         }
-        $params = array('feedback' => $this->feedback->id, 'userid' => $USER->id);
+        $params = array('feedback' => $this->feedback->id, 'userid' => $USER->id, 'anonymous_response' => FEEDBACK_ANONYMOUS_NO);
         if ($this->get_courseid()) {
             $params['courseid'] = $this->get_courseid();
         }
@@ -624,31 +652,23 @@ class mod_feedback_completion extends mod_feedback_structure {
     /**
      * Trigger module viewed event.
      *
-     * @param  stdClass $course optional, course object from DB
      * @since Moodle 3.3
      */
-    public function trigger_module_viewed($course = null) {
-        if ($course == null) {
-            $course = get_course($this->courseid);
-        }
-        $event = \mod_feedback\event\course_module_viewed::create_from_record($this->feedback, $this->cm, $course);
+    public function trigger_module_viewed() {
+        $event = \mod_feedback\event\course_module_viewed::create_from_record($this->feedback, $this->cm, $this->cm->get_course());
         $event->trigger();
     }
 
     /**
      * Mark activity viewed for completion-tracking.
      *
-     * @param stdClass $course optional, course object from DB
      * @since Moodle 3.3
      */
-    public function set_module_viewed($course = null) {
+    public function set_module_viewed() {
         global $CFG;
         require_once($CFG->libdir . '/completionlib.php');
 
-        if ($course == null) {
-            $course = get_course($this->courseid);
-        }
-        $completion = new completion_info($course);
+        $completion = new completion_info($this->cm->get_course());
         $completion->set_module_viewed($this->cm);
     }
 
@@ -668,12 +688,13 @@ class mod_feedback_completion extends mod_feedback_structure {
         $urltogo = null;
 
         // Save the form for later during the request.
+        $this->create_completed_tmp_from_last_completed();
         $this->form = new mod_feedback_complete_form(mod_feedback_complete_form::MODE_COMPLETE,
             $this, 'feedback_complete_form', array('gopage' => $gopage));
 
         if ($this->form->is_cancelled()) {
             // Form was cancelled - return to the course page.
-            $urltogo = course_get_url($this->courseid);
+            $urltogo = course_get_url($this->courseid ?: $this->feedback->course);
         } else if ($this->form->is_submitted() &&
                 ($this->form->is_validated() || $gopreviouspage)) {
             // Form was submitted (skip validation for "Previous page" button).
@@ -690,7 +711,7 @@ class mod_feedback_completion extends mod_feedback_structure {
                     $this->jumpto = $nextpage;
                 } else {
                     $this->save_response();
-                    if (!$this->feedback->page_after_submit) {
+                    if (!$this->get_feedback()->page_after_submit) {
                         \core\notification::success(get_string('entries_saved', 'feedback'));
                     }
                     $this->justcompleted = true;

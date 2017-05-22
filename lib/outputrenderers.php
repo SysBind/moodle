@@ -253,8 +253,18 @@ class renderer_base {
         return $classes;
     }
 
+    /**
+     * Return the direct URL for an image from the pix folder.
+     *
+     * Use this function sparingly and never for icons. For icons use pix_icon or the pix helper in a mustache template.
+     *
+     * @deprecated since Moodle 3.3
+     * @param string $imagename the name of the icon.
+     * @param string $component specification of one plugin like in get_string()
+     * @return moodle_url
+     */
     public function pix_url($imagename, $component = 'moodle') {
-        debugging('pix_url is deprecated. Use image_url for images and pix_icon for icons.');
+        debugging('pix_url is deprecated. Use image_url for images and pix_icon for icons.', DEBUG_DEVELOPER);
         return $this->page->theme->image_url($imagename, $component);
     }
 
@@ -2923,6 +2933,32 @@ EOD;
         }
 
         return html_writer::tag('div', $output, array('class' => 'paging'));
+    }
+
+    /**
+     * Returns HTML to display initials bar to provide access to other pages  (usually in a search)
+     *
+     * @param string $current the currently selected letter.
+     * @param string $class class name to add to this initial bar.
+     * @param string $title the name to put in front of this initial bar.
+     * @param string $urlvar URL parameter name for this initial.
+     * @param string $url URL object.
+     * @param array $alpha of letters in the alphabet.
+     * @return string the HTML to output.
+     */
+    public function initials_bar($current, $class, $title, $urlvar, $url, $alpha = null) {
+        $ib = new initials_bar($current, $class, $title, $urlvar, $url, $alpha);
+        return $this->render($ib);
+    }
+
+    /**
+     * Internal implementation of initials bar rendering.
+     *
+     * @param initials_bar $initialsbar
+     * @return string
+     */
+    protected function render_initials_bar(initials_bar $initialsbar) {
+        return $this->render_from_template('core/initials_bar', $initialsbar->export_for_template($this));
     }
 
     /**

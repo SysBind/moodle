@@ -1646,12 +1646,13 @@ class theme_config {
      *
      * Use this function sparingly and never for icons. For icons use pix_icon or the pix helper in a mustache template.
      *
+     * @deprecated since Moodle 3.3
      * @param string $imagename the name of the icon.
      * @param string $component specification of one plugin like in get_string()
      * @return moodle_url
      */
     public function pix_url($imagename, $component) {
-        debugging('pix_url is deprecated. Use image_url for images and pix_icon for icons.');
+        debugging('pix_url is deprecated. Use image_url for images and pix_icon for icons.', DEBUG_DEVELOPER);
         return $this->image_url($imagename, $component);
     }
 
@@ -1825,7 +1826,8 @@ class theme_config {
      *
      * @param string $image name of image, may contain relative path
      * @param string $component
-     * @param bool $svg If set to true SVG images will also be looked for.
+     * @param bool $svg|null Should SVG images also be looked for? If null, resorts to $CFG->svgicons if that is set; falls back to
+     * auto-detection of browser support otherwise
      * @return string full file path
      */
     public function resolve_image_location($image, $component, $svg = false) {

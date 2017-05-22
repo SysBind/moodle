@@ -26,8 +26,8 @@ namespace fileconverter_unoconv;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/filelib.php');
-use stored_file;
 
+use stored_file;
 use \core_files\conversion;
 
 /**
@@ -105,10 +105,6 @@ class converter implements \core_files\converter_interface {
             return $this;
         }
 
-        // Update the status to IN_PROGRESS.
-        $conversion->set('status', \core_files\conversion::STATUS_IN_PROGRESS);
-        $conversion->update();
-
         // Copy the file to the tmp dir.
         $uniqdir = make_unique_writable_directory(make_temp_directory('core_file/conversions'));
         \core_shutdown_manager::register_function('remove_dir', array($uniqdir));
@@ -118,9 +114,9 @@ class converter implements \core_files\converter_interface {
         try {
             // This function can either return false, or throw an exception so we need to handle both.
             if ($file->copy_content_to($filename) === false) {
-                throw new file_exception('storedfileproblem', 'Could not copy file contents to temp file.');
+                throw new \file_exception('storedfileproblem', 'Could not copy file contents to temp file.');
             }
-        } catch (file_exception $fe) {
+        } catch (\file_exception $fe) {
             throw $fe;
         }
 
@@ -169,7 +165,7 @@ class converter implements \core_files\converter_interface {
     /**
      * Generate and serve the test document.
      *
-     * @return  stored_file
+     * @return  void
      */
     public function serve_test_document() {
         global $CFG;
@@ -267,7 +263,7 @@ class converter implements \core_files\converter_interface {
     /**
      * Whether the plugin is fully configured.
      *
-     * @return  bool
+     * @return  \stdClass
      */
     public static function test_unoconv_path() {
         global $CFG;

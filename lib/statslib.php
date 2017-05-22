@@ -1156,7 +1156,8 @@ function stats_get_parameters($time,$report,$courseid,$mode,$roleid=0) {
     case STATS_REPORT_ACTIVITYBYROLE;
         $param->fields = 'stat1 AS line1, stat2 AS line2';
         $param->stattype = 'activity';
-        $rolename = $DB->get_field('role','name', array('id'=>$roleid));
+        $role = $DB->get_record('role', array('id' => $roleid));
+        $rolename = role_get_name($role, context_course::instance($courseid));
         $param->line1 = $rolename . get_string('statsreads');
         $param->line2 = $rolename . get_string('statswrites');
         if ($courseid == SITEID) {
@@ -1399,7 +1400,8 @@ function stats_get_report_options($courseid,$mode) {
             $sql = 'SELECT r.id, r.name FROM {role} r JOIN {stats_daily} s ON s.roleid = r.id WHERE s.courseid = :courseid GROUP BY r.id, r.name';
             if ($roles = $DB->get_records_sql($sql, array('courseid' => $courseid))) {
                 foreach ($roles as $role) {
-                    $reportoptions[STATS_REPORT_ACTIVITYBYROLE.$role->id] = get_string('statsreport'.STATS_REPORT_ACTIVITYBYROLE). ' '.$role->name;
+                    $reportoptions[STATS_REPORT_ACTIVITYBYROLE.$role->id] = get_string('statsreport'.STATS_REPORT_ACTIVITYBYROLE).
+                        ' ' . format_string($role->name, true, ['context' => $context]);
                 }
             }
         }

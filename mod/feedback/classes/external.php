@@ -32,6 +32,8 @@ use mod_feedback\external\feedback_summary_exporter;
 use mod_feedback\external\feedback_completedtmp_exporter;
 use mod_feedback\external\feedback_item_exporter;
 use mod_feedback\external\feedback_valuetmp_exporter;
+use mod_feedback\external\feedback_value_exporter;
+use mod_feedback\external\feedback_completed_exporter;
 
 /**
  * Feedback external functions
@@ -305,13 +307,13 @@ class mod_feedback_external extends external_api {
         $feedbackcompletion = new mod_feedback_completion($feedback, $cm, $course->id);
 
         // Trigger module viewed event.
-        $feedbackcompletion->trigger_module_viewed($course);
+        $feedbackcompletion->trigger_module_viewed();
         if ($params['moduleviewed']) {
             if (!$feedbackcompletion->is_open()) {
                 throw new moodle_exception('feedback_is_not_open', 'feedback');
             }
             // Mark activity viewed for completion-tracking.
-            $feedbackcompletion->set_module_viewed($course);
+            $feedbackcompletion->set_module_viewed();
         }
 
         $result = array(
@@ -422,7 +424,6 @@ class mod_feedback_external extends external_api {
         $warnings = array();
 
         list($feedback, $course, $cm, $context) = self::validate_feedback($params['feedbackid']);
-        self::validate_feedback_access($feedback,  $course, $cm, $context);
 
         $feedbackstructure = new mod_feedback_structure($feedback, $cm, $course->id);
         $returneditems = array();
@@ -611,7 +612,7 @@ class mod_feedback_external extends external_api {
                             'name' => new external_value(PARAM_NOTAGS, 'The response name (usually type[index]_id).'),
                             'value' => new external_value(PARAM_RAW, 'The response value.'),
                         )
-                    ), 'The data to be processed.'
+                    ), 'The data to be processed.', VALUE_DEFAULT, array()
                 ),
                 'goprevious' => new external_value(PARAM_BOOL, 'Whether we want to jump to previous page.', VALUE_DEFAULT, false),
             )
@@ -628,7 +629,7 @@ class mod_feedback_external extends external_api {
      * @return array of warnings and launch information
      * @since Moodle 3.3
      */
-    public static function process_page($feedbackid, $page, $responses, $goprevious = false) {
+    public static function process_page($feedbackid, $page, $responses = [], $goprevious = false) {
         global $USER, $SESSION;
 
         $params = array('feedbackid' => $feedbackid, 'page' => $page, 'responses' => $responses, 'goprevious' => $goprevious);
@@ -643,18 +644,24 @@ class mod_feedback_external extends external_api {
         // Create the $_POST object required by the feedback question engine.
         $_POST = array();
         foreach ($responses as $response) {
-            $_POST[$response['name']] = $response['value'];
+            // First check if we are handling array parameters.
+            if (preg_match('/(.+)\[(.+)\]$/', $response['name'], $matches)) {
+                $_POST[$matches[1]][$matches[2]] = $response['value'];
+            } else {
+                $_POST[$response['name']] = $response['value'];
+            }
         }
         // Force fields.
         $_POST['id'] = $cm->id;
         $_POST['courseid'] = $course->id;
         $_POST['gopage'] = $params['page'];
         $_POST['_qf__mod_feedback_complete_form'] = 1;
+
+        // Determine where to go, backwards or forward.
         if (!$params['goprevious']) {
+            $_POST['gonextpage'] = 1;   // Even if we are saving values we need this set.
             if ($feedbackcompletion->get_next_page($params['page'], false) === null) {
                 $_POST['savevalues'] = 1;   // If there is no next page, it means we are finishing the feedback.
-            } else {
-                $_POST['gonextpage'] = 1;   // If we are not going to previous page or finishing we are going forward.
             }
         }
 
@@ -891,6 +898,374 @@ class mod_feedback_external extends external_api {
                 feedback_valuetmp_exporter::get_read_structure()
             ),
             'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_finished_responses.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.3
+     */
+    public static function get_finished_responses_parameters() {
+        return new external_function_parameters (
+            array(
+                'feedbackid' => new external_value(PARAM_INT, 'Feedback instance id.'),
+            )
+        );
+    }
+
+    /**
+     * Retrieves responses from the last finished attempt.
+     *
+     * @param array $feedbackid feedback instance id
+     * @return array of warnings and the responses
+     * @since Moodle 3.3
+     */
+    public static function get_finished_responses($feedbackid) {
+        global $PAGE;
+
+        $params = array('feedbackid' => $feedbackid);
+        $params = self::validate_parameters(self::get_finished_responses_parameters(), $params);
+        $warnings = $itemsdata = array();
+
+        list($feedback, $course, $cm, $context) = self::validate_feedback($params['feedbackid']);
+        $feedbackcompletion = new mod_feedback_completion($feedback, $cm, $course->id);
+
+        $responses = array();
+        // Load and get the responses from the last completed feedback.
+        $feedbackcompletion->find_last_completed();
+        $unfinished = $feedbackcompletion->get_finished_responses();
+        foreach ($unfinished as $u) {
+            $exporter = new feedback_value_exporter($u);
+            $responses[] = $exporter->export($PAGE->get_renderer('core'));
+        }
+
+        $result = array(
+            'responses' => $responses,
+            'warnings' => $warnings
+        );
+        return $result;
+    }
+
+    /**
+     * Describes the get_finished_responses return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.3
+     */
+    public static function get_finished_responses_returns() {
+        return new external_single_structure(
+            array(
+            'responses' => new external_multiple_structure(
+                feedback_value_exporter::get_read_structure()
+            ),
+            'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_non_respondents.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.3
+     */
+    public static function get_non_respondents_parameters() {
+        return new external_function_parameters (
+            array(
+                'feedbackid' => new external_value(PARAM_INT, 'Feedback instance id'),
+                'groupid' => new external_value(PARAM_INT, 'Group id, 0 means that the function will determine the user group.',
+                                                VALUE_DEFAULT, 0),
+                'sort' => new external_value(PARAM_ALPHA, 'Sort param, must be firstname, lastname or lastaccess (default).',
+                                                VALUE_DEFAULT, 'lastaccess'),
+                'page' => new external_value(PARAM_INT, 'The page of records to return.', VALUE_DEFAULT, 0),
+                'perpage' => new external_value(PARAM_INT, 'The number of records to return per page.', VALUE_DEFAULT, 0),
+            )
+        );
+    }
+
+    /**
+     * Retrieves a list of students who didn't submit the feedback.
+     *
+     * @param int $feedbackid feedback instance id
+     * @param int $groupid Group id, 0 means that the function will determine the user group'
+     * @param str $sort sort param, must be firstname, lastname or lastaccess (default)
+     * @param int $page the page of records to return
+     * @param int $perpage the number of records to return per page
+     * @return array of warnings and users ids
+     * @since Moodle 3.3
+     */
+    public static function get_non_respondents($feedbackid, $groupid = 0, $sort = 'lastaccess', $page = 0, $perpage = 0) {
+        global $CFG;
+        require_once($CFG->dirroot . '/mod/feedback/lib.php');
+
+        $params = array('feedbackid' => $feedbackid, 'groupid' => $groupid, 'sort' => $sort, 'page' => $page, 'perpage' => $perpage);
+        $params = self::validate_parameters(self::get_non_respondents_parameters(), $params);
+        $warnings = $nonrespondents = array();
+
+        list($feedback, $course, $cm, $context) = self::validate_feedback($params['feedbackid']);
+
+        if ($feedback->anonymous != FEEDBACK_ANONYMOUS_NO || $feedback->course == SITEID) {
+            throw new moodle_exception('anonymous', 'feedback');
+        }
+
+        // Check permissions.
+        require_capability('mod/feedback:viewreports', $context);
+
+        if (!empty($params['groupid'])) {
+            $groupid = $params['groupid'];
+            // Determine is the group is visible to user.
+            if (!groups_group_visible($groupid, $course, $cm)) {
+                throw new moodle_exception('notingroup');
+            }
+        } else {
+            // Check to see if groups are being used here.
+            if ($groupmode = groups_get_activity_groupmode($cm)) {
+                $groupid = groups_get_activity_group($cm);
+                // Determine is the group is visible to user (this is particullary for the group 0 -> all groups).
+                if (!groups_group_visible($groupid, $course, $cm)) {
+                    throw new moodle_exception('notingroup');
+                }
+            } else {
+                $groupid = 0;
+            }
+        }
+
+        if ($params['sort'] !== 'firstname' && $params['sort'] !== 'lastname' && $params['sort'] !== 'lastaccess') {
+            throw new invalid_parameter_exception('Invalid sort param, must be firstname, lastname or lastaccess.');
+        }
+
+        // Check if we are page filtering.
+        if ($params['perpage'] == 0) {
+            $page = $params['page'];
+            $perpage = FEEDBACK_DEFAULT_PAGE_COUNT;
+        } else {
+            $perpage = $params['perpage'];
+            $page = $perpage * $params['page'];
+        }
+        $users = feedback_get_incomplete_users($cm, $groupid, $params['sort'], $page, $perpage, true);
+        foreach ($users as $user) {
+            $nonrespondents[] = [
+                'courseid' => $course->id,
+                'userid'   => $user->id,
+                'fullname' => fullname($user),
+                'started'  => $user->feedbackstarted
+            ];
+        }
+
+        $result = array(
+            'users' => $nonrespondents,
+            'total' => feedback_count_incomplete_users($cm, $groupid),
+            'warnings' => $warnings
+        );
+        return $result;
+    }
+
+    /**
+     * Describes the get_non_respondents return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.3
+     */
+    public static function get_non_respondents_returns() {
+        return new external_single_structure(
+            array(
+                'users' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'courseid' => new external_value(PARAM_INT, 'Course id'),
+                            'userid' => new external_value(PARAM_INT, 'The user id'),
+                            'fullname' => new external_value(PARAM_TEXT, 'User full name'),
+                            'started' => new external_value(PARAM_BOOL, 'If the user has started the attempt'),
+                        )
+                    )
+                ),
+                'total' => new external_value(PARAM_INT, 'Total number of non respondents'),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_responses_analysis.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.3
+     */
+    public static function get_responses_analysis_parameters() {
+        return new external_function_parameters (
+            array(
+                'feedbackid' => new external_value(PARAM_INT, 'Feedback instance id'),
+                'groupid' => new external_value(PARAM_INT, 'Group id, 0 means that the function will determine the user group',
+                                                VALUE_DEFAULT, 0),
+                'page' => new external_value(PARAM_INT, 'The page of records to return.', VALUE_DEFAULT, 0),
+                'perpage' => new external_value(PARAM_INT, 'The number of records to return per page', VALUE_DEFAULT, 0),
+            )
+        );
+    }
+
+    /**
+     * Return the feedback user responses.
+     *
+     * @param int $feedbackid feedback instance id
+     * @param int $groupid Group id, 0 means that the function will determine the user group
+     * @param int $page the page of records to return
+     * @param int $perpage the number of records to return per page
+     * @return array of warnings and users attemps and responses
+     * @throws moodle_exception
+     * @since Moodle 3.3
+     */
+    public static function get_responses_analysis($feedbackid, $groupid = 0, $page = 0, $perpage = 0) {
+
+        $params = array('feedbackid' => $feedbackid, 'groupid' => $groupid, 'page' => $page, 'perpage' => $perpage);
+        $params = self::validate_parameters(self::get_responses_analysis_parameters(), $params);
+        $warnings = $itemsdata = array();
+
+        list($feedback, $course, $cm, $context) = self::validate_feedback($params['feedbackid']);
+
+        // Check permissions.
+        require_capability('mod/feedback:viewreports', $context);
+
+        if (!empty($params['groupid'])) {
+            $groupid = $params['groupid'];
+            // Determine is the group is visible to user.
+            if (!groups_group_visible($groupid, $course, $cm)) {
+                throw new moodle_exception('notingroup');
+            }
+        } else {
+            // Check to see if groups are being used here.
+            if ($groupmode = groups_get_activity_groupmode($cm)) {
+                $groupid = groups_get_activity_group($cm);
+                // Determine is the group is visible to user (this is particullary for the group 0 -> all groups).
+                if (!groups_group_visible($groupid, $course, $cm)) {
+                    throw new moodle_exception('notingroup');
+                }
+            } else {
+                $groupid = 0;
+            }
+        }
+
+        $feedbackstructure = new mod_feedback_structure($feedback, $cm, $course->id);
+        $responsestable = new mod_feedback_responses_table($feedbackstructure, $groupid);
+        $anonresponsestable = new mod_feedback_responses_anon_table($feedbackstructure, $groupid);
+
+        $result = array(
+            'attempts'          => $responsestable->export_external_structure($params['page'], $params['perpage']),
+            'totalattempts'     => $responsestable->get_total_responses_count(),
+            'anonattempts'      => $anonresponsestable->export_external_structure($params['page'], $params['perpage']),
+            'totalanonattempts' => $anonresponsestable->get_total_responses_count(),
+            'warnings'       => $warnings
+        );
+        return $result;
+    }
+
+    /**
+     * Describes the get_responses_analysis return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.3
+     */
+    public static function get_responses_analysis_returns() {
+        $responsestructure = new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'id' => new external_value(PARAM_INT, 'Response id'),
+                    'name' => new external_value(PARAM_RAW, 'Response name'),
+                    'printval' => new external_value(PARAM_RAW, 'Response ready for output'),
+                    'rawval' => new external_value(PARAM_RAW, 'Response raw value'),
+                )
+            )
+        );
+
+        return new external_single_structure(
+            array(
+                'attempts' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Completed id'),
+                            'courseid' => new external_value(PARAM_INT, 'Course id'),
+                            'userid' => new external_value(PARAM_INT, 'User who responded'),
+                            'timemodified' => new external_value(PARAM_INT, 'Time modified for the response'),
+                            'fullname' => new external_value(PARAM_TEXT, 'User full name'),
+                            'responses' => $responsestructure
+                        )
+                    )
+                ),
+                'totalattempts' => new external_value(PARAM_INT, 'Total responses count.'),
+                'anonattempts' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Completed id'),
+                            'courseid' => new external_value(PARAM_INT, 'Course id'),
+                            'number' => new external_value(PARAM_INT, 'Response number'),
+                            'responses' => $responsestructure
+                        )
+                    )
+                ),
+                'totalanonattempts' => new external_value(PARAM_INT, 'Total anonymous responses count.'),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_last_completed.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.3
+     */
+    public static function get_last_completed_parameters() {
+        return new external_function_parameters (
+            array(
+                'feedbackid' => new external_value(PARAM_INT, 'Feedback instance id'),
+            )
+        );
+    }
+
+    /**
+     * Retrieves the last completion record for the current user.
+     *
+     * @param int $feedbackid feedback instance id
+     * @return array of warnings and the last completed record
+     * @since Moodle 3.3
+     * @throws moodle_exception
+     */
+    public static function get_last_completed($feedbackid) {
+        global $PAGE;
+
+        $params = array('feedbackid' => $feedbackid);
+        $params = self::validate_parameters(self::get_last_completed_parameters(), $params);
+        $warnings = array();
+
+        list($feedback, $course, $cm, $context) = self::validate_feedback($params['feedbackid']);
+        $feedbackcompletion = new mod_feedback_completion($feedback, $cm, $course->id);
+
+        if ($feedbackcompletion->is_anonymous()) {
+             throw new moodle_exception('anonymous', 'feedback');
+        }
+        if ($completed = $feedbackcompletion->find_last_completed()) {
+            $exporter = new feedback_completed_exporter($completed);
+            return array(
+                'completed' => $exporter->export($PAGE->get_renderer('core')),
+                'warnings' => $warnings,
+            );
+        }
+        throw new moodle_exception('not_completed_yet', 'feedback');
+    }
+
+    /**
+     * Describes the get_last_completed return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.3
+     */
+    public static function get_last_completed_returns() {
+        return new external_single_structure(
+            array(
+                'completed' => feedback_completed_exporter::get_read_structure(),
+                'warnings' => new external_warnings(),
             )
         );
     }

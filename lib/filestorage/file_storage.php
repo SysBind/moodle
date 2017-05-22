@@ -982,7 +982,7 @@ class file_storage {
         static $contenthash = null;
         if (!$contenthash) {
             $this->add_string_to_pool('');
-            $contenthash = sha1('');
+            $contenthash = self::hash_from_string('');
         }
 
         $now = time();
@@ -1128,9 +1128,9 @@ class file_storage {
         // creating a new file from an existing alias creates new alias implicitly.
         // here we just check the database consistency.
         if (!empty($newrecord->repositoryid)) {
-            if ($newrecord->referencefileid != $this->get_referencefileid($newrecord->repositoryid, $newrecord->reference, MUST_EXIST)) {
-                throw new file_reference_exception($newrecord->repositoryid, $newrecord->reference, $newrecord->referencefileid);
-            }
+            // It is OK if the current reference does not exist. It may have been altered by a repository plugin when the files
+            // where saved from a draft area.
+            $newrecord->referencefileid = $this->get_or_create_referencefileid($newrecord->repositoryid, $newrecord->reference);
         }
 
         try {
@@ -2322,5 +2322,25 @@ class file_storage {
             WHERE referencefileid = :referencefileid', $params);
         $data = array('id' => $referencefileid, 'lastsync' => $lastsync);
         $DB->update_record('files_reference', (object)$data);
+    }
+
+    /**
+     * Calculate and return the contenthash of the supplied file.
+     *
+     * @param   string $filepath The path to the file on disk
+     * @return  string The file's content hash
+     */
+    public static function hash_from_path($filepath) {
+        return sha1_file($filepath);
+    }
+
+    /**
+     * Calculate and return the contenthash of the supplied content.
+     *
+     * @param   string $content The file content
+     * @return  string The file's content hash
+     */
+    public static function hash_from_string($content) {
+        return sha1($content);
     }
 }

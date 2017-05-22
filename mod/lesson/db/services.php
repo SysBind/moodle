@@ -132,4 +132,36 @@ $functions = array(
         'capabilities'  => 'mod/lesson:view',
         'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
     ),
+    'mod_lesson_get_attempts_overview' => array(
+        'classname'     => 'mod_lesson_external',
+        'methodname'    => 'get_attempts_overview',
+        'description'   => 'Get a list of all the attempts made by users in a lesson.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lesson:viewreports',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+    'mod_lesson_get_user_attempt' => array(
+        'classname'     => 'mod_lesson_external',
+        'methodname'    => 'get_user_attempt',
+        'description'   => 'Return information about the given user attempt (including answers).',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lesson:viewreports',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+    'mod_lesson_get_pages_possible_jumps' => array(
+        'classname'     => 'mod_lesson_external',
+        'methodname'    => 'get_pages_possible_jumps',
+        'description'   => 'Return all the possible jumps for the pages in a given lesson.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lesson:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
+    ),
+    'mod_lesson_get_lesson' => array(
+        'classname'     => 'mod_lesson_external',
+        'methodname'    => 'get_lesson',
+        'description'   => 'Return information of a given lesson.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lesson:view',
+        'services'      => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
 );
