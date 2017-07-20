@@ -181,6 +181,9 @@ module.exports = function(grunt) {
                 paths: [cwd]
             }
         },
+	jsx: {
+	    files: ['**/amd/src/*.jsx']
+	},
         gherkinlint: {
             options: {
                 files: ['**/tests/behat/*.feature'],
@@ -326,6 +329,26 @@ module.exports = function(grunt) {
         }, done);
     };
 
+    tasks.jsx = function() {
+	var done = this.async();
+	var files = grunt.config('jsx.files');	
+	for (idx in files) {
+	    pattern = files[idx];
+	    //file.src is the list of all matching file names.
+	    grunt.file.expand(pattern).forEach(function(f) {
+		outfile = f.substring(0, f.length-1);
+		grunt.log.writeln('JSX to javascript file ' + outfile + ' from ' + f);
+		grunt.util.spawn({
+		    cmd: 'lib/react/jsx-compile.sh',
+		    args: [outfile],
+		    opts: {stdio: 'inherit'}
+		}, function(error, result, code) {
+		    done(code === 0);
+		});
+	    });
+	}
+    }
+
     tasks.gherkinlint = function() {
         var done = this.async(),
             options = grunt.config('gherkinlint.options');
@@ -386,11 +409,12 @@ module.exports = function(grunt) {
 
     // Register JS tasks.
     grunt.registerTask('shifter', 'Run Shifter against the current directory', tasks.shifter);
+    grunt.registerTask('jsx', 'Process all jsx files', tasks.jsx);
     grunt.registerTask('gherkinlint', 'Run gherkinlint against the current directory', tasks.gherkinlint);
     grunt.registerTask('ignorefiles', 'Generate ignore files for linters', tasks.ignorefiles);
     grunt.registerTask('yui', ['eslint:yui', 'shifter']);
     grunt.registerTask('amd', ['eslint:amd', 'uglify']);
-    grunt.registerTask('js', ['amd', 'yui']);
+    grunt.registerTask('js', ['amd', 'yui', 'jsx']);
 
     // Register CSS taks.
     grunt.registerTask('css', ['stylelint:scss', 'stylelint:less', 'less:bootstrapbase', 'stylelint:css']);
