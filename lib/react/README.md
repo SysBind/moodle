@@ -14,6 +14,37 @@ define(['react', 'reactdom'], function(React, ReactDOM) {
 
 ```
 
+## Without JSX, Without ES6
+Create some component, your_module/amd/src/hello.js:
+``` js
+define(['react'], function(React) {
+    var createReactClass = React.createClass;
+
+    var Greeting = createReactClass({
+	render: function() {
+	    return React.createElement('span', null, `Hello ${this.props.toWhat}`);
+	}
+    });
+    
+    return Greeting;
+});
+
+```
+
+Use it, your_module/amd/src/reacttest.js
+
+``` js
+define(['react', 'reactdom', your_module/hello'], function(React, ReactDOM, Hello) {
+    return {
+        init: function() {
+            ReactDOM.render(
+                React.createElement(Hello, {toWhat: 'World'}, null),
+                document.getElementById('page-content')
+            );
+         }
+     };
+});
+```
 
 ## JSX Support
 
