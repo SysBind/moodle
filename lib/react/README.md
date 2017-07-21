@@ -34,7 +34,7 @@ define(['react'], function(React) {
 Use it, your_module/amd/src/reacttest.js
 
 ``` js
-define(['react', 'reactdom', your_module/hello'], function(React, ReactDOM, Hello) {
+define(['react', 'reactdom', 'your_module/hello'], function(React, ReactDOM, Hello) {
     return {
         init: function() {
             ReactDOM.render(
