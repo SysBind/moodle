@@ -111,7 +111,7 @@ foreach ($formdata as $key => $value) {
 $currentgroup = groups_get_activity_group($cm);
 
 $exportdata = data_get_exportdata($data->id, $fields, $selectedfields, $currentgroup, $context,
-                                  $exportuser, $exporttime, $exportapproval);
+    $exportuser, $exporttime, $exportapproval, $formdata['striptags']);
 $count = count($exportdata);
 switch ($formdata['exporttype']) {
     case 'csv':

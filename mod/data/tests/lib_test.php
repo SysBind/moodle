@@ -977,6 +977,52 @@ class mod_data_lib_testcase extends advanced_testcase {
     }
 
     /**
+     * Test if exported data can strip tags
+     * @return void
+     */
+    public function test_data_export_striptags() {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Setup test data.
+        $course = $this->getDataGenerator()->create_course();
+        $data = $this->getDataGenerator()->create_module('data',array('course' => $course->id));
+        $cm = get_coursemodule_from_instance('data', $data->id, $data->course);
+
+        // get fields for this database
+        $fieldrecords = $DB->get_records('data_fields', array('dataid'=>$data->id), 'id');
+        $fields = array();
+        foreach ($fieldrecords as $fieldrecord) {
+            $fields[]= data_get_field($fieldrecord, $data);
+        }
+        $context = context_module::instance($cm->id);
+
+        $exportdata = data_get_exportdata($data->id, $fields, $fields, false, $context,
+            false, false, false, false);
+        $hashtml = 0;
+        foreach ($exportdata as $key => $row){
+            if ($row != strip_tags($row)) {
+                $hashtml = 1;
+            }
+        }
+
+        $this->assertEquals(1, $hashtml);
+
+        $exportdata = data_get_exportdata($data->id, $fields, $fields, false, $context,
+            false, false, false, true);
+        $hashtml = 0;
+        foreach ($exportdata as $key => $row){
+            if ($row != strip_tags($row)) {
+                $hashtml = 1;
+            }
+        }
+
+        $this->assertEquals(0, $hashtml);
+    }
+
+    /**
      * Test check_updates_since callback.
      */
     public function test_check_updates_since() {

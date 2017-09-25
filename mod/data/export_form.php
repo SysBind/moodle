@@ -81,6 +81,7 @@ class mod_data_export_form extends moodleform {
         if ($this->_data->approval) {
             $mform->addElement('checkbox', 'exportapproval', get_string('includeapproval', 'data'));
         }
+        $mform->addElement('advcheckbox', 'striptags', null, get_string('striptags', 'data'));
         $this->add_action_buttons(true, get_string('exportentries', 'data'));
     }
 

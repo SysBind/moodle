@@ -3008,10 +3008,11 @@ function data_export_ods($export, $dataname, $count) {
  * @param bool $userdetails whether to include the details of the record author
  * @param bool $time whether to include time created/modified
  * @param bool $approval whether to include approval status
+ * @param bool $striptag whether strip html tag from the data output
  * @return array
  */
 function data_get_exportdata($dataid, $fields, $selectedfields, $currentgroup=0, $context=null,
-                             $userdetails=false, $time=false, $approval=false) {
+    $userdetails=false, $time=false, $approval=false, $striptag=false) {
     global $DB;
 
     if (is_null($context)) {
@@ -3063,7 +3064,7 @@ function data_get_exportdata($dataid, $fields, $selectedfields, $currentgroup=0,
                 if(isset($content[$field->field->id])) {
                     $contents = $field->export_text_value($content[$field->field->id]);
                 }
-                $exportdata[$line][] = $contents;
+                $exportdata[$line][] = ($striptag) ? strip_tags($contents) : $contents;
             }
             if ($userdetails) { // Add user details to the export data
                 $userdata = get_complete_user_data('id', $record->userid);

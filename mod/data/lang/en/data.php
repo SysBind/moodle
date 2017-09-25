@@ -337,6 +337,7 @@ $string['selectedrequired'] = 'All selected required';
 $string['showall'] = 'Show all entries';
 $string['single'] = 'View single';
 $string['singletemplate'] = 'Single template';
+$string['striptags'] = 'Strip HTML tags';
 $string['subplugintype_datafield'] = 'Database field type';
 $string['subplugintype_datafield_plural'] = 'Database field types';
 $string['subplugintype_datapreset'] = 'Preset';
