@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/lib/filestorage/file_progress.php');
 require_once($CFG->dirroot . '/lib/filestorage/file_system.php');
+require_once($CFG->dirlib . '/gdlib.php');
 
 /**
  * Class representing local files stored in a sha1 file pool.
