@@ -182,6 +182,20 @@ class restore_plan extends base_plan implements loggable {
             ));
             $event->trigger();
         }
+        // Trigger a activity restored event.
+        if ($this->controller->get_type() === backup::TYPE_1ACTIVITY) {
+        	// Now a bit hacky part follows - we try to get the cmid of the newly restored module.(same as duplicate_module function)
+        	foreach ($this->tasks as $task) {
+        		if (is_subclass_of($task, 'restore_activity_task')) {
+        			$newcmid = $task->get_moduleid();
+        			break;
+        		}
+        	}
+        	$info = get_fast_modinfo($this->get_courseid());
+        	$newcm = $info->get_cm($newcmid);
+        	$event = \core\event\course_module_restored::create_from_cm($newcm);
+        	$event->trigger();
+        }
     }
 
     /**
