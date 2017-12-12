@@ -151,7 +151,6 @@ class course_module_restored extends base {
     /**
      * Custom validation.
      *
-     * @throw \coding_exception
      */
     protected function validate_data() {
         parent::validate_data();
@@ -165,11 +164,17 @@ class course_module_restored extends base {
             throw new \coding_exception('The \'name\' value must be set in other.');
         }
     }
-
+    /**
+     * map DB table and restore type
+     *
+     */
     public static function get_objectid_mapping() {
         return array('db' => 'course_modules', 'restore' => 'course_module');
     }
-
+    /**
+     *
+     * @return array an array of other values and their corresponding mapping
+     */
     public static function get_other_mapping() {
         $othermapped = array();
         $othermapped['instanceid'] = base::NOT_MAPPED;
