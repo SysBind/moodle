@@ -3501,11 +3501,6 @@ function duplicate_module($course, $cm) {
         // Update calendar events with the duplicated module.
         // The following line is to be removed in MDL-58906.
         course_module_update_calendar_events($newcm->modname, null, $newcm);
-
-        // Trigger course module created event. We can trigger the event only if we know the newcmid.
-        $newcm = get_fast_modinfo($cm->course)->get_cm($newcmid);
-        $event = \core\event\course_module_created::create_from_cm($newcm);
-        $event->trigger();
     }
 
     return isset($newcm) ? $newcm : null;
