@@ -3352,11 +3352,6 @@ function duplicate_module($course, $cm) {
         if (function_exists($refresheventsfunction)) {
             call_user_func($refresheventsfunction, $newcm->course);
         }
-
-        // Trigger course module created event. We can trigger the event only if we know the newcmid.
-        $newcm = get_fast_modinfo($cm->course)->get_cm($newcmid);
-        $event = \core\event\course_module_created::create_from_cm($newcm);
-        $event->trigger();
     }
 
     return isset($newcm) ? $newcm : null;
