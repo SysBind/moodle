@@ -60,4 +60,13 @@ $functions = array(
         'capabilities'    => '',
         'ajax'            => true,
     ),
+
+    'tool_usertours_fetch_tours_for_list' => array(
+        'classname' => 'tool_usertours\external\tour',
+        'methodname' => 'fetch_tours_for_list',
+        'description'     => 'Fetch the list of tours for specified page',
+        'type'            => 'write',
+        'capabilities'    => '',
+        'ajax'            => true,
+    ),
 );

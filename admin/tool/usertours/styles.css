@@ -66,3 +66,15 @@ span[data-flexitour="container"].orphan div[data-role="arrow"] {
     display: block;
     padding: 1em;
 }
+
+div.select-tour:first-of-type {
+    border-top: 1px solid #cecece;
+}
+div.select-tour {
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1em;
+    border-bottom: 1px solid #cecece;
+    padding: 5px;
+    cursor: pointer;
+}

@@ -113,6 +113,7 @@ $string['title'] = 'Title';
 $string['title_help'] = 'The title of a step may be added as plain text, enclosed in multilang tags (for use with the multi-language content filter) if required.
 
 Alternatively, a language string ID may be entered in the format identifier,component (with no brackets or space after the comma).';
+$string['tourchois'] = 'Please select a tour';
 $string['tourconfig'] = 'Tour configuration file to import';
 $string['tourlist_explanation'] = 'You can create as many tours as you like and enable them for different parts of Moodle. Only one tour can be created per page.';
 $string['tours'] = 'Tours';

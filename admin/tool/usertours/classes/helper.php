@@ -503,11 +503,24 @@ class helper {
         self::$bootstrapped = true;
 
         if ($tour = manager::get_current_tour()) {
+            if(is_array($tour)){
+                $ids = [];
+                $views = [];
+                foreach ($tour as $currenttour) {
+                    $ids[] = $currenttour->get_id();
+                    $views[] = $currenttour->should_show_for_user();
+                }
+            } else {
+                $ids = $tour->get_id();
+                $views = $tour->should_show_for_user();
+            }
+
             $PAGE->requires->js_call_amd('tool_usertours/usertours', 'init', [
-                    $tour->get_id(),
-                    $tour->should_show_for_user(),
-                    $PAGE->context->id,
-                ]);
+                $ids,
+                $views,
+                $PAGE->context->id,
+            ]);
+            $PAGE->requires->string_for_js('tourchois', 'tool_usertours');
         }
     }
 

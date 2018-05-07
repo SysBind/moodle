@@ -11,6 +11,8 @@ define(
 function(ajax, BootstrapTour, $, templates, str, log, notification) {
     var usertours = {
         tourId: null,
+        
+        tourList: null,
 
         currentTour: null,
 
@@ -26,25 +28,29 @@ function(ajax, BootstrapTour, $, templates, str, log, notification) {
          */
         init: function(tourId, startTour, context) {
             // Only one tour per page is allowed.
-            usertours.tourId = tourId;
-
-            usertours.context = context;
-
-            if (typeof startTour === 'undefined') {
-                startTour = true;
+            if (Array.isArray(tourId)) {
+                usertours.showTourList(tourId, context);
+            } else {
+                usertours.tourId = tourId;
+    
+                usertours.context = context;
+    
+                if (typeof startTour === 'undefined') {
+                    startTour = true;
+                }
+    
+                if (startTour) {
+                    // Fetch the tour configuration.
+                    usertours.fetchTour(tourId);
+                }
+    
+                usertours.addResetLink();
+                // Watch for the reset link.
+                $('body').on('click', '[data-action="tool_usertours/resetpagetour"]', function(e) {
+                    e.preventDefault();
+                    usertours.resetTourState(usertours.tourId);
+                });
             }
-
-            if (startTour) {
-                // Fetch the tour configuration.
-                usertours.fetchTour(tourId);
-            }
-
-            usertours.addResetLink();
-            // Watch for the reset link.
-            $('body').on('click', '[data-action="tool_usertours/resetpagetour"]', function(e) {
-                e.preventDefault();
-                usertours.resetTourState(usertours.tourId);
-            });
         },
 
         /**
@@ -163,6 +169,16 @@ function(ajax, BootstrapTour, $, templates, str, log, notification) {
 
                 return step;
             });
+            
+            if ($('.select-tour').length){
+                $('.btn-group').css("visibility","hidden");
+            }
+
+            $('.select-tour').click(function(){
+                setTimeout(function() {
+                    $('.btn-group').removeAttr("style");
+                }, 500);
+            });
 
             usertours.currentTour = new BootstrapTour(tourConfig);
             return usertours.currentTour.startTour();
@@ -234,10 +250,72 @@ function(ajax, BootstrapTour, $, templates, str, log, notification) {
                 ])[0]
             ).then(function(response) {
                 if (response.startTour) {
-                    usertours.fetchTour(response.startTour);
+                    if(usertours.tourList !== null) {
+                        usertours.showTourList(usertours.tourList, usertours.context);
+                    } else {
+                        usertours.fetchTour(response.startTour);
+                    }
                 }
                 return;
             }).fail(notification.exception);
+        },
+        
+        /**
+         * Show all the available tours on this page
+         */
+        showTourList: function(tourId, context){
+            usertours.tourList = tourId;
+            $.when(
+                ajax.call([
+                    {
+                        methodname: 'tool_usertours_fetch_tours_for_list',
+                        args: {
+                            tours: tourId,
+                            'context': context
+                        }
+                    }
+                ])[0],
+                templates.render('tool_usertours/tourstep', {}))
+                .then(function(resp, template) {
+                    var content = '';
+                    //if the list is empty and there are no new tours, do nothing
+                    if(resp.tours.length == 0) {
+                        return null;
+                    }
+                    
+                    //create an html list of all the contents of the list
+                    for (i in resp.tours) {
+                        content = content + '<div class="select-tour" id="tour_' + resp.tours[i].tourid + '">' + resp.tours[i].title + '</div>';
+                    }
+                    
+                    //pop the tour box with the list of available tours
+                    usertours.startBootstrapTour(0, template[0], {
+                        name: "tool_usertours_choice",
+                        steps: new Array({
+                            backdrop: false,
+                            'content': content,
+                            element: '',
+                            orphan: true,
+                            placement: 'top',
+                            reflex: false,
+                            title: M.util.get_string('tourchois', 'local_usertours')
+                        })
+                    });
+                    
+                    //when a tour is selected restart this tour plugin with the selected tour details
+                    $(".select-tour").click(function(e) {
+                        var id = $(this).attr('id');
+                        id = id.split('_');
+                        usertours.init(id[1], true, context);
+                    });
+                });              
+            
+                $('body').on('click', '[data-action="tool_usertours/resetpagetour"]', function(e) {
+                    e.preventDefault();
+                    for(var i in tourId){
+                        usertours.resetTourState(tourId[i]);
+                    }
+                });
         }
     };
 

@@ -33,6 +33,7 @@ use external_multiple_structure;
 use external_value;
 use tool_usertours\tour as tourinstance;
 use tool_usertours\step;
+use core\output\external;
 
 /**
  * Web Service functions for steps.
@@ -325,6 +326,64 @@ class tour extends external_api {
                     'Whether to display the step even if it could not be found', VALUE_OPTIONAL),
             'stepid'            => new external_value(PARAM_INT,
                     'The actual ID of the step', VALUE_OPTIONAL),
+        ]);
+    }
+
+    public static function fetch_tours_for_list($tours, $context) {
+        global $PAGE;
+
+        $context = \context_helper::instance_by_id($context);
+        self::validate_context($context);
+
+        $returntours = [];
+        foreach ($tours as $tour) {
+            $tourinstance = tourinstance::instance($tour);
+            $ret = new \stdClass();
+            $ret->tourid = $tour;
+            $ret->title = $tourinstance->get_name();
+            if($tourinstance->should_show_for_user()) {
+                $returntours[] = $ret;
+            }
+        }
+
+
+        if(sizeof($returntours > 0 )){
+            return [
+                'tours' => $returntours,
+                'context' => $context->id
+            ];
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * The parameters for fetch_tour.
+     *
+     * @return external_function_parameters
+     */
+    public static function fetch_tours_for_list_parameters() {
+        return new external_function_parameters([
+            'tours' => new \external_multiple_structure(
+                new \external_value(PARAM_RAW, 'Tzours'), 'list of tours', false, []),
+            'context' => new \external_value(PARAM_RAW, 'context')
+        ]);
+    }
+
+    /**
+     * The return configuration for fetch_tour.
+     *
+     * @return external_single_structure
+     */
+    public static function fetch_tours_for_list_return() {
+        return new \external_single_structure([
+            'tours' => new \external_multiple_structure(
+                new \external_single_structure([
+                    'tourid' => new \external_value(PARAM_RAW, 'Tour ID'),
+                    'title' => new \external_value(PARAM_RAW, 'Tour Title')
+                ]),
+                'list of tours with names', false, []),
+            'context' => new \external_value(PARAM_RAW, 'Context ID'),
         ]);
     }
 }

@@ -579,14 +579,31 @@ class manager {
 
         $tours = cache::get_matching_tourdata($pageurl);
 
-        foreach ($tours as $record) {
-            $tour = tour::load_from_record($record);
-            if ($tour->is_enabled() && $tour->matches_all_filters($PAGE->context)) {
-                return $tour;
-            }
+        switch(sizeof($tours)) {
+            case 0:
+                return null;
+                break;
+            case 1:
+                foreach ($tours as $record) {
+                    $tour = tour::load_from_record($record);
+                    if ($tour->is_enabled() && $tour->matches_all_filters($PAGE->context)) {
+                        return $tour;
+                    }
+                }
+                return null;
+                break;
+            default:
+                $result = [];
+                foreach ($tours as $record) {
+                    $tour = tour::load_from_record($record);
+                    if($tour->is_enabled() && $tour->matches_all_filters($PAGE->context) ) {
+                       $result[] = $tour;
+                    }
+                }
+                return (sizeof($result)) ? $result : null;
+                break;
         }
 
-        return null;
     }
 
     /**
