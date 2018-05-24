@@ -1232,8 +1232,10 @@ function download_file_content($url, $headers=null, $postdata=null, $fullrespons
 
     if ($skipcertverify) {
         $options['CURLOPT_SSL_VERIFYPEER'] = false;
+        $options['CURLOPT_SSL_VERIFYHOST'] = false;
     } else {
         $options['CURLOPT_SSL_VERIFYPEER'] = true;
+        $options['CURLOPT_SSL_VERIFYHOST'] = 2;
     }
 
     $options['CURLOPT_CONNECTTIMEOUT'] = $connecttimeout;
