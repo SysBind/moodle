@@ -1,6 +1,7 @@
 @editor @editor_atto @atto @mod @mod_forum @javascript
 Feature: Add text direction
   To support bidi text sent by email
+
   Background:
     Given the following "courses" exist:
       | fullname | shortname | category | groupmode | summary | summaryformat |
@@ -11,7 +12,6 @@ Feature: Add text direction
     And the following "course enrolments" exist:
       | user | course | role |
       | teacher1 | C1 | editingteacher |
-
     And I log in as "admin"
     And I navigate to "Plugins > Atto HTML editor" in site administration
     And I set the field "id_s_editor_atto_toolbar" to multiline:
@@ -34,7 +34,6 @@ Feature: Add text direction
     And I click on "Disable" "link" in the "Plain text area" "table_row"
     And I click on "Disable" "link" in the "TinyMCE HTML editor" "table_row"
     And I log out
-
 
   @javascript
   Scenario: Check default direction exist in atto
