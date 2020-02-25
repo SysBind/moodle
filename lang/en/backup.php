@@ -379,3 +379,5 @@ $string['userinfo'] = 'Userinfo';
 $string['module'] = 'Module';
 $string['morecoursesearchresults'] = 'More than {$a} courses found, showing first {$a} results';
 $string['recyclebin_desc'] = 'Note that these settings will be also be used for the recycle bin.';
+$string['backupskipfrozencourses'] = 'Skip categories and courses in context freeze mode';
+$string['backupskipfrozencourseshelp'] = 'Choose to skip categories and courses that in context freeze mode';
