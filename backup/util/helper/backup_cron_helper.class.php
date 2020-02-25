@@ -87,13 +87,30 @@ abstract class backup_cron_automated_helper {
             $now = time();
         }
 
-        $sql = 'SELECT c.*,
+        $skip = '';
+        $skipwhere = '';
+        $before = '';
+        if (get_config('backup', 'backup_skip_frozen_courses')) {
+            $before = 'SELECT DISTINCT fc.* FROM(';
+            $skip = ') fc INNER JOIN {context} co ON co.instanceid = fc.id WHERE co.contextlevel = '.CONTEXT_COURSE
+                    .' AND co.locked = 0 ';
+            $lockedcat = $DB->get_records('context', ['contextlevel' => CONTEXT_COURSECAT, 'locked' => 1 ]);
+            foreach ($lockedcat as $locked) {
+                $skip .= ' AND co.path NOT LIKE "'.$locked->path.'/%" ';
+            }
+        }
+
+        if (get_config('backup', 'backup_auto_skip_hidden')) {
+            $skipwhere .= 'AND c.visible = 1 ';
+        }
+
+        $sql = $before.'SELECT c.*,
                        COALESCE(bc.nextstarttime, 1) nextstarttime
                   FROM {course} c
              LEFT JOIN {backup_courses} bc ON bc.courseid = c.id
-                 WHERE bc.nextstarttime IS NULL OR bc.nextstarttime < ?
+                 WHERE bc.nextstarttime IS NULL OR bc.nextstarttime < ? '.$skipwhere.'
               ORDER BY nextstarttime ASC,
-                       c.timemodified DESC';
+                       c.timemodified DESC'.$skip;
 
         $params = array(
             $now,  // Only get courses where the backup start time is in the past.
@@ -333,12 +350,6 @@ abstract class backup_cron_automated_helper {
         $lastbackupwassuccessful = ($backupcourse->laststatus == self::BACKUP_STATUS_SKIPPED ||
         $backupcourse->laststatus == self::BACKUP_STATUS_OK) && (
         $backupcourse->laststarttime > 0 && $backupcourse->lastendtime > 0);
-
-        // If config backup_auto_skip_hidden is set to true, skip courses that are not visible.
-        if ($config->backup_auto_skip_hidden) {
-            $skipped = ($config->backup_auto_skip_hidden && !$course->visible);
-            $skippedmessage = 'Not visible';
-        }
 
         // If config backup_auto_skip_modif_days is set to true, skip courses
         // that have not been modified since the number of days defined.
