@@ -96,6 +96,7 @@ abstract class backup_cron_automated_helper {
             $skip = ') fc INNER JOIN {context} co ON co.instanceid = fc.id WHERE co.contextlevel = '.CONTEXT_COURSE
                     .' AND co.locked = 0 ';
             $lockedcat = $DB->get_records('context', ['contextlevel' => CONTEXT_COURSECAT, 'locked' => 1 ]);
+            $skipping = array();
             foreach ($lockedcat as $locked) {
                 $skip .= ' AND '.$DB->sql_like('co.path', '?' , true,
                                 true, true);
