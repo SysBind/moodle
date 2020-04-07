@@ -89,13 +89,16 @@ abstract class backup_cron_automated_helper {
         $skip = '';
         $skipwhere = '';
         $before = '';
-        if (get_config('backup', 'backup_skip_frozen_courses')) {
+        if (get_config('backup', 'backup_skip_frozen_courses') && get_config('core', 'contextlocking')) {
             $before = 'SELECT DISTINCT fc.* FROM(';
             $skip = ') fc INNER JOIN {context} co ON co.instanceid = fc.id WHERE co.contextlevel = '
                     .CONTEXT_COURSE.' AND co.locked = 0 ';
             $lockedcat = $DB->get_records('context', ['contextlevel' => CONTEXT_COURSECAT, 'locked' => 1 ]);
+            $skipping = array();
             foreach ($lockedcat as $locked) {
-                $skip .= ' AND co.path NOT LIKE "'.$locked->path.'/%" ';
+                $skip .= ' AND '.$DB->sql_like('co.path', '?' , true,
+                                true, true);
+                $skipping[] = $locked->path.'/%';
             }
         }
 
@@ -107,13 +110,18 @@ abstract class backup_cron_automated_helper {
                        COALESCE(bc.nextstarttime, 1) nextstarttime
                   FROM {course} c
              LEFT JOIN {backup_courses} bc ON bc.courseid = c.id
-                 WHERE bc.nextstarttime IS NULL OR bc.nextstarttime < ?'.$skipwhere.'
+                 WHERE (bc.nextstarttime IS NULL OR bc.nextstarttime < ?) '.$skipwhere.'
               ORDER BY nextstarttime ASC,
                        c.timemodified DESC'.$skip;
 
         $params = array(
             $now,  // Only get courses where the backup start time is in the past.
         );
+
+        foreach ($skipping as $skipp) {
+            $params[] = $skipp;
+        }
+
         $rs = $DB->get_recordset_sql($sql, $params);
 
         return $rs;
