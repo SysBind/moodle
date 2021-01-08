@@ -403,8 +403,9 @@ class editor {
             'assets' => $assets,
             'apiVersion' => H5PCore::$coreApi,
             'language' => $language,
+            'bidi' => $CFG->h5pbidi,
+            'editordirsupport' => $CFG->h5peditordirsupport,
         ];
-
         if (!empty($this->id)) {
             $settings['editor']['nodeVersionId'] = $this->id;
 

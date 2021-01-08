@@ -87,3 +87,4 @@ with the previous patched and minified JQuery version.
  * @member
  */
 
+5.4 Add support for rtl languages

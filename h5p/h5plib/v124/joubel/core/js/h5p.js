@@ -375,11 +375,19 @@ H5P.init = function (target) {
     }
   });
 
+  // RTL support in iframe, based on Moodle calculated user language
+  if (H5PIntegration.contentlang == false) {
+    var rtlclss = '';
+    if (this.$body.hasClass('dir-rtl')) {
+      rtlclss = 'h5p-dir-rtl';
+    }
+  }
+
   // Insert H5Ps that should be in iframes.
   H5P.jQuery('iframe.h5p-iframe:not(.h5p-initialized)', target).each(function () {
     var contentId = H5P.jQuery(this).addClass('h5p-initialized').data('content-id');
     this.contentDocument.open();
-    this.contentDocument.write('<!doctype html><html class="h5p-iframe"><head>' + H5P.getHeadTags(contentId) + '</head><body><div class="h5p-content" data-content-id="' + contentId + '"/></body></html>');
+    this.contentDocument.write('<!doctype html><html class="h5p-iframe ' + rtlclss + '"><head>' + H5P.getHeadTags(contentId) + '</head><body><div class="h5p-content" data-content-id="' + contentId + '"/></body></html>');
     this.contentDocument.close();
   });
 };
@@ -951,6 +959,23 @@ H5P.newRunnable = function (library, contentId, $attachTo, skipResize, extras) {
 
   if ($attachTo !== undefined) {
     $attachTo.toggleClass('h5p-standalone', standalone);
+    // Viewing user RTL support.
+    if (H5PIntegration.contentlang == true) {
+      var contentlang = instance.contentData.metadata.defaultLanguage;
+      if (contentlang == 'he' || contentlang == 'ar') {
+        $attachTo.toggleClass('lang-' + contentlang + ' h5p-dir-rtl');
+      }
+    } else {
+      // No content language, then use hosting env (Moodle) directionality.
+      if (library.params.language == null || library.params.language == undefined) {
+        $attachTo.toggleClass(' h5p-dir-' + window.parent.document.dir);
+      } else {
+        // Content custom language (Legacy support)
+        if (library.params.language == 'he' || library.params.language == 'ar') {
+          $attachTo.toggleClass('lang-'+library.params.language+' h5p-dir-rtl');
+        }
+      }
+    }
     instance.attach($attachTo);
     H5P.trigger(instance, 'domChanged', {
       '$target': $attachTo,

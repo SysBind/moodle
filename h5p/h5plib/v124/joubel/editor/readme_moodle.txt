@@ -24,3 +24,5 @@ Added:
  * readme_moodle.txt
 
 Downloaded version: moodle-1.20.2 release
+
+- Add support for rtl languages
