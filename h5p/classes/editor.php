@@ -403,6 +403,8 @@ class editor {
             'assets' => $assets,
             'apiVersion' => H5PCore::$coreApi,
             'language' => $language,
+            'bidi' => $CFG->h5pbidi,
+            'editordirsupport' => 1,
         ];
 
         if (!empty($this->id)) {

@@ -45,13 +45,17 @@ ns.Editor = function (library, defaultParams, replace, iframeLoaded) {
     if (!iframe.contentDocument) {
       return; // Not possible, iframe 'load' hasn't been triggered yet
     }
+    var parentHtml = window.parent.document.getElementsByTagName('html');
+    if (parentHtml.length > 0) {
+      parentHtml = parentHtml.item(0);
+    }
     iframe.contentDocument.open();
     iframe.contentDocument.write(
-      '<!doctype html><html>' +
+      '<!doctype html><html dir="' +  parentHtml.dir  + '" lang="' + parentHtml.lang +'" xml:lang="' + parentHtml.lang + '">' +
       '<head>' +
       ns.wrap('<link rel="stylesheet" href="', ns.assets.css, '">') +
       ns.wrap('<script src="', ns.assets.js, '"></script>') +
-      '</head><body>' +
+      '</head><body >' +
       '<div class="h5p-editor h5peditor">' + ns.t('core', 'loading') + '</div>' +
       '</body></html>');
     iframe.contentDocument.close();
