@@ -39,7 +39,16 @@ class cachestore_redis_addinstance_form extends cachestore_addinstance_form {
     protected function configuration_definition() {
         $form = $this->_form;
 
-        $form->addElement('text', 'server', get_string('server', 'cachestore_redis'), array('size' => 24));
+        $form->addElement('checkbox', 'clustermode',
+            get_string('clustermode', 'cachestore_redis'),
+            cachestore_redis::is_cluster_available() ? '' : get_string('clustermodeunavailable', 'cachestore_redis'),
+            cachestore_redis::is_cluster_available() ? '' : 'disabled');
+
+        $form->addElement('textarea', 'server', get_string('server', 'cachestore_redis'),
+            [
+                'cols' => 100,
+                'rows' => 10,
+            ]);
         $form->setType('server', PARAM_TEXT);
         $form->addHelpButton('server', 'server', 'cachestore_redis');
         $form->addRule('server', get_string('required'), 'required');
@@ -64,5 +73,70 @@ class cachestore_redis_addinstance_form extends cachestore_addinstance_form {
         $form->addHelpButton('compressor', 'usecompressor', 'cachestore_redis');
         $form->setDefault('compressor', cachestore_redis::COMPRESSOR_NONE);
         $form->setType('compressor', PARAM_INT);
+    }
+
+    /**
+     * Validates the configuration form data
+     *
+     * @param array    $data
+     * @param array    $files
+     * @param string[] $errors
+     * @return array
+     */
+    public function configuration_validation($data, $files, $errors) {
+        $clusteravailable = cachestore_redis::is_cluster_available();
+        $clustermode = !empty($data['clustermode']);
+        $servers = explode("\r\n", $data['server']);
+
+        // Sanity check, check if RedisCluster installed (should not happend as checkbox is disabled).
+        if (!$clusteravailable && $clustermode) {
+            $errors['clustermode'] = get_string('clustermodeunavailable', 'cachestore_redis');
+        }
+
+        if ($clustermode) {
+            $errors = $this->configuration_validation_serverscluster($servers, $errors);
+        } else {
+            // Multiple servers only allowed in cluster mode.
+            if (count($servers) != 1) {
+                $errors['server'] = get_string('formerror_singleserveronly', 'cachestore_redis');
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validate if the given servers are well-formed.
+     *
+     * @param string[] $servers
+     * @param string[] $errors
+     * @return string[]
+     */
+    private function configuration_validation_serverscluster($servers, $errors) {
+        // In cluster mode port is mandatory.
+        foreach ($servers as $server) {
+            $server = trim($server);
+            if (empty($server)) {
+                continue;
+            }
+
+            $addressport = explode(':', $server);
+            if (count($addressport) != 2) {
+                if (!array_key_exists('server', $errors)) {
+                    $errors['server'] = [];
+                }
+                $errors['server'][] = get_string(
+                    'formerror_clusterserver',
+                    'cachestore_redis',
+                    ['server' => $server]
+                );
+            }
+        }
+
+        if (array_key_exists('server', $errors)) {
+            $errors['server'] = implode('<br />', $errors['server']);
+        }
+
+        return $errors;
     }
 }

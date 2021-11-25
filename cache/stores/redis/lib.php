@@ -84,7 +84,7 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
     /**
      * Connection to Redis for this store.
      *
-     * @var Redis
+     * @var Redis|RedisCluster
      */
     protected $redis;
 
@@ -96,11 +96,33 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
     protected $serializer = Redis::SERIALIZER_PHP;
 
     /**
+     * Redis in cluster mode.
+     *
+     * @var bool
+     */
+    protected $clustermode = false;
+
+    /**
      * Compressor for this store.
      *
      * @var int
      */
     protected $compressor = self::COMPRESSOR_NONE;
+
+    /** @var bool */
+    private static $clusteravailable = null;
+
+    /**
+     * Checks if cluster mode is available in PHP.
+     *
+     * @return bool
+     */
+    public static function is_cluster_available() {
+        if (is_null(self::$clusteravailable)) {
+            self::$clusteravailable = class_exists('RedisCluster');
+        }
+        return self::$clusteravailable;
+    }
 
     /**
      * Determines if the requirements for this type of store are met.
@@ -108,7 +130,7 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
      * @return bool
      */
     public static function are_requirements_met() {
-        return class_exists('Redis');
+        return class_exists('Redis') && class_exists('RedisCluster');
     }
 
     /**
@@ -156,6 +178,11 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
         if (array_key_exists('serializer', $configuration)) {
             $this->serializer = (int)$configuration['serializer'];
         }
+
+        if (array_key_exists('clustermode', $configuration)) {
+            $this->clustermode = (bool)$configuration['clustermode'];
+        }
+
         if (array_key_exists('compressor', $configuration)) {
             $this->compressor = (int)$configuration['compressor'];
         }
@@ -171,9 +198,33 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
      * @param string $server The server connection string
      * @param string $prefix The key prefix
      * @param string $password The server connection password
-     * @return Redis
+     * @return Redis|RedisCluster
      */
     protected function new_redis($server, $prefix = '', $password = '') {
+        if ($this->clustermode) {
+            $redis = $this->new_redis_cluster($server, $prefix, $password);
+        } else {
+            $redis = $this->new_redis_single($server, $prefix, $password);
+        }
+        if ($this->is_ready()) {
+            $redis->setOption(Redis::OPT_SERIALIZER, $this->serializer);
+            if (!empty($prefix)) {
+                $redis->setOption(Redis::OPT_PREFIX, $prefix);
+            }
+        }
+        return $redis;
+    }
+
+    /**
+     * Create a new Redis instance and
+     * connect to the server.
+     *
+     * @param string $server The server connection string
+     * @param string $prefix The key prefix
+     * @param string $password The server connection password
+     * @return Redis
+     */
+    protected function new_redis_single($server, $prefix = '', $password = '') {
         $redis = new Redis();
         // Check if it isn't a Unix socket to set default port.
         $port = ($server[0] === '/') ? null : 6379;
@@ -208,12 +259,55 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
     }
 
     /**
+     * Create a new RedisCluster instance already connect to the server.
+     *
+     * @param string $servers  string The server connection strings separated by newlines.
+     * @param string $prefix The key prefix
+     * @param string $password The server connection password
+     * @return RedisCluster
+     */
+    protected function new_redis_cluster($servers, $prefix = '', $password = '') {
+        $servers = explode("\n", $servers);
+
+        $trimmedservers = [];
+        foreach ($servers as $server) {
+            $server = trim($server);
+            if (!empty($server)) {
+                $trimmedservers[] = $server;
+            }
+        }
+
+        $redis = null;
+        $this->isready = false;
+
+        try {
+            $redis = new RedisCluster(null, $trimmedservers);
+            // If using compressor, serialisation will be done at cachestore level, not php-redis.
+            if ($this->compressor == self::COMPRESSOR_NONE) {
+                $redis->setOption(Redis::OPT_SERIALIZER, $this->serializer);
+            }
+            if (!empty($password)) {
+                $redis->auth($password);
+            }
+            if (!empty($prefix)) {
+                $redis->setOption(Redis::OPT_PREFIX, $prefix);
+            }
+            $this->isready = true;
+        } catch (\RedisClusterException $exception) {
+            debugging($exception->getMessage());
+            $this->isready = false;
+        }
+
+        return $redis;
+    }
+
+    /**
      * See if we can ping Redis server
      *
-     * @param Redis $redis
+     * @param RedisCluster|Redis $redis
      * @return bool
      */
-    protected function ping(Redis $redis) {
+    protected function ping(RedisCluster|Redis $redis) {
         try {
             if ($redis->ping() === false) {
                 return false;
@@ -507,6 +601,7 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
             'password' => $data->password,
             'serializer' => $data->serializer,
             'compressor' => $data->compressor,
+            'clustermode' => $data->clustermode,
         );
     }
 
@@ -522,6 +617,7 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
         $data['server'] = $config['server'];
         $data['prefix'] = !empty($config['prefix']) ? $config['prefix'] : '';
         $data['password'] = !empty($config['password']) ? $config['password'] : '';
+        $data['clustermode'] = !empty($config['clustermode']);
         if (!empty($config['serializer'])) {
             $data['serializer'] = $config['serializer'];
         }
@@ -553,6 +649,8 @@ class cachestore_redis extends cache_store implements cache_is_key_aware, cache_
         if (!empty($config->test_password)) {
             $configuration['password'] = $config->test_password;
         }
+        $configuration['clustermode'] = ($config->test_clustermode);
+
         $cache = new cachestore_redis('Redis test', $configuration);
         $cache->initialise($definition);
 

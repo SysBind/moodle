@@ -25,13 +25,23 @@
 defined('MOODLE_INTERNAL') || die();
 
 $settings->add(
-    new admin_setting_configtext(
+    new admin_setting_configtextarea(
         'cachestore_redis/test_server',
         get_string('test_server', 'cachestore_redis'),
         get_string('test_server_desc', 'cachestore_redis'),
         '',
         PARAM_TEXT,
-        16
+        '100',
+        '10'
+    )
+);
+
+$settings->add(
+    new admin_setting_configcheckbox(
+        'cachestore_redis/test_clustermode',
+        get_string('test_clustermode', 'cachestore_redis'),
+        get_string('test_clustermode_desc', 'cachestore_redis'),
+        '0'
     )
 );
 $settings->add(
