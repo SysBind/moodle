@@ -90,6 +90,13 @@ class redis extends handler {
     protected $timeout;
 
     /**
+     * Redis in cluster mode.
+     *
+     * @var bool
+     */
+    protected $clustermode = false;
+
+    /**
      * Create new instance of handler.
      */
     public function __construct() {
@@ -141,6 +148,10 @@ class redis extends handler {
         if (isset($CFG->session_redis_compressor)) {
             $this->compressor = $CFG->session_redis_compressor;
         }
+
+        if (isset($CFG->session_redis_clustermode)) {
+            $this->clustermode = $CFG->session_redis_clustermode;
+        }
     }
 
     /**
@@ -172,9 +183,15 @@ class redis extends handler {
         if (!$version or version_compare($version, '2.0') <= 0) {
             throw new exception('sessionhandlerproblem', 'error', '', null, 'redis extension version must be at least 2.0');
         }
-
-        $this->connection = new \Redis();
-
+        if ($this->clustermode) {
+            $seeds = explode(',', $this->host);
+            foreach ($seeds as $key => $host) {
+                $seeds[$key] = $host. ':' . $this->port;
+            }
+            $this->connection = new \RedisCluster(null, $seeds);
+        } else {
+            $this->connection = new \Redis();
+        }
         $result = session_set_save_handler(array($this, 'handler_open'),
             array($this, 'handler_close'),
             array($this, 'handler_read'),
@@ -196,7 +213,7 @@ class redis extends handler {
                 $delay = rand(100000, 500000);
 
                 // One second timeout was chosen as it is long for connection, but short enough for a user to be patient.
-                if (!$this->connection->connect($this->host, $this->port, 1, null, $delay)) {
+                if (!$this->clustermode && !$this->connection->connect($this->host, $this->port, 1, null, $delay)) {
                     throw new RedisException('Unable to connect to host.');
                 }
 
@@ -221,7 +238,9 @@ class redis extends handler {
                         throw new RedisException('Unable to select Redis database '.$this->database.'.');
                     }
                 }
-                $this->connection->ping();
+                if (!$this->clustermode) {
+                    $this->connection->ping();
+                }
                 return true;
             } catch (RedisException $e) {
                 $logstring = "Failed to connect (try {$counter} out of {$maxnumberofretries}) to redis ";
