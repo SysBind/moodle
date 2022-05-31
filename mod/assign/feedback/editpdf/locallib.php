@@ -23,8 +23,6 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 use \assignfeedback_editpdf\document_services;
 use \assignfeedback_editpdf\page_editor;
 
@@ -42,6 +40,7 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
 
     /**
      * Get the name of the file feedback plugin
+     *
      * @return string
      */
     public function get_name() {
@@ -163,7 +162,7 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
                 $feedbackfile->get_filename(),
                 false
             );
-           $filename = $feedbackfile->get_filename();
+            $filename = $feedbackfile->get_filename();
         }
 
         $widget = new assignfeedback_editpdf_widget(
@@ -181,7 +180,7 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
     /**
      * Get the pathnamehash for the specified stamp if in the system stamps.
      *
-     * @param   stored_file $file
+     * @param stored_file $file
      * @return  string
      */
     protected function get_system_stamp_path(stored_file $stamp): string {
@@ -200,8 +199,8 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
     /**
      * Get the pathnamehash for the specified stamp if in the current assignment stamps.
      *
-     * @param   stored_file $file
-     * @param   int $gradeid
+     * @param stored_file $file
+     * @param int $gradeid
      * @return  string
      */
     protected function get_assignment_stamp_path(stored_file $stamp, int $gradeid): string {
@@ -237,8 +236,8 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
         // Links to download the generated pdf...
         if ($attempt > -1 && page_editor::has_annotations_or_comments($grade->id, false)) {
             $html = $this->assignment->render_area_files('assignfeedback_editpdf',
-                                                         document_services::FINAL_PDF_FILEAREA,
-                                                         $grade->id);
+                document_services::FINAL_PDF_FILEAREA,
+                $grade->id);
             $mform->addElement('static', 'editpdf_files', get_string('downloadfeedback', 'assignfeedback_editpdf'), $html);
         }
 
@@ -268,7 +267,8 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
             $sourceuserid = $data->editpdf_source_userid;
             // Retrieve the grade information for the source user.
             $sourcegrade = $this->assignment->get_user_grade($sourceuserid, true, $grade->attemptnumber);
-            $pagenumbercount = document_services::page_number_for_attempt($this->assignment, $sourceuserid, $sourcegrade->attemptnumber);
+            $pagenumbercount =
+                document_services::page_number_for_attempt($this->assignment, $sourceuserid, $sourcegrade->attemptnumber);
             for ($i = 0; $i < $pagenumbercount; $i++) {
                 // Select all annotations.
                 $draftannotations = page_editor::get_annotations($sourcegrade->id, $i, true);
@@ -316,6 +316,29 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
                         return true;
                     }
                 }
+
+                // Select all htmlcomments.
+                $drafthtmlcomments = page_editor::get_htmlcomments($sourcegrade->id, $i, true);
+                $nondrafthtmlcomments = page_editor::get_htmlcomments($grade->id, $i, false);
+                if (count($drafthtmlcomments) != count($nondrafthtmlcomments)) {
+                    return true;
+                } else {
+                    // Go for a closer inspection.
+                    $matches = 0;
+                    foreach ($nondrafthtmlcomments as $ndhtmlcomment) {
+                        foreach ($drafthtmlcomments as $dhtmlcomment) {
+                            foreach ($ndhtmlcomment as $key => $value) {
+                                if ($key != 'id' && $value != $dhtmlcomment->{$key}) {
+                                    continue 2;
+                                }
+                            }
+                            $matches++;
+                        }
+                    }
+                    if ($matches !== count($nondrafthtmlcomments)) {
+                        return true;
+                    }
+                }
             }
         }
         return false;
@@ -351,7 +374,7 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
      * @param bool $showviewlink (Always set to false).
      * @return string
      */
-    public function view_summary(stdClass $grade, & $showviewlink) {
+    public function view_summary(stdClass $grade, &$showviewlink) {
         $showviewlink = false;
         return $this->view($grade);
     }
@@ -368,8 +391,8 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
         // Show a link to download the pdf.
         if (page_editor::has_annotations_or_comments($grade->id, false)) {
             $html = $this->assignment->render_area_files('assignfeedback_editpdf',
-                                                         document_services::FINAL_PDF_FILEAREA,
-                                                         $grade->id);
+                document_services::FINAL_PDF_FILEAREA,
+                $grade->id);
 
             // Also show the link to the read-only interface.
             $renderer = $PAGE->get_renderer('assignfeedback_editpdf');
@@ -388,9 +411,10 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
     public function is_empty(stdClass $grade) {
         global $DB;
 
-        $comments = $DB->count_records('assignfeedback_editpdf_cmnt', array('gradeid'=>$grade->id, 'draft'=>0));
-        $annotations = $DB->count_records('assignfeedback_editpdf_annot', array('gradeid'=>$grade->id, 'draft'=>0));
-        return $comments == 0 && $annotations == 0;
+        $comments = $DB->count_records('assignfeedback_editpdf_cmnt', array('gradeid' => $grade->id, 'draft' => 0));
+        $htmlcomments = $DB->count_records('assignfeedback_editpdf_htcm', array('gradeid' => $grade->id, 'draft' => 0));
+        $annotations = $DB->count_records('assignfeedback_editpdf_annot', array('gradeid' => $grade->id, 'draft' => 0));
+        return $comments == 0 && $annotations == 0 && $htmlcomments == 0;
     }
 
     /**
@@ -400,11 +424,12 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
      */
     public function delete_instance() {
         global $DB;
-        $grades = $DB->get_records('assign_grades', array('assignment'=>$this->assignment->get_instance()->id), '', 'id');
+        $grades = $DB->get_records('assign_grades', array('assignment' => $this->assignment->get_instance()->id), '', 'id');
         if ($grades) {
             list($gradeids, $params) = $DB->get_in_or_equal(array_keys($grades), SQL_PARAMS_NAMED);
             $DB->delete_records_select('assignfeedback_editpdf_annot', 'gradeid ' . $gradeids, $params);
             $DB->delete_records_select('assignfeedback_editpdf_cmnt', 'gradeid ' . $gradeids, $params);
+            $DB->delete_records_select('assignfeedback_editpdf_htcm', 'gradeid ' . $gradeids, $params);
         }
         return true;
     }
@@ -421,6 +446,7 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
         }
         return $this->enabledcache;
     }
+
     /**
      * Prevent enabling this plugin if ghostscript is not available.
      *
@@ -441,6 +467,7 @@ class assign_feedback_editpdf extends assign_feedback_plugin {
 
     /**
      * This plugin will inject content into the review panel with javascript.
+     *
      * @return bool true
      */
     public function supports_review_panel() {

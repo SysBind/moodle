@@ -33,6 +33,7 @@ use DOMDocument;
  * PDF 1.4 document with all submission files concatinated together. It also
  * provides the functions to generate a downloadable pdf with all comments and
  * annotations embedded.
+ *
  * @copyright 2012 Davo Smith
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -90,6 +91,7 @@ EOD;
     /**
      * This function will take an int or an assignment instance and
      * return an assignment instance. It is just for convenience.
+     *
      * @param int|\assign $assignment
      * @return assign
      */
@@ -109,6 +111,7 @@ EOD;
 
     /**
      * Get a hash that will be unique and can be used in a path name.
+     *
      * @param int|\assign $assignment
      * @param int $userid
      * @param int $attemptnumber (-1 means latest attempt)
@@ -124,6 +127,7 @@ EOD;
 
     /**
      * Use a DOM parser to accurately replace images with their alt text.
+     *
      * @param string $html
      * @return string New html with no image tags.
      */
@@ -229,11 +233,11 @@ EOD;
                         $record->filename = $plugin->get_type() . '-' . $filename;
 
                         $htmlfile = $fs->get_file($record->contextid,
-                                $record->component,
-                                $record->filearea,
-                                $record->itemid,
-                                $record->filepath,
-                                $record->filename);
+                            $record->component,
+                            $record->filearea,
+                            $record->itemid,
+                            $record->filepath,
+                            $record->filename);
 
                         $newhash = sha1($file);
 
@@ -386,6 +390,7 @@ EOD;
 
     /**
      * This function will generate and return a list of the page images from a pdf.
+     *
      * @param int|\assign $assignment
      * @param int $userid
      * @param int $attemptnumber (-1 means latest attempt)
@@ -567,7 +572,7 @@ EOD;
                         throw new \coding_exception("'" . $file->get_filename()
                             . "' file hasn't the expected format filename: image_pageXXXX.png.");
                     }
-                    $pagenumber = (int)$matches[1];
+                    $pagenumber = (int) $matches[1];
 
                     // Save the page in the ordered array.
                     $pages[$pagenumber] = $file;
@@ -592,6 +597,7 @@ EOD;
 
     /**
      * This function returns sensible filename for a feedback file.
+     *
      * @param int|\assign $assignment
      * @param int $userid
      * @param int $attemptnumber (-1 means latest attempt)
@@ -606,13 +612,13 @@ EOD;
         $groupname = '';
         if ($groupmode) {
             $groupid = groups_get_activity_group($assignment->get_course_module(), true);
-            $groupname = groups_get_group_name($groupid).'-';
+            $groupname = groups_get_group_name($groupid) . '-';
         }
         if ($groupname == '-') {
             $groupname = '';
         }
         $grade = $assignment->get_user_grade($userid, true, $attemptnumber);
-        $user = $DB->get_record('user', array('id'=>$userid), '*', MUST_EXIST);
+        $user = $DB->get_record('user', array('id' => $userid), '*', MUST_EXIST);
 
         if ($assignment->is_blind_marking()) {
             $prefix = $groupname . get_string('participant', 'assign');
@@ -675,11 +681,11 @@ EOD;
         $grade = $assignment->get_user_grade($userid, true, $attemptnumber);
         // Copy any new stamps to this instance.
         if ($files = $fs->get_area_files($assignment->get_context()->id,
-                                         'assignfeedback_editpdf',
-                                         'stamps',
-                                         $grade->id,
-                                         "filename",
-                                         false)) {
+            'assignfeedback_editpdf',
+            'stamps',
+            $grade->id,
+            "filename",
+            false)) {
             foreach ($files as $file) {
                 $filename = $stamptmpdir . '/' . $file->get_filename();
                 $file->copy_content_to($filename); // Copy the file.
@@ -691,6 +697,7 @@ EOD;
         page_editor::release_drafts($grade->id);
 
         $allcomments = array();
+        $allhtmlcomments = array();
 
         for ($i = 0; $i < $pagecount; $i++) {
             $pagerotation = page_editor::get_page_rotation($grade->id, $i);
@@ -708,21 +715,26 @@ EOD;
             }
 
             $comments = page_editor::get_comments($grade->id, $i, false);
+            $htmlcomments = page_editor::get_htmlcomments($grade->id, $i, false);
             $annotations = page_editor::get_annotations($grade->id, $i, false);
 
             if (!empty($comments)) {
                 $allcomments[$i] = $comments;
             }
 
+            if (!empty($htmlcomments)) {
+                $allhtmlcomments[$i] = $htmlcomments;
+            }
+
             foreach ($annotations as $annotation) {
                 $pdf->add_annotation($annotation->x,
-                                     $annotation->y,
-                                     $annotation->endx,
-                                     $annotation->endy,
-                                     $annotation->colour,
-                                     $annotation->type,
-                                     $annotation->path,
-                                     $stamptmpdir);
+                    $annotation->y,
+                    $annotation->endx,
+                    $annotation->endy,
+                    $annotation->colour,
+                    $annotation->type,
+                    $annotation->path,
+                    $stamptmpdir);
             }
             $pdf->SetAutoPageBreak($autopagebreak, $pagemargin);
             $pdf->setPageMark();
@@ -735,7 +747,17 @@ EOD;
             foreach ($allcomments as $pageno => $comments) {
                 foreach ($comments as $index => $comment) {
                     $pdf->add_comment_marker($comment->pageno, $index, $comment->x, $comment->y, $links[$pageno][$index],
-                            $comment->colour);
+                        $comment->colour);
+                }
+            }
+        }
+
+        if (!empty($allhtmlcomments)) {
+            // Add the comment markers with links.
+            foreach ($allhtmlcomments as $pageno => $htmlcomments) {
+                foreach ($htmlcomments as $index => $htmlcomment) {
+                    $pdf->add_htmlcomment($htmlcomment->pageno, $htmlcomment->width, $htmlcomment->x, $htmlcomment->y,
+                        $htmlcomment->rawtext);
                 }
             }
         }
@@ -804,6 +826,7 @@ EOD;
 
     /**
      * This function returns the generated pdf (if it exists).
+     *
      * @param int|\assign $assignment
      * @param int $userid
      * @param int $attemptnumber (-1 means latest attempt)
@@ -827,11 +850,11 @@ EOD;
 
         $fs = get_file_storage();
         $files = $fs->get_area_files($contextid,
-                                     $component,
-                                     $filearea,
-                                     $itemid,
-                                     "itemid, filepath, filename",
-                                     false);
+            $component,
+            $filearea,
+            $itemid,
+            "itemid, filepath, filename",
+            false);
         if ($files) {
             return reset($files);
         }
@@ -840,6 +863,7 @@ EOD;
 
     /**
      * This function deletes the generated pdf for a student.
+     *
      * @param int|\assign $assignment
      * @param int $userid
      * @param int $attemptnumber (-1 means latest attempt)
@@ -869,6 +893,7 @@ EOD;
 
     /**
      * Get All files in a File area
+     *
      * @param int|\assign $assignment Assignment
      * @param int $userid User ID
      * @param int $attemptnumber Attempt Number
@@ -888,6 +913,7 @@ EOD;
 
     /**
      * Save file.
+     *
      * @param int|\assign $assignment Assignment
      * @param int $userid User ID
      * @param int $attemptnumber Attempt Number
@@ -928,6 +954,7 @@ EOD;
 
     /**
      * This function rotate a page, and mark the page as rotated.
+     *
      * @param int|\assign $assignment Assignment
      * @param int $userid User ID
      * @param int $attemptnumber Attempt Number
@@ -956,7 +983,7 @@ EOD;
                     throw new \coding_exception("'" . $file->get_filename()
                         . "' file hasn't the expected format filename: image_pageXXXX.png.");
                 }
-                $pagenumber = (int)$matches[1];
+                $pagenumber = (int) $matches[1];
 
                 if ($pagenumber == $index) {
                     $source = imagecreatefromstring($file->get_content());
@@ -969,7 +996,7 @@ EOD;
                         $content = imagerotate($source, -90, 0);
                         $degree = ($degree - 90) % 360;
                     }
-                    $filename = $matches[0].'png';
+                    $filename = $matches[0] . 'png';
                     $tmpdir = make_temp_directory(self::COMPONENT . '/' . self::PAGE_IMAGE_FILEAREA . '/'
                         . self::hash($assignment, $userid, $attemptnumber));
                     $tempfile = $tmpdir . '/' . time() . '_' . $filename;
@@ -995,6 +1022,7 @@ EOD;
 
     /**
      * Convert jpg file to pdf file
+     *
      * @param int|\assign $assignment Assignment
      * @param int $userid User ID
      * @param int $attemptnumber Attempt Number
@@ -1004,7 +1032,7 @@ EOD;
      * @throws \file_exception
      * @throws \stored_file_creation_exception
      */
-    private static function save_jpg_to_pdf($assignment, $userid, $attemptnumber, $file, $size=null) {
+    private static function save_jpg_to_pdf($assignment, $userid, $attemptnumber, $file, $size = null) {
         // Temporary file.
         $filename = $file->get_filename();
         $tmpdir = make_temp_directory('assignfeedback_editpdf' . DIRECTORY_SEPARATOR
@@ -1047,6 +1075,7 @@ EOD;
 
     /**
      * Save rotated image data to file.
+     *
      * @param int|\assign $assignment Assignment
      * @param int $userid User ID
      * @param int $attemptnumber Attempt Number

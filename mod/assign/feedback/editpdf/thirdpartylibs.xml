@@ -7,4 +7,10 @@
     <version>2.3.5</version>
     <licenseversion></licenseversion>
   </library>
+  <library>
+    <location>vendor/phplatex</location>
+    <name>PHP LaTeX</name>
+    <license>GNU</license>
+    <licenseversion>2</licenseversion>
+  </library>
 </libraries>

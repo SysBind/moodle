@@ -66,13 +66,13 @@ if ($action === 'pollconversions') {
     }
 
     $response = (object) [
-            'status' => -1,
-            'filecount' => 0,
-            'pagecount' => 0,
-            'pageready' => 0,
-            'partial' => false,
-            'pages' => [],
-        ];
+        'status' => -1,
+        'filecount' => 0,
+        'pagecount' => 0,
+        'pageready' => 0,
+        'partial' => false,
+        'pages' => [],
+    ];
 
     $combineddocument = document_services::get_combined_document_for_attempt($assignment, $userid, $attemptnumber);
     $response->status = $combineddocument->get_status();
@@ -101,9 +101,9 @@ if ($action === 'pollconversions') {
 
     if (in_array($response->status, $completestatuslist)) {
         $pages = document_services::get_page_images_for_attempt($assignment,
-                                                                $userid,
-                                                                $attemptnumber,
-                                                                $readonly);
+            $userid,
+            $attemptnumber,
+            $readonly);
 
         $response->pagecount = $combineddocument->get_page_count();
 
@@ -120,13 +120,15 @@ if ($action === 'pollconversions') {
             $index = count($response->pages);
             $page = new stdClass();
             $comments = page_editor::get_comments($grade->id, $index, $draft);
+            $htmlcomments = page_editor::get_htmlcomments($grade->id, $index, $draft);
             $page->url = moodle_url::make_pluginfile_url($context->id,
-                                                        'assignfeedback_editpdf',
-                                                        $filearea,
-                                                        $grade->id,
-                                                        '/',
-                                                        $pagefile->get_filename())->out();
+                'assignfeedback_editpdf',
+                $filearea,
+                $grade->id,
+                '/',
+                $pagefile->get_filename())->out();
             $page->comments = $comments;
+            $page->htmlcomments = $htmlcomments;
             if ($imageinfo = $pagefile->get_imageinfo()) {
                 $page->width = $imageinfo['width'];
                 $page->height = $imageinfo['height'];
@@ -163,11 +165,15 @@ if ($action === 'pollconversions') {
 
     $added = page_editor::set_comments($grade->id, $index, $page->comments);
     if ($added != count($page->comments)) {
-        array_push($response->errors, get_string('couldnotsavepage', 'assignfeedback_editpdf', $index+1));
+        array_push($response->errors, get_string('couldnotsavepage', 'assignfeedback_editpdf', $index + 1));
+    }
+    $added = page_editor::set_htmlcomments($grade->id, $index, $page->htmlcomments);
+    if ($added != count($page->htmlcomments)) {
+        array_push($response->errors, get_string('couldnotsavepage', 'assignfeedback_editpdf', $index + 1));
     }
     $added = page_editor::set_annotations($grade->id, $index, $page->annotations);
     if ($added != count($page->annotations)) {
-        array_push($response->errors, get_string('couldnotsavepage', 'assignfeedback_editpdf', $index+1));
+        array_push($response->errors, get_string('couldnotsavepage', 'assignfeedback_editpdf', $index + 1));
     }
     echo json_encode($response);
     die();
@@ -182,12 +188,12 @@ if ($action === 'pollconversions') {
     $response->url = '';
     if ($file) {
         $url = moodle_url::make_pluginfile_url($assignment->get_context()->id,
-                                               'assignfeedback_editpdf',
-                                               document_services::FINAL_PDF_FILEAREA,
-                                               $grade->id,
-                                               '/',
-                                               $file->get_filename(),
-                                               false);
+            'assignfeedback_editpdf',
+            document_services::FINAL_PDF_FILEAREA,
+            $grade->id,
+            '/',
+            $file->get_filename(),
+            false);
         $response->url = $url->out(true);
         $response->filename = $file->get_filename();
     }
@@ -258,8 +264,7 @@ if ($action === 'pollconversions') {
         $page->width = 0;
         $page->height = 0;
     }
-    $response = (object)['page' => $page];
+    $response = (object) ['page' => $page];
     echo json_encode($response);
     die();
 }
-

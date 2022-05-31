@@ -41,6 +41,7 @@ var AJAXBASE = M.cfg.wwwroot + '/mod/assign/feedback/editpdf/ajax.php',
         SAVE: '.savebutton',
         COMMENTCOLOURBUTTON: '.commentcolourbutton',
         COMMENTMENU: '.commentdrawable a',
+        HTMLCOMMENTMENU: '.htmlcommentdrawable a',
         ANNOTATIONCOLOURBUTTON:  '.annotationcolourbutton',
         DELETEANNOTATIONBUTTON: '.deleteannotationbutton',
         WARNINGMESSAGECONTAINER: '.warningmessages',
@@ -51,6 +52,7 @@ var AJAXBASE = M.cfg.wwwroot + '/mod/assign/feedback/editpdf/ajax.php',
         USERINFOREGION: '[data-region="user-info"]',
         ROTATELEFTBUTTON: '.rotateleftbutton',
         ROTATERIGHTBUTTON: '.rotaterightbutton',
+        HTMLEDITORBUTTON: '.htmleditorbutton',
         DIALOGUE: '.' + CSS.DIALOGUE
     },
     SELECTEDBORDERCOLOUR = 'rgba(200, 200, 255, 0.9)',
@@ -82,7 +84,8 @@ var AJAXBASE = M.cfg.wwwroot + '/mod/assign/feedback/editpdf/ajax.php',
         'stamp': '.stampbutton',
         'select': '.selectbutton',
         'drag': '.dragbutton',
-        'highlight': '.highlightbutton'
+        'highlight': '.highlightbutton',
+        'htmleditor': '.htmleditorbutton'
     },
     STROKEWEIGHT = 4;
 // This file is part of Moodle - http://moodle.org/
@@ -3492,6 +3495,13 @@ EDITOR.prototype = {
      */
     searchcommentswindow: null,
 
+    /**
+     * The html editor window.
+     * @property htmleditorwindow
+     * @type M.core.dialogue
+     * @protected
+     */
+    htmleditorwindow: null,
 
     /**
      * The selected stamp picture.
@@ -3518,6 +3528,16 @@ EDITOR.prototype = {
      * @public
      */
     editingcomment: false,
+
+    /**
+     * Prevent new comments from appearing
+     * immediately after clicking off a current
+     * comment
+     * @property editinghtmlcomment
+     * @type Boolean
+     * @public
+     */
+    editinghtmlcomment: false,
 
     /**
      * Should inactive comments be collapsed?
@@ -3904,7 +3924,7 @@ EDITOR.prototype = {
      * @method prepare_pages_for_display
      */
     prepare_pages_for_display: function(data) {
-        var i, j, comment, error, annotation, readonly;
+        var i, j, comment, htmlcomment, error, annotation, readonly;
 
         if (!data.pagecount) {
             if (this.dialogue) {
@@ -3929,6 +3949,17 @@ EDITOR.prototype = {
                                                                                  comment.width,
                                                                                  comment.colour,
                                                                                  comment.rawtext);
+            }
+            for (j = 0; j < this.pages[i].htmlcomments.length; j++) {
+                htmlcomment = this.pages[i].htmlcomments[j];
+                this.pages[i].htmlcomments[j] = new M.assignfeedback_editpdf.htmlcomment(this,
+                    htmlcomment.gradeid,
+                    htmlcomment.pageno,
+                    htmlcomment.x,
+                    htmlcomment.y,
+                    htmlcomment.width,
+                    htmlcomment.colour,
+                    htmlcomment.rawtext);
             }
             for (j = 0; j < this.pages[i].annotations.length; j++) {
                 annotation = this.pages[i].annotations[j];
@@ -4097,8 +4128,14 @@ EDITOR.prototype = {
             currentstampbutton,
             stampfiles,
             picker,
-            filename;
+            filename,
+            htmleditorbutton;
 
+        htmleditorbutton = this.get_dialogue_element(SELECTOR.HTMLEDITORBUTTON);
+        if(htmleditorbutton !== null &&  htmleditorbutton !== 'unknown') {
+            htmleditorbutton.on('click', this.open_htmleditor, this);
+            htmleditorbutton.on('key', this.open_htmleditor, 'down:13', this);
+        }
         searchcommentsbutton = this.get_dialogue_element(SELECTOR.SEARCHCOMMENTSBUTTON);
         searchcommentsbutton.on('click', this.open_search_comments, this);
         searchcommentsbutton.on('key', this.open_search_comments, 'down:13', this);
@@ -4213,7 +4250,7 @@ EDITOR.prototype = {
         currenttoolnode.setAttribute('aria-pressed', 'false');
         this.currentedit.tool = tool;
 
-        if (tool !== "comment" && tool !== "select" && tool !== "drag" && tool !== "stamp") {
+        if (tool !== "htmleditor" && tool !== "comment" && tool !== "select" && tool !== "drag" && tool !== "stamp") {
             this.lastannotationtool = tool;
         }
 
@@ -4228,10 +4265,13 @@ EDITOR.prototype = {
      */
     stringify_current_page: function() {
         var comments = [],
+            htmlcomments = [],
             annotations = [],
             page,
             i = 0;
-
+        for (i = 0; i < this.pages[this.currentpage].htmlcomments.length; i++) {
+            htmlcomments[i] = this.pages[this.currentpage].htmlcomments[i].clean();
+        }
         for (i = 0; i < this.pages[this.currentpage].comments.length; i++) {
             comments[i] = this.pages[this.currentpage].comments[i].clean();
         }
@@ -4239,7 +4279,7 @@ EDITOR.prototype = {
             annotations[i] = this.pages[this.currentpage].annotations[i].clean();
         }
 
-        page = {comments: comments, annotations: annotations};
+        page = {comments: comments, annotations: annotations, htmlcomments: htmlcomments};
 
         return Y.JSON.stringify(page);
     },
@@ -4251,6 +4291,7 @@ EDITOR.prototype = {
      */
     get_current_drawable: function() {
         var comment,
+            htmlcomment,
             annotation,
             drawable = false;
 
@@ -4261,6 +4302,9 @@ EDITOR.prototype = {
         if (this.currentedit.tool === 'comment') {
             comment = new M.assignfeedback_editpdf.comment(this);
             drawable = comment.draw_current_edit(this.currentedit);
+        } else if (this.currentedit.tool === 'htmleditor') {
+                htmlcomment = new M.assignfeedback_editpdf.htmlcomment(this);
+                drawable = htmlcomment.draw_current_edit(this.currentedit);
         } else {
             annotation = this.create_annotation(this.currentedit.tool, {});
             if (annotation) {
@@ -4321,6 +4365,9 @@ EDITOR.prototype = {
         }
 
         if (this.editingcomment) {
+            return;
+        }
+        if (this.editinghtmlcomment) {
             return;
         }
 
@@ -4434,17 +4481,32 @@ EDITOR.prototype = {
     edit_end: function() {
         var duration,
             comment,
-            annotation;
+            htmlcomment,
+            annotation,
+            needsaved;
 
         duration = new Date().getTime() - this.currentedit.start;
+        needsaved = false;
 
         if (duration < CLICKTIMEOUT || this.currentedit.start === false) {
             return;
         }
-
-        if (this.currentedit.tool === 'comment') {
+        if (this.currentedit.tool === 'htmleditor') {
             if (this.currentdrawable) {
                 this.currentdrawable.erase();
+                needsaved = true;
+            }
+            this.currentdrawable = false;
+            htmlcomment = new M.assignfeedback_editpdf.htmlcomment(this);
+            if (htmlcomment.init_from_edit(this.currentedit)) {
+                this.pages[this.currentpage].htmlcomments.push(htmlcomment);
+                this.drawables.push(htmlcomment.draw());
+                needsaved = true;
+            }
+        } else if (this.currentedit.tool === 'comment') {
+            if (this.currentdrawable) {
+                this.currentdrawable.erase();
+                needsaved = true;
             }
             this.currentdrawable = false;
             comment = new M.assignfeedback_editpdf.comment(this);
@@ -4452,23 +4514,28 @@ EDITOR.prototype = {
                 this.pages[this.currentpage].comments.push(comment);
                 this.drawables.push(comment.draw(true));
                 this.editingcomment = true;
+                needsaved = true;
             }
         } else {
             annotation = this.create_annotation(this.currentedit.tool, {});
             if (annotation) {
                 if (this.currentdrawable) {
                     this.currentdrawable.erase();
+                    needsaved = true;
                 }
                 this.currentdrawable = false;
                 if (annotation.init_from_edit(this.currentedit)) {
                     this.pages[this.currentpage].annotations.push(annotation);
                     this.drawables.push(annotation.draw());
+                    needsaved = true;
                 }
             }
         }
 
         // Save the changes.
-        this.save_current_page();
+        if (needsaved) {
+            this.save_current_page();
+        }
 
         // Reset the current edit.
         this.currentedit.starttime = 0;
@@ -4525,7 +4592,10 @@ EDITOR.prototype = {
             return new M.assignfeedback_editpdf.annotationhighlight(data);
         } else if (type === "stamp") {
             return new M.assignfeedback_editpdf.annotationstamp(data);
+        } else if (type === "htmleditor") {
+            return new M.assignfeedback_editpdf.htmlcomment(data);
         }
+
         return false;
     },
 
@@ -4593,7 +4663,24 @@ EDITOR.prototype = {
         this.searchcommentswindow.show();
         e.preventDefault();
     },
+    /**
+     * Event handler to open the comment search interface.
+     *
+     * @param Event e
+     * @protected
+     * @method open_htmleditor
+     */
+    open_htmleditor: function(e) {
+        if (!this.htmleditorwindow) {
+            this.htmleditorwindow = new M.assignfeedback_editpdf.htmleditor({
+                editor: this
+            });
+        }
 
+        this.htmleditorwindow.show();
+
+        e.preventDefault();
+    },
     /**
      * Toggle function to expand/collapse all comments on page.
      *
@@ -4634,6 +4721,9 @@ EDITOR.prototype = {
         }
         for (i = 0; i < page.comments.length; i++) {
             this.drawables.push(page.comments[i].draw(false));
+        }
+        for (i = 0; i < page.htmlcomments.length; i++) {
+            this.drawables.push(page.htmlcomments[i].draw());
         }
     },
 
@@ -4865,6 +4955,15 @@ EDITOR.prototype = {
                         for (i = 0; i < oldcomments.length; i++) {
                             oldcomments[i].updatePosition();
                         }
+
+                        /**
+                         * Update Position of htmlcomments with relation to canvas coordinates.
+                         * Without this code, the htmlcomments will stay at their positions in windows/document coordinates.
+                         */
+                        var oldhtmlcomments = page.htmlcomments;
+                        for (i = 0; i < oldhtmlcomments.length; i++) {
+                            oldhtmlcomments[i].updatePosition();
+                        }
                         // Save Annotations.
                         return self.save_current_page();
                     } catch (e) {
@@ -4992,6 +5091,706 @@ M.assignfeedback_editpdf.editor.init = M.assignfeedback_editpdf.editor.init || f
     M.assignfeedback_editpdf.instance = new EDITOR(params);
     return M.assignfeedback_editpdf.instance;
 };
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+
+/**
+ * Provides an in browser PDF editor.
+ *
+ * @module moodle-assignfeedback_editpdf-editor
+ */
+
+/**
+ * Class representing a list of reach text.
+ *
+ * @namespace M.assignfeedback_editpdf
+ * @class htmleditor
+ * @constructor
+ * @extends M.core.dialogue
+ */
+var HTMLEDITOR = function(config) {
+    config.draggable = true;
+    config.centered = true;
+    config.width = 'auto';
+    config.visible = false;
+    config.headerContent = M.util.get_string('htmleditor', 'assignfeedback_editpdf');
+    config.footerContent = '';
+    config.closeButton = false;
+    HTMLEDITOR.superclass.constructor.apply(this, [config]);
+};
+
+var HTMLEDITORNAME = "htmleditor";
+
+
+Y.extend(HTMLEDITOR, M.core.dialogue, {
+    /**
+     * Initialise the menu.
+     *
+     * @method initializer
+     * @return void
+     */
+    editor: null,
+    initializer: function(config) {
+        var editorr,
+            container,
+            textarea,
+            bb;
+        this.editor = config.editor || null;
+        bb = this.get('boundingBox');
+        bb.addClass('assignfeedback_editpdf_htmleditor');
+        editorr = this.get('editor');
+        container = Y.Node.create('<div/>');
+        textarea = Y.one('#editorcontainer');
+        textarea.removeClass('hidden');
+        container.append(textarea);
+
+        Y.one('[name="savechanges"]').on('click', this.removeeditor);
+        Y.one('[name="saveandshownext"]').on('click', this.removeeditor);
+        // Set the body content.
+        this.set('bodyContent', container);
+        HTMLEDITOR.superclass.initializer.call(this, config);
+        this.addButton({
+            name: 'confirm',
+            label: M.util.get_string('confirm', 'moodle'),
+            action: function(e) {
+                e.preventDefault();
+                this.hide();
+            },
+            classNames: 'btn btn-primary',
+            section: Y.WidgetStdMod.FOOTER
+        });
+        this.addButton({
+            name: 'cancel',
+            label: M.util.get_string('cancel', 'moodle'),
+            action: function(e) {
+                e.preventDefault();
+                Y.one('#html_editor').set('value', ' ');
+                this.hide();
+            },
+            classNames: 'btn btn-secondary',
+            section: Y.WidgetStdMod.FOOTER
+        });
+
+    },
+    removeeditor: function () {
+        if (Y.one(".assignfeedback_editpdf_htmleditor")) {
+            Y.one(".assignfeedback_editpdf_htmleditor").remove();
+        }
+    }
+},{
+    NAME: HTMLEDITORNAME,
+    ATTRS: {
+        /**
+         * The editor this search window is attached to.
+         *
+         * @attribute editor
+         * @type M.assignfeedback_editpdf.editor
+         * @default null
+         */
+        editor: {
+            value: null
+        }
+
+    }
+});
+Y.Base.modifyAttrs(HTMLEDITOR, {
+    /**
+     * Whether the widget should be modal or not.
+     *
+     * Moodle override: We override this for commentsearch to force it always true.
+     *
+     * @attribute Modal
+     * @type Boolean
+     * @default true
+     */
+    modal: {
+        getter: function() {
+            return true;
+        }
+    }
+});
+M.assignfeedback_editpdf = M.assignfeedback_editpdf || {};
+M.assignfeedback_editpdf.htmleditor = HTMLEDITOR;
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Provides an in browser PDF editor.
+ *
+ * @module moodle-assignfeedback_editpdf-editor
+ */
+
+/**
+ * Class representing a list of htmlcomments.
+ *
+ * @namespace M.assignfeedback_editpdf
+ * @class htmlcomment
+ * @param M.assignfeedback_editpdf.editor editor
+ * @param Int gradeid
+ * @param Int pageno
+ * @param Int x
+ * @param Int y
+ * @param Int width
+ * @param String colour
+ * @param String rawtext
+ */
+var HTMLCOMMENT = function(editor, gradeid, pageno, x, y, width, colour, rawtext) {
+
+    /**
+     * Reference to M.assignfeedback_editpdf.editor.
+     * @property editor
+     * @type M.assignfeedback_editpdf.editor
+     * @public
+     */
+    this.editor = editor;
+
+    /**
+     * Grade id
+     * @property gradeid
+     * @type Int
+     * @public
+     */
+    this.gradeid = gradeid || 0;
+
+    /**
+     * X position
+     * @property x
+     * @type Int
+     * @public
+     */
+    this.x = parseInt(x, 10) || 0;
+
+    /**
+     * Y position
+     * @property y
+     * @type Int
+     * @public
+     */
+    this.y = parseInt(y, 10) || 0;
+
+    /**
+     * Htmlcomment width
+     * @property width
+     * @type Int
+     * @public
+     */
+    this.width = parseInt(width, 10) || 0;
+
+    /**
+     * Htmlcomment rawtext
+     * @property rawtext
+     * @type String
+     * @public
+     */
+    this.rawtext = rawtext || '';
+
+    /**
+     * Htmlcomment page number
+     * @property pageno
+     * @type Int
+     * @public
+     */
+    this.pageno = pageno || 0;
+
+    /**
+     * Htmlcomment background colour.
+     * @property colour
+     * @type String
+     * @public
+     */
+    this.colour = colour || 'yellow';
+
+    /**
+     * Reference to M.assignfeedback_editpdf.drawable
+     * @property drawable
+     * @type M.assignfeedback_editpdf.drawable
+     * @public
+     */
+    this.drawable = false;
+
+    /**
+     * Boolean used by a timeout to delete empty htmlcomments after a short delay.
+     * @property deleteme
+     * @type Boolean
+     * @public
+     */
+    this.deleteme = false;
+
+    /**
+     * Reference to the link that opens the menu.
+     * @property menulink
+     * @type Y.Node
+     * @public
+     */
+    this.menulink = null;
+
+    /**
+     * Reference to the dialogue that is the context menu.
+     * @property menu
+     * @type M.assignfeedback_editpdf.dropdown
+     * @public
+     */
+    this.menu = null;
+
+    /**
+     * Clean a htmlcomment record, returning an oject with only fields that are valid.
+     * @public
+     * @method clean
+     * @return {}
+     */
+    this.clean = function() {
+        return {
+            gradeid: this.gradeid,
+            x: parseInt(this.x, 10),
+            y: parseInt(this.y, 10),
+            width: parseInt(this.width, 10),
+            rawtext: this.rawtext,
+            pageno: parseInt(this.pageno, 10),
+            colour: this.colour
+        };
+    };
+
+    /**
+     * Draw a htmlcomment.
+     * @public
+     * @method draw
+     * @return M.assignfeedback_editpdf.drawable
+     */
+    this.draw = function(editnode) {
+        var drawable = new M.assignfeedback_editpdf.drawable(this.editor),
+            drawingcanvas = this.editor.get_dialogue_element(SELECTOR.DRAWINGCANVAS),
+            container,
+            node,
+            menu,
+            position,
+            scrollheight,
+            textarea;
+        menu = Y.Node.create('<a href="#"><img src="' + M.util.image_url('t/contextmenu', 'core') + '"/></a>');
+        // // Lets add a contenteditable div.
+        node = editnode || Y.Node.create('<div/>');
+        node.addClass('htmlcomment');
+        container = Y.Node.create('<div class="htmlcommentdrawable"/>');
+        this.menulink = menu;
+        if (this.rawtext.replace(/^\s+|\s+$/g, "") === '') {
+            textarea = Y.one('#html_editor');
+            this.rawtext = textarea.get('value');
+        }
+        menu.setAttribute('tabindex', '0');
+        if (!this.editor.get('readonly')) {
+            container.append(menu);
+        } else {
+            node.setAttribute('readonly', 'readonly');
+        }
+        if (this.width < 100) {
+            this.width = 100;
+        }
+        node.set('innerHTML', this.rawtext);
+        Y.use('mathjax', function() {
+            window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub, node.getDOMNode()]);
+        });
+        scrollheight = node.get('scrollHeight');
+        node.setStyles({
+            'height': scrollheight + 'px'
+        });
+        position = this.editor.get_window_coordinates(new M.assignfeedback_editpdf.point(this.x, this.y));
+        node.setStyles({
+            width: this.width + 'px'
+        });
+        container.append(node);
+        drawingcanvas.append(container);
+        container.setStyle('position', 'absolute');
+        container.setX(position.x);
+        container.setY(position.y);
+        drawable.store_position(container, position.x, position.y);
+
+        // Bind events only when editing.
+        if (!this.editor.get('readonly')) {
+            // Pass through the event handlers on the div.
+            node.on('gesturemovestart', this.editor.edit_start, null, this.editor);
+            node.on('gesturemove', this.editor.edit_move, null, this.editor);
+            node.on('gesturemoveend', this.editor.edit_end, null, this.editor);
+        }
+        drawable.nodes.push(container);
+
+        this.attach_events(node, menu);
+        this.drawable = drawable;
+
+        node.focus();
+        this.width = parseInt(node.getStyle('width'), 10);
+
+        // Trim.
+        if (this.rawtext.replace(/^\s+|\s+$/g, "") === '') {
+            // Delete empty htmlcomments.
+            this.deleteme = true;
+            Y.later(400, this, this.delete_htmlcomment_later);
+            if (document.getElementsByClassName('dir-rtl').length !== 0) {
+                Y.one('#html_editoreditable').set('innerHTML', '<p dir="rtl" style="text-align: right;"><br></p>');
+            } else {
+                Y.one('#html_editoreditable').set('innerHTML', '<p dir="ltr" style="text-align: left;"><br></p>');
+            }
+            if (!this.editor.htmleditorwindow) {
+                this.editor.htmleditorwindow = new M.assignfeedback_editpdf.htmleditor({
+                    editor: this
+                });
+            }
+        }
+        node.active = false;
+        if (this.rawtext.replace(/^\s+|\s+$/g, "") !== '') {
+            if (editnode) {
+                this.editor.save_current_page();
+            }
+            this.drawable = drawable;
+            if (textarea) {
+                textarea.set('value', ' ');
+                if (document.getElementsByClassName('dir-rtl').length !== 0) {
+                    Y.one('#html_editoreditable').set('innerHTML', '<p dir="rtl" style="text-align: right;"><br></p>');
+                } else {
+                    Y.one('#html_editoreditable').set('innerHTML', '<p dir="ltr" style="text-align: left;"><br></p>');
+                }
+            }
+        }
+        return drawable;
+    };
+
+    /**
+     * Delete an empty htmlcomment if it's menu hasn't been opened in time.
+     * @method delete_htmlcomment_later
+     */
+    this.delete_htmlcomment_later = function() {
+        if (this.deleteme) {
+            this.remove();
+        }
+    };
+
+    /**
+     * Htmlomment nodes have a bunch of event handlers attached to them directly.
+     * This is all done here for neatness.
+     *
+     * @protected
+     * @method attach_htmlcomment_events
+     * @param node - The Y.Node representing the htmlcomment.
+     * @param menu - The Y.Node representing the menu.
+     */
+    this.attach_events = function(node, menu) {
+        var container = node.ancestor('div');
+
+        if (!this.editor.get('readonly')) {
+            // For delegated event handler.
+            menu.setData('htmlcomment', this);
+
+            node.on('gesturemovestart', function(e) {
+                if (editor.currentedit.tool === 'select') {
+                    e.preventDefault();
+                    node.setData('offsetx', e.clientX - container.getX());
+                    node.setData('offsety', e.clientY - container.getY());
+                }
+            });
+            node.on('gesturemove', function(e) {
+                if (editor.currentedit.tool === 'select') {
+                    var x = e.clientX - node.getData('offsetx'),
+                        y = e.clientY - node.getData('offsety'),
+                        newlocation,
+                        windowlocation,
+                        bounds;
+
+                    if (node.getData('clicking') !== true) {
+                        node.setData('clicking', true);
+                    }
+
+                    newlocation = this.editor.get_canvas_coordinates(new M.assignfeedback_editpdf.point(x, y));
+                    bounds = this.editor.get_canvas_bounds(true);
+                    bounds.x = 0;
+                    bounds.y = 0;
+
+                    bounds.width -= 24;
+                    bounds.height -= 24;
+                    // Clip to the window size - the comment icon size.
+                    newlocation.clip(bounds);
+
+                    this.x = newlocation.x;
+                    this.y = newlocation.y;
+
+                    windowlocation = this.editor.get_window_coordinates(newlocation);
+                    container.setX(windowlocation.x);
+                    container.setY(windowlocation.y);
+                    this.drawable.store_position(container, windowlocation.x, windowlocation.y);
+                }
+            }, null, this);
+            this.menu = new M.assignfeedback_editpdf.htmlcommentmenu({
+                buttonNode: this.menulink,
+                htmlcomment: this
+            });
+        }
+    };
+
+    /**
+     * Delete a htmlcomment.
+     * @method remove
+     */
+    this.remove = function() {
+        var i = 0;
+        var htmlcomments;
+
+        htmlcomments = this.editor.pages[this.editor.currentpage].htmlcomments;
+        for (i = 0; i < htmlcomments.length; i++) {
+            if (htmlcomments[i] === this) {
+                htmlcomments.splice(i, 1);
+                this.drawable.erase();
+                this.editor.save_current_page();
+                return;
+            }
+        }
+    };
+
+    /**
+     * Draw the in progress edit.
+     *
+     * @public
+     * @method draw_current_edit
+     * @param M.assignfeedback_editpdf.edit edit
+     */
+    this.draw_current_edit = function(edit) {
+        var bounds = new M.assignfeedback_editpdf.rect(),
+            drawable = new M.assignfeedback_editpdf.drawable(this.editor),
+            drawingregion = this.editor.get_dialogue_element(SELECTOR.DRAWINGREGION),
+            node,
+            position;
+
+        bounds.bound([edit.start, edit.end]);
+        position = this.editor.get_window_coordinates(new M.assignfeedback_editpdf.point(bounds.x, bounds.y));
+
+        node = Y.Node.create('<div/>');
+        node.setStyles({
+            'position': 'absolute',
+            'display': 'inline-block',
+            'width': bounds.width,
+            'height': bounds.height,
+            'backgroundSize': '100% 100%'
+        });
+
+        drawingregion.append(node);
+        node.setX(position.x);
+        node.setY(position.y);
+        drawable.store_position(node, position.x, position.y);
+
+        drawable.nodes.push(node);
+
+        return drawable;
+    };
+
+    /**
+     * Promote the current edit to a real htmlcomment.
+     *
+     * @public
+     * @method init_from_edit
+     * @param M.assignfeedback_editpdf.edit edit
+     * @return bool true if htmlcomment bound is more than min width/height, else false.
+     */
+    this.init_from_edit = function(edit) {
+        var bounds = new M.assignfeedback_editpdf.rect();
+        bounds.bound([edit.start, edit.end]);
+
+        if (bounds.width < 40) {
+            bounds.width = 40;
+        }
+        if (bounds.height < 40) {
+            bounds.height = 40;
+        }
+        this.gradeid = this.editor.get('gradeid');
+        this.pageno = this.editor.currentpage;
+        this.x = bounds.x;
+        this.y = bounds.y;
+        this.endx = bounds.x + bounds.width;
+        this.endy = bounds.y + bounds.height;
+        this.rawtext = '';
+
+        // Min width and height is always more than 40px.
+        return true;
+    };
+
+    /**
+     * Update htmlcomment position when rotating page.
+     * @public
+     * @method updatePosition
+     */
+    this.updatePosition = function() {
+        var node = this.drawable.nodes[0].one('div');
+        var container = node.ancestor('div');
+
+        var newlocation = new M.assignfeedback_editpdf.point(this.x, this.y);
+        var windowlocation = this.editor.get_window_coordinates(newlocation);
+
+        container.setX(windowlocation.x);
+        container.setY(windowlocation.y);
+        this.drawable.store_position(container, windowlocation.x, windowlocation.y);
+    };
+
+    /**
+     * Edit exist html comment
+     * @public
+     * @method edit_htmlcomment
+     * @param e
+     */
+    this.edit_htmlcomment = function(e) {
+        var htmleditor,
+            origtext,
+            node;
+        e.preventDefault();
+        this.menu.hide();
+        node = this.drawable.nodes[0].one('div');
+        htmleditor = Y.one('#html_editoreditable');
+        origtext = this.rawtext;
+        htmleditor.set('innerHTML', this.rawtext);
+        if (!this.editor.htmleditorwindow) {
+            this.editor.htmleditorwindow = new M.assignfeedback_editpdf.htmleditor({
+                editor: this
+            });
+        }
+        var htmleditorwindow = this.editor.htmleditorwindow;
+        var cancelbuton = htmleditorwindow.getButton('cancel', Y.WidgetStdMod.FOOTER);
+        cancelbuton.on('click', function (e) {
+            e.preventDefault();
+            this.rawtext = origtext;
+            htmleditorwindow.hide();
+        }, this);
+        var confirmbutton = htmleditorwindow.getButton('confirm', Y.WidgetStdMod.FOOTER);
+        confirmbutton.on('click', function (){
+            // Save the changes back to the comment.
+            var textarea = Y.one('#html_editor');
+            this.rawtext = textarea.get('value');
+            this.draw(node);
+            htmleditorwindow.hide();
+        }, this);
+        htmleditorwindow.show();
+    };
+
+};
+
+M.assignfeedback_editpdf = M.assignfeedback_editpdf || {};
+M.assignfeedback_editpdf.htmlcomment = HTMLCOMMENT;
+var HTMLCOMMENTMENUNAME = "Htmlcommentmenu",
+    HTMLCOMMENTMENU;
+
+/**
+ * Provides an in browser PDF editor.
+ *
+ * @module moodle-assignfeedback_editpdf-editor
+ */
+
+/**
+ * HTMLCOMMENTMENU
+ * This is a drop down list of comment context functions.
+ *
+ * @namespace M.assignfeedback_editpdf
+ * @class commentmenu
+ * @constructor
+ * @param {Object} config
+ * @extends M.assignfeedback_editpdf.dropdown
+ */
+HTMLCOMMENTMENU = function(config) {
+    HTMLCOMMENTMENU.superclass.constructor.apply(this, [config]);
+};
+
+Y.extend(HTMLCOMMENTMENU, M.assignfeedback_editpdf.dropdown, {
+
+    /**
+     * Initialise the menu.
+     *
+     * @method initializer
+     * @param {Object} config
+     */
+    initializer: function(config) {
+        var htmlcommentlinks,
+            link,
+            body,
+            htmlcomment;
+
+        htmlcomment = this.get('htmlcomment');
+        // Build the list of menu items.
+        htmlcommentlinks = Y.Node.create('<ul role="menu" class="assignfeedback_editpdf_menu"/>');
+
+        link = Y.Node.create('<li><a tabindex="-1" href="#">' +
+               M.util.get_string('edithtml', 'assignfeedback_editpdf') +
+               '</a></li>');
+        link.on('click', htmlcomment.edit_htmlcomment, htmlcomment);
+        link.on('key', htmlcomment.edit_htmlcomment, 'enter,space', htmlcomment);
+
+        htmlcommentlinks.append(link);
+
+        link = Y.Node.create('<li><a tabindex="-1" href="#">' +
+               M.util.get_string('deletecomment', 'assignfeedback_editpdf') +
+               '</a></li>');
+        link.on('click', function(e) {
+            e.preventDefault();
+            this.menu.hide();
+            this.remove();
+        }, htmlcomment);
+
+        link.on('key', function() {
+            htmlcomment.menu.hide();
+            htmlcomment.remove();
+        }, 'enter,space', htmlcomment);
+
+        htmlcommentlinks.append(link);
+
+        link = Y.Node.create('<li><hr/></li>');
+        htmlcommentlinks.append(link);
+
+        // Set the accessible header text.
+        this.set('headerText', M.util.get_string('commentcontextmenu', 'assignfeedback_editpdf'));
+
+        body = Y.Node.create('<div/>');
+
+        // Set the body content.
+        body.append(htmlcommentlinks);
+        this.set('bodyContent', body);
+
+        HTMLCOMMENTMENU.superclass.initializer.call(this, config);
+    }
+}, {
+    NAME: HTMLCOMMENTMENUNAME,
+    ATTRS: {
+        /**
+         * The comment this menu is attached to.
+         *
+         * @attribute comment
+         * @type M.assignfeedback_editpdf.comment
+         * @default null
+         */
+        htmlcomment: {
+            value: null
+        }
+
+    }
+});
+
+M.assignfeedback_editpdf = M.assignfeedback_editpdf || {};
+M.assignfeedback_editpdf.htmlcommentmenu = HTMLCOMMENTMENU;
 
 
 }, '@VERSION@', {
