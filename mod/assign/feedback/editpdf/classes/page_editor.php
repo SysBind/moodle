@@ -403,14 +403,14 @@ class page_editor {
         foreach ($records as $record) {
             unset($record->id);
             $record->draft = 0;
-            $DB->insert_record('assignfeedback_editpdf_annot', $record);
+            $DB->insert_record('assignfeedback_editpdf_cmnt', $record);
         }
 
         $records = $DB->get_records('assignfeedback_editpdf_htcm', array('gradeid' => $gradeid, 'draft' => 0));
         foreach ($records as $record) {
             unset($record->id);
             $record->draft = 0;
-            $DB->insert_record('assignfeedback_editpdf_annot', $record);
+            $DB->insert_record('assignfeedback_editpdf_htcm', $record);
         }
 
         return true;

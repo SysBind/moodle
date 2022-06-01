@@ -2,7 +2,7 @@
 <COMPATIBILITY_MATRIX>
     <PLUGIN name="assignfeedback_editpdf">
         <PHP_EXTENSIONS>
-            <PHP_EXTENSION name="gmagick" level="required"></PHP_EXTENSION>
+            <PHP_EXTENSION name="imagick" level="required"></PHP_EXTENSION>
         </PHP_EXTENSIONS>
     </PLUGIN>
 </COMPATIBILITY_MATRIX>
