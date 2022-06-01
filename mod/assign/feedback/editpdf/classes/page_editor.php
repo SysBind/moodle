@@ -144,7 +144,7 @@ class page_editor {
         global $DB;
 
         $htmlcomments = array();
-        $params = array('gradeid' => $gradeid, 'pageno' => $pageno,);
+        $params = array('gradeid' => $gradeid, 'pageno' => $pageno, 'draft'=>1);
         if (!$draft) {
             $params['draft'] = 0;
         }
