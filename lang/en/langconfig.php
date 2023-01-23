@@ -63,6 +63,7 @@ $string['strftimetime12'] = '%I:%M %p';
 $string['strftimetime24'] = '%H:%M';
 $string['thisdirection'] = 'ltr';
 $string['thisdirectionvertical'] = 'btt';
+$string['thisicondirection'] = 'standard';
 $string['thislanguage'] = 'English';
 $string['thislanguageint'] = 'English';
 $string['thousandssep'] = ',';
