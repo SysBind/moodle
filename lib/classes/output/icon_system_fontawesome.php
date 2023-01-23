@@ -481,6 +481,13 @@ class icon_system_fontawesome extends icon_system_font {
         if (isset($icon->attributes['aria-hidden'])) {
             $data['aria-hidden'] = $icon->attributes['aria-hidden'];
         }
+
+        // Define the orientation of the question mark in right-to-left languages.
+        $mirror = get_string('thisicondirection', 'langconfig');
+        if ($mirror == 'mirror' && (strpos($data['key'], 'fa-question') !== false)) {
+            $data['extraclasses'] = "fa-flip-horizontal";
+        }
+
         return $output->render_from_template('core/pix_icon_fontawesome', $data);
     }
 
