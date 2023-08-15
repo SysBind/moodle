@@ -328,6 +328,10 @@ class pgsql_native_moodle_database extends moodle_database {
             return false;
         }
 
+        if ($this->retry_failed_get_record_skip_ro_replica) {
+            return false;
+        }
+
         return $this->read_slave_can_use_readonly($type, $sql);
 
     }
