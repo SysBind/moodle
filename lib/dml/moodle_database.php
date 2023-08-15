@@ -149,6 +149,11 @@ abstract class moodle_database {
     protected $skiplogging = false;
 
     /**
+     * @var boolean disable using read-only replica after failing to fetch record (MUST_EXIST)
+     */
+    protected $retry_failed_get_record_skip_ro_replica = false;
+    
+    /**
      * Constructor - Instantiates the database, specifying if it's external (connect to other systems) or not (Moodle DB).
      *              Note that this affects the decision of whether prefix checks must be performed or not.
      * @param bool $external True means that an external database is used.
@@ -1679,7 +1684,14 @@ abstract class moodle_database {
         if (!$records = $this->get_records_sql($sql, $params, 0, $count)) {
             // not found
             if ($strictness == MUST_EXIST) {
-                throw new dml_missing_record_exception('', $sql, $params);
+                if ($this->retry_failed_get_record_skip_ro_replica) {
+                    throw new dml_missing_record_exception('', $sql, $params);
+                }
+
+                // retry on primary
+                debugging('Failed getting record from replica (MUST_EXIST), retrying from primary');
+                $this->retry_failed_get_record_skip_ro_replica = true;
+                return $this->get_record_sql($sql, $params, $strictness);
             }
             return false;
         }
