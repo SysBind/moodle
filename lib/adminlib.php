@@ -3853,6 +3853,7 @@ class admin_setting_configtime extends admin_setting {
         $context = (object) [
             'id' => $this->get_id(),
             'name' => $this->get_full_name(),
+            'rtl' => right_to_left(),
             'readonly' => $this->is_readonly(),
             'hours' => array_map(function($i) use ($data) {
                 return [
