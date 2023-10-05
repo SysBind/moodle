@@ -21828,6 +21828,9 @@ div.editor_atto_toolbar button .icon {
   .tertiary-navigation {
     display: none; } }
 
+.dropdown-menu {
+  width: fit-content; }
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale; }
