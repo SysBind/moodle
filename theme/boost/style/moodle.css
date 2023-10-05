@@ -37848,6 +37848,10 @@ div.editor_atto_toolbar button .icon {
   margin-right: auto;
 }
 
+.dropdown-menu {
+  width: fit-content;
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
