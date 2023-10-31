@@ -286,6 +286,35 @@ abstract class pdo_moodle_database extends moodle_database {
     }
 
     /**
+     * Get Last query explain.
+     *
+     * @return array
+     * @throws coding_exception
+     * @throws ddl_change_structure_exception
+     * @throws dml_exception
+     * @throws dml_read_exception
+     * @throws dml_write_exception
+     */
+    protected function query_log_explain(): array {
+        list($sql, $params, $type) = $this->fix_sql_params($this->last_sql, $this->last_params);
+        $sql = 'EXPLAIN ' . $sql;
+        try {
+            $sth = $this->pdb->prepare($sql);
+            $sth->execute($params);
+            $result = $this->create_recordset($sth);
+        } catch (PDOException $ex) {
+            $this->lastError = $ex->getMessage();
+            $result = false;
+        }
+        $explain = [];
+        foreach ($result as $rs) {
+            $explain[] = $rs;
+        }
+
+        return $explain;
+    }
+
+    /**
      * Selects rows and return values of first column as array.
      *
      * @param string $sql The SQL query

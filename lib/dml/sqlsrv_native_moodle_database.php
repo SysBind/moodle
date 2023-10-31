@@ -445,6 +445,27 @@ class sqlsrv_native_moodle_database extends moodle_database {
     }
 
     /**
+     * Get Last query explain.
+     *
+     * @return array
+     */
+    protected function query_log_explain(): array {
+        list($sql, $params, $type) = $this->fix_sql_params($this->last_sql, $this->last_params);
+
+        $sql = $this->emulate_bound_params($sql, $params);
+
+        $explain = [];
+        $result = sqlsrv_query($this->sqlsrv, 'EXPLAIN ' . $sql);
+        if ($result !== false) {
+            foreach ($this->create_recordset($result) as $rs) {
+                $explain[] = $rs;
+            }
+        }
+
+        return $explain;
+    }
+
+    /**
      * Return tables in database WITHOUT current prefix.
      * @param bool $usecache if true, returns list of cached tables.
      * @return array of table names in lowercase and without prefix

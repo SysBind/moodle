@@ -1103,6 +1103,29 @@ class oci_native_moodle_database extends moodle_database {
     }
 
     /**
+     * Get Last query explain.
+     *
+     * @return array
+     */
+    protected function query_log_explain(): array {
+        list($rawsql, $params, $type) = $this->fix_sql_params($this->last_sql, $this->last_params);
+
+        list($rawsql, $params) = $this->tweak_param_names($rawsql, $params);
+
+        $explain = [];
+        $stmt = $this->parse_query('EXPLAIN ' . $rawsql);
+        $descriptors = [];
+        $this->bind_params($stmt, $params, null, $descriptors);
+        $result = oci_execute($stmt, $this->commit_status);
+        $this->free_descriptors($descriptors);
+        foreach ($this->create_recordset($stmt) as $rs) {
+            $explain[] = $rs;
+        }
+
+        return $explain;
+    }
+
+    /**
      * Get a number of records as an array of objects using a SQL statement.
      *
      * Return value is like:

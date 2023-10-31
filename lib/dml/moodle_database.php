@@ -539,7 +539,7 @@ abstract class moodle_database {
                 $log->sqltext    = $this->last_sql;
                 $log->sqlparams  = var_export((array)$this->last_params, true);
                 $log->error      = (int)$iserror;
-                $log->info       = $iserror ? $error : null;
+                $log->info       = $iserror ? $error : var_export($this->query_log_explain(), true);
                 $log->backtrace  = format_backtrace($backtrace, true);
                 $log->exectime   = $time;
                 $log->timelogged = time();
@@ -549,6 +549,13 @@ abstract class moodle_database {
             $this->loggingquery = false;
         }
     }
+
+    /**
+     * Get Last query explain.
+     *
+     * @return array
+     */
+    abstract protected function query_log_explain(): array;
 
     /**
      * Disable logging temporarily.

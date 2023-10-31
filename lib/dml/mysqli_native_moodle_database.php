@@ -417,6 +417,32 @@ class mysqli_native_moodle_database extends moodle_database {
     }
 
     /**
+     * Get Last query explain.
+     *
+     * @return array
+     */
+    protected function query_log_explain(): array {
+        list($sql, $params, $type) = $this->fix_sql_params($this->last_sql, $this->last_params);
+
+        if (strpos($sql, ';') !== false) {
+            throw new coding_exception('moodle_database::execute() Multiple sql statements found or
+                bound parameters not used properly in query!');
+        }
+
+        $rawsql = $this->emulate_bound_params($sql, $params);
+        $explain = [];
+        $result = $this->mysqli->query('EXPLAIN ' . $rawsql);
+        foreach ($result as $rs) {
+            $explain[] = $rs;
+        }
+        if ($result !== true) {
+            $result->close();
+        }
+
+        return $explain;
+    }
+
+    /**
      * Check the database to see if innodb_file_per_table is on.
      *
      * @return bool True if on otherwise false.
