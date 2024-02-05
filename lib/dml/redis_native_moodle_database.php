@@ -34,6 +34,8 @@ class redis_native_moodle_database extends moodle_database {
     /** @var array $serverinfo cache */
     private $serverinfo = [];
 
+    /** @var resource|Redis|null $redis database resource */
+    protected $redis     = null;    
     /**
      * Detects if all needed PHP stuff installed.
      * Note: can be used before connect()
@@ -59,8 +61,8 @@ class redis_native_moodle_database extends moodle_database {
      * @throws dml_connection_exception if error
      */
     public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
-        $this->redis = new Redis('127.0.0.1');
-        $this->redis->connect();
+        $this->redis = new Redis();
+        $this->redis->connect('127.0.0.1');
     }
     
     
