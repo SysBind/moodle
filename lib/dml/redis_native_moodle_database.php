@@ -40,5 +40,51 @@ class redis_native_moodle_database extends moodle_database {
             return get_string('redisextensionisnotpresentinphp', 'install');
         }
         return true;
-    }    
+    }
+
+    /**
+     * Returns database family type - describes SQL dialect
+     * Note: can be used before connect()
+     * @return string db family name (mysql, postgres, mssql, oracle, etc.)
+     */
+    public function get_dbfamily() {
+        return 'redis';
+    }
+
+    /**
+     * Returns more specific database driver type
+     * Note: can be used before connect()
+     * @return string db type mysqli, pgsql, oci, mssql, sqlsrv
+     */
+    protected function get_dbtype() {
+        return 'redis';
+    }
+
+    /**
+     * Returns general database library name
+     * Note: can be used before connect()
+     * @return string db type pdo, native
+     */
+    protected function get_dblibrary() {
+        return 'native';
+    }
+
+    /**
+     * Returns localised database type name
+     * Note: can be used before connect()
+     * @return string
+     */
+    public function get_name() {
+        return get_string('nativeredis', 'install');
+    }
+
+    /**
+     * Returns localised database configuration help.
+     * Note: can be used before connect()
+     * @return string
+     */
+    public function get_configuration_help() {
+        return get_string('nativeredishelp', 'install');
+    }
+    
 }
