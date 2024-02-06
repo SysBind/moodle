@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__.'/moodle_database.php');
+require_once(__DIR__.'/redis_native_moodle_temptables.php');
 
 /**
  * Native redis class representing moodle database interface.
@@ -61,8 +62,19 @@ class redis_native_moodle_database extends moodle_database {
      * @throws dml_connection_exception if error
      */
     public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
+        $driverstatus = $this->driver_installed();
+
+        if ($driverstatus !== true) {
+            throw new dml_exception('dbdriverproblem', $driverstatus);
+        }
+
         $this->redis = new Redis();
-        $this->redis->connect('127.0.0.1');
+        $this->redis->connect($dbhost);
+
+        // Connection stabilised and configured, going to instantiate the temptables controller
+        $this->temptables = new redis_native_moodle_temptables($this);
+
+        return true;
     }
     
     
@@ -152,8 +164,7 @@ class redis_native_moodle_database extends moodle_database {
         if ($usecache and $this->tables !== null) {
             return $this->tables;
         }
-        $this->tables = ['NOT_YET_IMPLEMENTED'];
-
+        throw new coding_exception("Redis -> get_tables not yet implemented");
         return $this->tables;
     }
 
@@ -163,7 +174,7 @@ class redis_native_moodle_database extends moodle_database {
      * @return array of arrays
      */
     public function get_indexes($table) {
-        return ['NOT_YET_IMPLEMENTED'];
+        throw new coding_exception("Redis -> get_indexes not yet implemented");        
     }
 
     /**
@@ -173,7 +184,7 @@ class redis_native_moodle_database extends moodle_database {
      * @return database_column_info[] array of database_column_info objects indexed with column names
      */
     protected function fetch_columns(string $table): array {
-        return ['NOT_YET_IMPLEMENTED'];
+        throw new coding_exception("Redis -> fetch_columns not yet implemented");        
     }
 
     /**
@@ -262,7 +273,16 @@ class redis_native_moodle_database extends moodle_database {
      * @throws dml_exception A DML specific exception is thrown for any errors.
      */
     public function get_records_sql($sql, array $params = null, $limitfrom = 0, $limitnum = 0) {
+        error_log("get_records_sql sql= $sql");
+        error_log("get_records_sql param= " . print_r($params, true));
+        xdebug_break();
         list($limitfrom, $limitnum) = $this->normalise_limit_from_num($limitfrom, $limitnum);
+
+        if (str_contains($sql, 'COUNT')) {
+            return [[0]];
+        }
+        
+        return [];
         
         throw new coding_exception("Redis -> get_records_sql not yet implemented");        
     }
