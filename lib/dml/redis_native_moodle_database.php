@@ -217,8 +217,8 @@ class redis_native_moodle_database extends moodle_database {
             $sql = implode("\n;\n", $sql);
         }
 
-
-        throw new coding_exception("Redis -> change_database_structure not yet implemented");
+        
+        throw new coding_exception("Redis -> change_database_structure not yet implemented - - " . $sql);
         
         return true;
     }

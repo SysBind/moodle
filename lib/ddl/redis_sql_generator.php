@@ -50,6 +50,7 @@ class redis_sql_generator extends sql_generator {
      * @return array of sql statements
      */
     public function getCreateTempTableSQL($xmldb_table) {
+        error_log('Redis Generator -> getCreateTempTableSQL' .  $xmldb_table);
         throw new coding_exception("Redis SQL Generator -> getCreateTempTableSQL not yet implemented");        
     }
 
@@ -63,7 +64,9 @@ class redis_sql_generator extends sql_generator {
      * @throws coding_exception Thrown if the xmldb_index does not validate with the xmldb_table.
      */
     public function getCreateIndexSQL($xmldb_table, $xmldb_index) {
-        throw new coding_exception("Redis SQL Generator -> getCreateIndexSQL not yet implemented");
+        error_log('Redis Generator -> getCreateTempTableSQL' .  $xmldb_table->getName() . ' : ' . $xmldb_index->getName());
+        return ['sql-create-index ' . $xmldb_table->getName() . ' ' . $xmldb_index->getName() ];
+        // throw new coding_exception("Redis SQL Generator -> getCreateIndexSQL not yet implemented : " . $xmldb_table->getName() . ' : ' . $xmldb_index->getName());
     }
 
     /**
@@ -175,34 +178,6 @@ class redis_sql_generator extends sql_generator {
         return $this->getAlterFieldSQL($xmldb_table, $xmldb_field);
     }
 
-
-    /**
-     * Given one xmldb_table returns one string with the sequence of the table
-     * in the table (fetched from DB)
-     * The sequence name for Postgres has one standard name convention:
-     *     tablename_fieldname_seq
-     * so we just calculate it and confirm it's present in pg_class
-     *
-     * @param xmldb_table $xmldb_table The xmldb_table object instance.
-     * @return string|bool If no sequence is found, returns false
-     */
-    function getSequenceFromDB($xmldb_table) {
-
-        $tablename = $this->getTableName($xmldb_table);
-        $sequencename = $tablename . '_id_seq';
-
-        if (!$this->mdb->get_record_sql("SELECT c.*
-                                           FROM pg_catalog.pg_class c
-                                           JOIN pg_catalog.pg_namespace as ns ON ns.oid = c.relnamespace
-                                          WHERE c.relname = ? AND c.relkind = 'S'
-                                                AND (ns.nspname = current_schema() OR ns.oid = pg_my_temp_schema())",
-            array($sequencename))) {
-            $sequencename = false;
-        }
-
-        return $sequencename;
-    }
-
     /**
      * Given one object name and it's type (pk, uk, fk, ck, ix, uix, seq, trg).
      *
@@ -217,39 +192,9 @@ class redis_sql_generator extends sql_generator {
      * @return bool If such name is currently in use (true) or no (false)
      */
     public function isNameInUse($object_name, $type, $table_name) {
-        switch($type) {
-            case 'ix':
-            case 'uix':
-            case 'seq':
-                if ($check = $this->mdb->get_records_sql("SELECT c.relname
-                                                            FROM pg_class c
-                                                            JOIN pg_catalog.pg_namespace as ns ON ns.oid = c.relnamespace
-                                                           WHERE lower(c.relname) = ?
-                                                                 AND (ns.nspname = current_schema() OR ns.oid = pg_my_temp_schema())", array(strtolower($object_name)))) {
-                    return true;
-                }
-                break;
-            case 'pk':
-            case 'uk':
-            case 'fk':
-            case 'ck':
-                if ($check = $this->mdb->get_records_sql("SELECT c.conname
-                                                            FROM pg_constraint c
-                                                            JOIN pg_catalog.pg_namespace as ns ON ns.oid = c.connamespace
-                                                           WHERE lower(c.conname) = ?
-                                                                 AND (ns.nspname = current_schema() OR ns.oid = pg_my_temp_schema())", array(strtolower($object_name)))) {
-                    return true;
-                }
-                break;
-            case 'trg':
-                if ($check = $this->mdb->get_records_sql("SELECT tgname
-                                                            FROM pg_trigger
-                                                           WHERE lower(tgname) = ?", array(strtolower($object_name)))) {
-                    return true;
-                }
-                break;
-        }
-        return false; //No name in use found
+        error_log('Redis Generator -> isNameInUse ' . $object_name . ' : ' . $type . ':' . $table_name);
+        return false;
+        // throw new coding_exception("Redis SQL Generator -> isNameInUse not yet implemented");
     }
 
     /**
@@ -261,20 +206,7 @@ class redis_sql_generator extends sql_generator {
                 // This file contains the reserved words for PostgreSQL databases
         // http://www.postgresql.org/docs/current/static/sql-keywords-appendix.html
         $reserved_words = array (
-            'all', 'analyse', 'analyze', 'and', 'any', 'array', 'as', 'asc',
-            'asymmetric', 'authorization', 'between', 'binary', 'both', 'case',
-            'cast', 'check', 'collate', 'column', 'constraint', 'create', 'cross',
-            'current_date', 'current_role', 'current_time', 'current_timestamp',
-            'current_user', 'default', 'deferrable', 'desc', 'distinct', 'do',
-            'else', 'end', 'except', 'false', 'for', 'foreign', 'freeze', 'from',
-            'full', 'grant', 'group', 'having', 'ilike', 'in', 'initially', 'inner',
-            'intersect', 'into', 'is', 'isnull', 'join', 'leading', 'left', 'like',
-            'limit', 'localtime', 'localtimestamp', 'natural', 'new', 'not',
-            'notnull', 'null', 'off', 'offset', 'old', 'on', 'only', 'or', 'order',
-            'outer', 'overlaps', 'placing', 'primary', 'references', 'returning', 'right', 'select',
-            'session_user', 'similar', 'some', 'symmetric', 'table', 'then', 'to',
-            'trailing', 'true', 'union', 'unique', 'user', 'using', 'verbose',
-            'when', 'where', 'with'
+            'all', 'and', 'any', 'array', 'as', 'asc'
         );
         return $reserved_words;
     }
