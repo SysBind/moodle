@@ -164,6 +164,8 @@ class redis_native_moodle_database extends moodle_database {
         if ($usecache and $this->tables !== null) {
             return $this->tables;
         }
+        error_log('redis -> get_tables ');
+        return [];
         throw new coding_exception("Redis -> get_tables not yet implemented");
         return $this->tables;
     }
@@ -184,7 +186,9 @@ class redis_native_moodle_database extends moodle_database {
      * @return database_column_info[] array of database_column_info objects indexed with column names
      */
     protected function fetch_columns(string $table): array {
-        throw new coding_exception("Redis -> fetch_columns not yet implemented");        
+        error_log('redis -> fetch_columns ' . $table);
+        return [];
+            // throw new coding_exception("Redis -> fetch_columns not yet implemented");        
     }
 
     /**
