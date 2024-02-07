@@ -213,10 +213,18 @@ class redis_native_moodle_database extends moodle_database {
      */
     public function change_database_structure($sql, $tablenames = null) {
         $this->get_manager(); // Includes DDL exceptions classes ;-)
+        $this->redis->set('change_database_structure', 1);
+        $this->redis->set('change_database_structure_counter', 0);
+        $cdsis = 0;
         if (is_array($sql)) {
-            $sql = implode("\n;\n", $sql);
+            foreach ($sql as $statement) {
+                $cdsid = $this->redis->incr('change_database_structure_counter');
+                $this->redis->set('cds:'.$cdsid, $statement);
+                error_log('Redis->change_database_structure: ' . $statement);                
+            }
+            //$sql = implode("\n;\n", $sql);
         }
-
+        $this->redis->set('change_database_structure', 0);
         
         throw new coding_exception("Redis -> change_database_structure not yet implemented - - " . $sql);
         

@@ -32,6 +32,139 @@ require_once($CFG->libdir.'/ddl/sql_generator.php');
 
 class redis_sql_generator extends sql_generator {
 
+ /**
+     * Given one correct xmldb_table, returns the REDIS("SQL") statements
+     * to create it (inside one array).
+     *
+     * @param xmldb_table $xmldb_table An xmldb_table instance.
+     * @return array An array of REDIS ("SQL") statements, starting with the table creation SQL followed
+     * by any of its comments, indexes and sequence creation SQL statements.
+     */
+    public function getCreateTableSQL($xmldb_table) {
+        if ($error = $xmldb_table->validateDefinition()) {
+            throw new coding_exception($error);
+        }
+
+        $results = [];  //Array where all the sentences will be stored        
+
+        // Table header
+        $table = 'SADD mdl-tables ' . $this->getTableName($xmldb_table) . ';';
+
+        if (!$xmldb_fields = $xmldb_table->getFields()) {
+            return $results;
+        }
+
+        $sequencefield = null;
+
+        // Add the fields, separated by commas
+        foreach ($xmldb_fields as $xmldb_field) {
+            if ($xmldb_field->getSequence()) {
+                $sequencefield = $xmldb_field->getName();
+            }
+            $table .= "\n    " . $this->getFieldSQL($xmldb_table, $xmldb_field);
+            $table .= ',';
+        }
+        // Add the keys, separated by commas
+        if ($xmldb_keys = $xmldb_table->getKeys()) {
+            foreach ($xmldb_keys as $xmldb_key) {
+                if ($keytext = $this->getKeySQL($xmldb_table, $xmldb_key)) {
+                    $table .= "\nCONSTRAINT " . $keytext . ',';
+                }
+                // If the key is XMLDB_KEY_FOREIGN_UNIQUE, create it as UNIQUE too
+                if ($xmldb_key->getType() == XMLDB_KEY_FOREIGN_UNIQUE) {
+                    //Duplicate the key
+                    $xmldb_key->setType(XMLDB_KEY_UNIQUE);
+                    if ($keytext = $this->getKeySQL($xmldb_table, $xmldb_key)) {
+                        $table .= "\nCONSTRAINT " . $keytext . ',';
+                    }
+                }
+                // make sure sequence field is unique
+                if ($sequencefield and $xmldb_key->getType() == XMLDB_KEY_PRIMARY) {
+                    $fields = $xmldb_key->getFields();
+                    $field = reset($fields);
+                    if ($sequencefield === $field) {
+                        $sequencefield = null;
+                    }
+                }
+            }
+        }
+        // throw error if sequence field does not have unique key defined
+        if ($sequencefield) {
+            throw new ddl_exception('ddsequenceerror', $xmldb_table->getName());
+        }
+
+        // Table footer, trim the latest comma
+        $table = trim($table,',');
+        $table .= "\n)";
+
+        // Add the CREATE TABLE to results
+        $results[] = $table;
+
+        // Add comments if specified and it exists
+        if ($this->add_table_comments && $xmldb_table->getComment()) {
+            $comment = $this->getCommentSQL($xmldb_table);
+            // Add the COMMENT to results
+            $results = array_merge($results, $comment);
+        }
+
+        // Add the indexes (each one, one statement)
+        if ($xmldb_indexes = $xmldb_table->getIndexes()) {
+            foreach ($xmldb_indexes as $xmldb_index) {
+                //tables do not exist yet, which means indexed can not exist yet
+                if ($indextext = $this->getCreateIndexSQL($xmldb_table, $xmldb_index)) {
+                    $results = array_merge($results, $indextext);
+                }
+            }
+        }
+
+        // Also, add the indexes needed from keys, based on configuration (each one, one statement)
+        if ($xmldb_keys = $xmldb_table->getKeys()) {
+            foreach ($xmldb_keys as $xmldb_key) {
+                // If we aren't creating the keys OR if the key is XMLDB_KEY_FOREIGN (not underlying index generated
+                // automatically by the RDBMS) create the underlying (created by us) index (if doesn't exists)
+                if (!$this->getKeySQL($xmldb_table, $xmldb_key) || $xmldb_key->getType() == XMLDB_KEY_FOREIGN) {
+                    // Create the interim index
+                    $index = new xmldb_index('anyname');
+                    $index->setFields($xmldb_key->getFields());
+                    //tables do not exist yet, which means indexed can not exist yet
+                    $createindex = false; //By default
+                    switch ($xmldb_key->getType()) {
+                        case XMLDB_KEY_UNIQUE:
+                        case XMLDB_KEY_FOREIGN_UNIQUE:
+                            $index->setUnique(true);
+                            $createindex = true;
+                            break;
+                        case XMLDB_KEY_FOREIGN:
+                            $index->setUnique(false);
+                            $createindex = true;
+                            break;
+                    }
+                    if ($createindex) {
+                        if ($indextext = $this->getCreateIndexSQL($xmldb_table, $index)) {
+                            // Add the INDEX to the array
+                            $results = array_merge($results, $indextext);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add sequence extra code if needed
+        if ($this->sequence_extra_code) {
+            // Iterate over fields looking for sequences
+            foreach ($xmldb_fields as $xmldb_field) {
+                if ($xmldb_field->getSequence()) {
+                    // returns an array of statements needed to create one sequence
+                    $sequence_sentences = $this->getCreateSequenceSQL($xmldb_table, $xmldb_field);
+                    // Add the SEQUENCE to the array
+                    $results = array_merge($results, $sequence_sentences);
+                }
+            }
+        }
+
+        return $results;
+    }
+
     /**
      * Reset a sequence to the id field of a table.
      *
