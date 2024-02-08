@@ -51,14 +51,26 @@ class redis_sql_generator extends sql_generator {
 
         $results = [];  //Array where all the sentences will be stored        
 
+        $table_name = $this->getTableName($xmldb_table);
         // Table header
-        $table = new sadd('mdl:schema:tables', [$this->getTableName($xmldb_table)]);
+        $table = new sadd('mdl:schema:tables', [$table_name]);
 
         if (!$xmldb_fields = $xmldb_table->getFields()) {
             return $results;
         }
 
-        $sequencefield = null;
+        $fields = [];
+        $field_names = [];
+        foreach ($xmldb_fields as $xmldb_field) {
+            if ($error = $xmldb_field->validateDefinition($xmldb_table)) {
+                throw new coding_exception($error);
+            }
+
+            $field_names[] = $xmldb_field->getName();
+        }
+        $fields = new sadd('mdl:schema:columns:' . $table_name, $field_names);        
+        //        $fields = new sadd('mdl:schema:', []);
+        // $sequencefield = null;
 
         // // Add the fields, separated by commas
         // foreach ($xmldb_fields as $xmldb_field) {
@@ -103,6 +115,7 @@ class redis_sql_generator extends sql_generator {
 
         // Add the CREATE TABLE to results
         $results[] = $table;
+        $results[] = $fields;
 
         //!!!!
         return $results;
