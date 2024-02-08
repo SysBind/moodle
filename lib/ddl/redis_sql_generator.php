@@ -22,7 +22,11 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+
 defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->libdir.'/classes/redisdb/command.php'); // autoload?
+use core\redisdb\sadd;
 
 require_once($CFG->libdir.'/ddl/sql_generator.php');
 
@@ -48,7 +52,7 @@ class redis_sql_generator extends sql_generator {
         $results = [];  //Array where all the sentences will be stored        
 
         // Table header
-        $table = 'SADD mdl-tables ' . $this->getTableName($xmldb_table) . ';';
+        $table = new sadd('mdl:schema:tables', [$this->getTableName($xmldb_table)]);
 
         if (!$xmldb_fields = $xmldb_table->getFields()) {
             return $results;

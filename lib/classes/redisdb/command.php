@@ -23,26 +23,31 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
 
 namespace core\redisdb;
 
+defined('MOODLE_INTERNAL') || die();
+
 class keyval {
-    public string $key = null;
-    public string $val = [];
+    public function __construct(string $key, array $val) {
+        $this->key = $key;
+        $this->val = $val;
+    }
+    public string $key = '';
+    public array $val = [];
 }
 
 /**
  * represents modification to the database 
  */
-class command {
+abstract class command implements \Stringable {
     /**
      * @var keyval - key / value(s) to set / add to the key
      */
-    protected keyval $value;
+    protected keyval $keyval;
     
-    public function __construct(keyval $keyval) {
-        $this->keyval = keyval;
+    public function __construct(string $key, array $val) {
+        $this->keyval = new keyval($key, $val);
     }
 
     /** execute the command on the given Redis instance
@@ -50,19 +55,27 @@ class command {
      * @param Redis $redis instance.
      * @return Redis $redis instance. (for chain commands)
      */
-    public abstract function exec(Redis $redis);
+    public abstract function exec(\Redis $redis);
 }
 
-class set {
-    public function exec(Redis $redis) {
+class set extends command {
+    public function exec(\Redis $redis) : \Redis {
         error_log('redisdb:command:set -> ' . $this->keyval->key);
-        // return redis->set();
+        return redis->set($this->keyval->$key, $keyval->$val[0]);
+    }
+
+    public function  __toString(): string {
+        return 'SET ' . $this->key . $this->val[0];
     }
 }
 
-class sadd {
-    public function exec(Redis $redis) {
+class sadd extends command {
+    public function exec(\Redis $redis) : \Redis {
         error_log('redisdb:command:sadd -> ' . $this->keyval->key);
-        // return redis->set();
+        return $redis->sAdd($this->keyval->key, ...$this->$val);
     }
+
+    public function  __toString(): string {
+        return 'SADD ' . $this->keyval->key . implode(' ', $this->val);
+    }    
 }

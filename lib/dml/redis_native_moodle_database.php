@@ -206,28 +206,25 @@ class redis_native_moodle_database extends moodle_database {
 
     /**
      * Do NOT use in code, to be used by database_manager only!
-     * @param string|array $sql query
+     * @param core\redisdb\command | array $command commands
      * @param array|null $tablenames an array of xmldb table names affected by this request.
      * @return bool true
      * @throws ddl_change_structure_exception A DDL specific exception is thrown for any errors.
      */
-    public function change_database_structure($sql, $tablenames = null) {
+    public function change_database_structure($command, $tablenames = null) {
         $this->get_manager(); // Includes DDL exceptions classes ;-)
-        $this->redis->set('change_database_structure', 1);
-        $this->redis->set('change_database_structure_counter', 0);
-        $cdsis = 0;
-        if (is_array($sql)) {
-            foreach ($sql as $statement) {
-                $cdsid = $this->redis->incr('change_database_structure_counter');
-                $this->redis->set('cds:'.$cdsid, $statement);
-                error_log('Redis->change_database_structure: ' . $statement);                
+
+        if (is_array($command)) {            
+            $redis_ = $this->redis->multi(); // begin transaction
+            foreach ($command as $cmd) {
+                $redis_ = $cmd->exec($redis_);
             }
-            //$sql = implode("\n;\n", $sql);
+            $redis_->exec(); // end  transaction
+            return true;
         }
-        $this->redis->set('change_database_structure', 0);
-        
-        throw new coding_exception("Redis -> change_database_structure not yet implemented - - " . $sql);
-        
+
+         // single command
+        $commands->exec($this->redis);
         return true;
     }
 
