@@ -60,8 +60,7 @@ abstract class command implements \Stringable {
 
 class set extends command {
     public function exec(\Redis $redis) : \Redis {
-        error_log('redisdb:command:set -> ' . $this->keyval->key);
-        return redis->set($this->keyval->$key, $keyval->$val[0]);
+        return redis->set($this->keyval->$key, $this->keyval->$val[0]);
     }
 
     public function  __toString(): string {
@@ -71,11 +70,10 @@ class set extends command {
 
 class sadd extends command {
     public function exec(\Redis $redis) : \Redis {
-        error_log('redisdb:command:sadd -> ' . $this->keyval->key);
-        return $redis->sAdd($this->keyval->key, ...$this->$val);
+        return $redis->sAdd($this->keyval->key, ...($this->keyval->val));
     }
 
     public function  __toString(): string {
-        return 'SADD ' . $this->keyval->key . implode(' ', $this->val);
+        return 'SADD ' . $this->keyval->key . implode(' ', $this->keyval->val);
     }    
 }
