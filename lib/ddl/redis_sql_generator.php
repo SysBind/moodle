@@ -56,49 +56,52 @@ class redis_sql_generator extends sql_generator {
 
         $sequencefield = null;
 
-        // Add the fields, separated by commas
-        foreach ($xmldb_fields as $xmldb_field) {
-            if ($xmldb_field->getSequence()) {
-                $sequencefield = $xmldb_field->getName();
-            }
-            $table .= "\n    " . $this->getFieldSQL($xmldb_table, $xmldb_field);
-            $table .= ',';
-        }
-        // Add the keys, separated by commas
-        if ($xmldb_keys = $xmldb_table->getKeys()) {
-            foreach ($xmldb_keys as $xmldb_key) {
-                if ($keytext = $this->getKeySQL($xmldb_table, $xmldb_key)) {
-                    $table .= "\nCONSTRAINT " . $keytext . ',';
-                }
-                // If the key is XMLDB_KEY_FOREIGN_UNIQUE, create it as UNIQUE too
-                if ($xmldb_key->getType() == XMLDB_KEY_FOREIGN_UNIQUE) {
-                    //Duplicate the key
-                    $xmldb_key->setType(XMLDB_KEY_UNIQUE);
-                    if ($keytext = $this->getKeySQL($xmldb_table, $xmldb_key)) {
-                        $table .= "\nCONSTRAINT " . $keytext . ',';
-                    }
-                }
-                // make sure sequence field is unique
-                if ($sequencefield and $xmldb_key->getType() == XMLDB_KEY_PRIMARY) {
-                    $fields = $xmldb_key->getFields();
-                    $field = reset($fields);
-                    if ($sequencefield === $field) {
-                        $sequencefield = null;
-                    }
-                }
-            }
-        }
-        // throw error if sequence field does not have unique key defined
-        if ($sequencefield) {
-            throw new ddl_exception('ddsequenceerror', $xmldb_table->getName());
-        }
+        // // Add the fields, separated by commas
+        // foreach ($xmldb_fields as $xmldb_field) {
+        //     if ($xmldb_field->getSequence()) {
+        //         $sequencefield = $xmldb_field->getName();
+        //     }
+        //     $table .= "\n    " . $this->getFieldSQL($xmldb_table, $xmldb_field);
+        //     $table .= ',';
+        // }
+        // // Add the keys, separated by commas
+        // if ($xmldb_keys = $xmldb_table->getKeys()) {
+        //     foreach ($xmldb_keys as $xmldb_key) {
+        //         if ($keytext = $this->getKeySQL($xmldb_table, $xmldb_key)) {
+        //             $table .= "\nCONSTRAINT " . $keytext . ',';
+        //         }
+        //         // If the key is XMLDB_KEY_FOREIGN_UNIQUE, create it as UNIQUE too
+        //         if ($xmldb_key->getType() == XMLDB_KEY_FOREIGN_UNIQUE) {
+        //             //Duplicate the key
+        //             $xmldb_key->setType(XMLDB_KEY_UNIQUE);
+        //             if ($keytext = $this->getKeySQL($xmldb_table, $xmldb_key)) {
+        //                 $table .= "\nCONSTRAINT " . $keytext . ',';
+        //             }
+        //         }
+        //         // make sure sequence field is unique
+        //         if ($sequencefield and $xmldb_key->getType() == XMLDB_KEY_PRIMARY) {
+        //             $fields = $xmldb_key->getFields();
+        //             $field = reset($fields);
+        //             if ($sequencefield === $field) {
+        //                 $sequencefield = null;
+        //             }
+        //         }
+        //     }
+        // }
+        // // throw error if sequence field does not have unique key defined
+        // if ($sequencefield) {
+        //     throw new ddl_exception('ddsequenceerror', $xmldb_table->getName());
+        // }
 
-        // Table footer, trim the latest comma
-        $table = trim($table,',');
-        $table .= "\n)";
+        // // Table footer, trim the latest comma
+        // $table = trim($table,',');
+        // $table .= "\n)";
 
         // Add the CREATE TABLE to results
         $results[] = $table;
+
+        //!!!!
+        return $results;
 
         // Add comments if specified and it exists
         if ($this->add_table_comments && $xmldb_table->getComment()) {
