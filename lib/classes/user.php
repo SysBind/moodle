@@ -1489,4 +1489,42 @@ class core_user {
         return $initials;
     }
 
+    /**
+     * Retrieves the fields used for displaying a user's full name in the system.
+     *
+     * This function extracts the placeholder fields from the configured full name display format and
+     * returns them as an array.
+     *
+     * @param array $options optional array for override.
+     * @return array List of field names used in the full name display format.
+     */
+    public static function get_user_full_name_fields(array $options = []): array {
+        global $CFG;
+        $override = $options["override"] ?? false;
+
+        // Get all of the name fields.
+        $template = null;
+        // If the fullnamedisplay setting is available, set the template to that.
+        if (isset($CFG->fullnamedisplay)) {
+            $template = $CFG->fullnamedisplay;
+        }
+        // If the template is empty, or set to language, return the language string.
+        if ((empty($template) || $template == 'language') && !$override) {
+            $fullnamedisplay = get_string('fullnamedisplay');
+        }
+
+        // Check to see if we are displaying according to the alternative full name format.
+        if ($override) {
+            if (empty($CFG->alternativefullnameformat) || $CFG->alternativefullnameformat == 'language') {
+                // Default to show just the user names according to the fullnamedisplay string.
+                $fullnamedisplay = get_string('fullnamedisplay');
+            } else {
+                // If the override is true, then change the template to use the complete name.
+                $fullnamedisplay = $CFG->alternativefullnameformat;
+            }
+        }
+        preg_match_all('/{\$a->(.*?)}/', $fullnamedisplay, $matches);
+        return $matches[1];
+    }
+
 }
