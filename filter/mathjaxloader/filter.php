@@ -255,7 +255,7 @@ class filter_mathjaxloader extends moodle_text_filter {
      * @return string Returns the input string with HTML tags escaped.
      */
     private function escape_html_tag_wrapper(string $text): string {
-        return preg_replace_callback('/\{([^}]+)\}/', function(array $matches): string {
+        return preg_replace_callback('/\{[^}]*<[^}]+>[^}]*\}/', function(array $matches): string {
             $search = ['<', '>'];
             $replace = ['&lt;', '&gt;'];
             return str_replace($search, $replace, $matches[0]);
