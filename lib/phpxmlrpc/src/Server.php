@@ -1416,7 +1416,7 @@ class Server
         }
 
         //if ($errCode != E_NOTICE && $errCode != E_WARNING && $errCode != E_USER_NOTICE && $errCode != E_USER_WARNING)
-        if ($errCode != E_STRICT) {
+        if ($errCode != E_ALL) {
             static::error_occurred($errString);
         }
 

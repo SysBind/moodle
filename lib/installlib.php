@@ -431,9 +431,9 @@ function install_cli_database(array $options, $interactive) {
     require_once($CFG->libdir.'/upgradelib.php');
 
     // show as much debug as possible
-    @error_reporting(E_ALL | E_STRICT);
+    @error_reporting(E_ALL);
     @ini_set('display_errors', '1');
-    $CFG->debug = (E_ALL | E_STRICT);
+    $CFG->debug = (E_ALL);
     $CFG->debugdisplay = true;
     $CFG->debugdeveloper = true;
 
@@ -457,12 +457,12 @@ function install_cli_database(array $options, $interactive) {
     }
 
     // test environment first
-    list($envstatus, $environment_results) = check_moodle_environment(normalize_version($release), ENV_SELECT_RELEASE);
+    [$envstatus, $environment_results] = check_moodle_environment(normalize_version($release), ENV_SELECT_RELEASE);
     if (!$envstatus) {
         $errors = environment_get_errors($environment_results);
         cli_heading(get_string('environment', 'admin'));
         foreach ($errors as $error) {
-            list($info, $report) = $error;
+            [$info, $report] = $error;
             echo "!! $info !!\n$report\n\n";
         }
         exit(1);
