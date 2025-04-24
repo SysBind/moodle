@@ -1137,8 +1137,6 @@ class backup_gradebook_structure_step extends backup_structure_step {
             'sortorder', 'display', 'decimals', 'hidden', 'locked', 'locktime',
             'needsupdate', 'timecreated', 'timemodified'));
 
-        $this->add_plugin_structure('local', $grade_item, true);
-
         $grade_grades = new backup_nested_element('grade_grades');
         $grade_grade = new backup_nested_element('grade_grade', array('id'), array(
             'userid', 'rawgrade', 'rawgrademax', 'rawgrademin',
@@ -1182,6 +1180,8 @@ class backup_gradebook_structure_step extends backup_structure_step {
 
         $gradebook->add_child($grade_settings);
         $grade_settings->add_child($grade_setting);
+
+        $this->add_plugin_structure('local', $grade_item, true);
 
         // Define sources
 
