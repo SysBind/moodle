@@ -1034,4 +1034,26 @@ final class user_test extends \advanced_testcase {
             ],
         ];
     }
+
+    /**
+     * Verify that the get_user_full_name_fields function returns the expected
+     * list of fields for both the default and alternative formats.
+     *
+     * @covers ::get_user_full_name_fields
+     */
+    public function test_get_user_full_name_fields(): void {
+        $this->resetAfterTest();
+
+        // Use the language string for the standard full name.
+        set_config('fullnamedisplay', 'language');
+
+        $fields = \core_user::get_user_full_name_fields();
+        $this->assertSame(['firstname', 'lastname'], $fields);
+
+        // Configure an alternative format and request the override.
+        set_config('alternativefullnameformat', '{$a->firstnamephonetic} {$a->lastnamephonetic}');
+
+        $fields = \core_user::get_user_full_name_fields(['override' => true]);
+        $this->assertSame(['firstnamephonetic', 'lastnamephonetic'], $fields);
+    }
 }
