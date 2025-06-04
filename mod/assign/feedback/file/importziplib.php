@@ -322,6 +322,7 @@ class assignfeedback_file_zip_importer {
                                                      $basename)) {
                             // Update existing feedback file.
                             $oldfile->replace_file_with($unzippedfile);
+		            $DB->set_field('files', 'timemodified', time(), ['id' => $oldfile->get_id()]);
                             $feedbackfilesupdated++;
                         } else {
                             // Create a new feedback file.
