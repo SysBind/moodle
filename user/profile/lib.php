@@ -471,10 +471,9 @@ class profile_field_base {
                 } else if ($this->userid == $USER->id) {
                     return true;
                 } else if ($this->userid > 0) {
-                    return has_capability('moodle/user:viewalldetails', $context);
-                } else {
                     $coursecontext = context_course::instance($COURSE->id);
-                    return has_capability('moodle/site:viewuseridentity', $coursecontext);
+                    return has_capability('moodle/site:viewuseridentity', $coursecontext) ||
+                        has_capability('moodle/user:viewalldetails', $context);
                 }
             case PROFILE_VISIBLE_ALL:
                 return true;
