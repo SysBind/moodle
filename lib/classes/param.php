@@ -798,17 +798,19 @@ enum param: string {
      * Validation for PARAM_BOOL.
      *
      * @param mixed $param
-     * @return mixed
+     * @return bool
      */
-    protected function clean_param_value_bool(mixed $param): mixed {
-        // Convert to 1 or 0.
+    protected function clean_param_value_bool(mixed $param): bool {
+        if (is_bool($param)) {
+            return $param;
+        }
         $tempstr = strtolower((string)$param);
-        if ($tempstr === 'on' || $tempstr === 'yes' || $tempstr === 'true') {
-            $param = 1;
-        } else if ($tempstr === 'off' || $tempstr === 'no' || $tempstr === 'false') {
-            $param = 0;
+        if ($tempstr === 'on' || $tempstr === 'yes') {
+            $param = true;
+        } else if ($tempstr === 'off' || $tempstr === 'no') {
+            $param = false;
         } else {
-            $param = empty($param) ? 0 : 1;
+            $param = empty($param) ? false : true;
         }
         return $param;
     }
