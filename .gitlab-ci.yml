@@ -1,0 +1,206 @@
+# GitLab CI for Moodle — mirrors existing GitHub Actions (grunt + phpunit + behat)
+# Stages
+stages:
+  - build
+  - phpunit
+  - behat
+
+# Global variables and caches
+variables:
+  # Make config-template.php usable outside GH Actions
+  GITHUB_WORKFLOW: "gitlab-ci"
+  COMPOSER_ALLOW_SUPERUSER: "1"
+  COMPOSER_NO_INTERACTION: "1"
+  NPM_CONFIG_FUND: "false"
+  NPM_CONFIG_AUDIT: "false"
+  # Defaults for DBs (can be overridden per job as needed)
+  MYSQL_DATABASE: test
+  MYSQL_USER: test
+  MYSQL_PASSWORD: test
+  MYSQL_ROOT_PASSWORD: root
+  POSTGRES_DB: test
+  POSTGRES_USER: test
+  POSTGRES_PASSWORD: test
+  # Behat defaults (override in CI/CD Variables to run JS scenarios)
+  BEHAT_TAGS: "~@javascript"
+
+.default-cache: &default-cache
+  cache:
+    key: "$CI_JOB_NAME"
+    policy: pull-push
+    paths:
+      - vendor/
+      - ~/.composer/cache/
+
+# 1) Grunt build (same as GH Actions Grunt job)
+grunt:
+  stage: build
+  image: node:20
+  before_script:
+    - corepack enable || true
+    - npm -v && node -v
+  script:
+    - npm ci
+    - npx grunt
+    - |
+      git add .
+      git reset -- npm-shrinkwrap.json
+      git diff --cached --exit-code
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH
+
+# Helper anchor to install PHP + extensions + composer
+.php-base: &php_base
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends git unzip locales libzip-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libxml2-dev libonig-dev libpq-dev pkg-config ca-certificates
+    - docker-php-ext-configure gd --with-freetype --with-jpeg
+    - docker-php-ext-install -j"$(nproc)" intl zip gd opcache
+    - pecl install redis || printf "redis already installed or failed to fetch (will try enabling)\n"
+    - docker-php-ext-enable redis || true
+    - |
+      if [ "$DB" = "mysqli" ]; then
+        apt-get install -y default-mysql-client
+        docker-php-ext-install -j"$(nproc)" mysqli pdo_mysql
+      fi
+    - |
+      if [ "$DB" = "pgsql" ]; then
+        apt-get install -y postgresql-client
+        docker-php-ext-install -j"$(nproc)" pgsql pdo_pgsql
+      fi
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - php -v && composer -V
+    - echo "pathtophp=$(which php)" >> $CI_PROJECT_DIR/.gitlab-env
+    - export $(cat $CI_PROJECT_DIR/.gitlab-env | xargs)
+
+  script:
+    - composer install --no-progress --prefer-dist
+    - cp .github/workflows/config-template.php config.php
+    - mkdir -p ../moodledata
+    - locale-gen en_AU.UTF-8 || true
+    - php public/admin/tool/phpunit/cli/init.php --no-composer-self-update
+    - vendor/bin/phpunit ${PHPUNIT_EXTRA_OPTIONS}
+
+  artifacts:
+    when: always
+    expire_in: 1 day
+    reports:
+      junit: phpunit.xml
+    paths:
+      - phpunit.xml
+
+# 2) PHPUnit on MySQL (lowest supported PHP like GH Actions)
+phpunit:mysql:
+  stage: phpunit
+  image: php:8.2
+  variables:
+    DB: mysqli
+  services:
+    - name: mysql:8.4
+      alias: mysql
+      command: ["--default-authentication-plugin=mysql_native_password", "--skip-log-bin"]
+      variables:
+        MYSQL_DATABASE: $MYSQL_DATABASE
+        MYSQL_USER: $MYSQL_USER
+        MYSQL_PASSWORD: $MYSQL_PASSWORD
+        MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+    - name: redis:7
+      alias: redis
+    - name: moodlehq/moodle-exttests:latest
+      alias: exttests
+  <<: *php_base
+  before_script:
+    - *php_base.before_script
+    - |
+      # Wait for MySQL to be ready
+      for i in $(seq 1 60); do
+        mysqladmin ping -hmysql -u$MYSQL_USER -p$MYSQL_PASSWORD --silent && break || sleep 2
+      done
+    - |
+      # Ensure correct DB collation
+      mysql -hmysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e "ALTER DATABASE \`$MYSQL_DATABASE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;" || true
+  script:
+    - *php_base.script
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH
+
+# 3) PHPUnit on PostgreSQL (highest supported PHP like GH Actions)
+phpunit:pgsql:
+  stage: phpunit
+  image: php:8.4
+  variables:
+    DB: pgsql
+  services:
+    - name: postgres:15
+      alias: postgres
+      variables:
+        POSTGRES_DB: $POSTGRES_DB
+        POSTGRES_USER: $POSTGRES_USER
+        POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+    - name: redis:7
+      alias: redis
+    - name: moodlehq/moodle-exttests:latest
+      alias: exttests
+  <<: *php_base
+  before_script:
+    - *php_base.before_script
+    - |
+      # Wait for Postgres to be ready
+      for i in $(seq 1 60); do
+        pg_isready -h postgres -U $POSTGRES_USER && break || sleep 2
+      done
+  script:
+    - *php_base.script
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH
+
+# 4) Behat (non-JS by default). Override BEHAT_TAGS to run full JS suites with Selenium grid if available.
+behat:
+  stage: behat
+  image: php:8.4
+  variables:
+    DB: pgsql
+  services:
+    - name: postgres:15
+      alias: postgres
+      variables:
+        POSTGRES_DB: $POSTGRES_DB
+        POSTGRES_USER: $POSTGRES_USER
+        POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+    - name: redis:7
+      alias: redis
+    - name: moodlehq/moodle-exttests:latest
+      alias: exttests
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git unzip locales postgresql-client libzip-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libxml2-dev libpq-dev
+    - docker-php-ext-configure gd --with-freetype --with-jpeg
+    - docker-php-ext-install -j"$(nproc)" intl zip gd opcache pgsql pdo_pgsql
+    - pecl install redis || true && docker-php-ext-enable redis || true
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --no-progress --prefer-dist
+    - echo "pathtophp=$(which php)" >> $CI_PROJECT_DIR/.gitlab-env
+    - export $(cat $CI_PROJECT_DIR/.gitlab-env | xargs)
+    - cp .github/workflows/config-template.php config.php
+    - sed -i "s/\$host = 'localhost';/\$host = 'localhost:8000';/" config.php
+    - mkdir -p ../moodledata
+    - locale-gen en_AU.UTF-8 || true
+    - |
+      for i in $(seq 1 60); do
+        pg_isready -h postgres -U $POSTGRES_USER && break || sleep 2
+      done
+    - php admin/tool/behat/cli/init.php --no-composer-self-update
+    - php -S 0.0.0.0:8000 -t public >/tmp/php-server.log 2>&1 &
+    - sleep 2
+  script:
+    - vendor/bin/behat --colors --format=progress -vv --tags "$BEHAT_TAGS"
+  artifacts:
+    when: always
+    expire_in: 1 day
+    paths:
+      - /tmp/php-server.log
+      - behat*/
+  needs:
+    - job: phpunit:pgsql
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH
