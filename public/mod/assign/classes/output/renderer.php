@@ -304,6 +304,8 @@ class renderer extends \plugin_renderer_base {
         $o .= $this->output->box_start('boxaligncenter gradingsummarytable');
         $t = new \html_table();
         $t->attributes['class'] = 'generaltable table table-striped table-bordered';
+        $t->caption = get_string('gradingsummary', 'assign');
+        $t->captionhide = true; // Hidden because it matches the title above.
 
         // Visibility Status.
         $cell1content = get_string('hiddenfromstudents');
@@ -345,7 +347,7 @@ class renderer extends \plugin_renderer_base {
             }
         }
 
-        $time = time();
+        $time = \core\di::get(\core\clock::class)->time();
         if ($summary->duedate) {
             // Time remaining.
             $duedate = $summary->duedate;
@@ -410,6 +412,8 @@ class renderer extends \plugin_renderer_base {
         $o .= $this->output->heading(get_string('feedback', 'assign'), 3);
         $o .= $this->output->box_start('boxaligncenter feedbacktable');
         $t = new \html_table();
+        $t->caption = get_string('feedback', 'assign');
+        $t->captionhide = true; // Hidden because it matches the title above.
 
         // Grade.
         if (isset($status->gradefordisplay)) {
@@ -644,12 +648,14 @@ class renderer extends \plugin_renderer_base {
         $o = '';
         $o .= $this->output->container_start('submissionstatustable');
         $o .= $this->output->heading(get_string('submissionstatusheading', 'assign'), 3);
-        $time = time();
+        $time = \core\di::get(\core\clock::class)->time();
 
         $o .= $this->output->box_start('boxaligncenter submissionsummarytable');
 
         $t = new \html_table();
         $t->attributes['class'] = 'generaltable table table-striped table-bordered';
+        $t->caption = get_string('submissionstatusheading', 'assign');
+        $t->captionhide = true; // Hidden because it matches the title above.
 
         $warningmsg = '';
         if ($status->teamsubmissionenabled) {
@@ -936,6 +942,8 @@ class renderer extends \plugin_renderer_base {
             $o .= $this->heading(get_string('attemptheading', 'assign', $attemptsummaryparams), 4);
 
             $t = new \html_table();
+            $t->caption = get_string('attemptheading', 'assign', $attemptsummaryparams);
+            $t->captionhide = true; // Hidden because it matches the title above.
 
             if ($submission) {
                 $cell1content = get_string('submissionstatus', 'assign');
@@ -1300,7 +1308,7 @@ class renderer extends \plugin_renderer_base {
      *               string and the second is a CSS class.
      */
     protected function get_time_remaining(\mod_assign\output\assign_submission_status $status): array {
-        $time = time();
+        $time = \core\di::get(\core\clock::class)->time();
         $submission = $status->teamsubmission ? $status->teamsubmission : $status->submission;
         $submissionstarted = $submission && property_exists($submission, 'timestarted') && $submission->timestarted;
         $timelimitenabled = get_config('assign', 'enabletimelimit') && $status->timelimit > 0 && $submissionstarted;

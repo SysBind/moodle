@@ -383,9 +383,24 @@ class assign_grading_table extends table_sql implements renderable {
         // Select.
         if (!$this->is_downloading() && $this->hasgrade) {
             $columns[] = 'select';
-            $headers[] = get_string('select') .
-                    '<div class="selectall"><label class="accesshide" for="selectall">' . get_string('selectall') . '</label>
-                    <input type="checkbox" id="selectall" name="selectall" title="' . get_string('selectall') . '"/></div>';
+            // The displayed text for the column header. Hidden to assistive technologies.
+            $visibleheader = html_writer::span(get_string('select'), '', ['aria-hidden' => 'true']);
+            // The actual accessible name for the column header which provides more context about the column's purpose to
+            // screen reader users.
+            $bulkactionsselection = html_writer::span(get_string('bulkactionsselection', 'assign'), 'visually-hidden');
+
+            // The select all checkbox.
+            $selectalllabel = html_writer::label(get_string('selectall'), 'selectall', false, ['class' => 'visually-hidden']);
+            $selectallcheckbox = html_writer::empty_tag(
+                'input',
+                [
+                    'type' => 'checkbox',
+                    'id' => 'selectall',
+                    'name' => 'selectall',
+                ],
+            );
+            $headers[] = $visibleheader . $bulkactionsselection .
+                html_writer::div($selectalllabel . $selectallcheckbox, 'selectall');
         }
 
         if ($this->hasviewblind || !$this->assignment->is_blind_marking()) {
@@ -547,7 +562,7 @@ class assign_grading_table extends table_sql implements renderable {
         foreach ($extrauserfields as $extrafield) {
              $this->column_class($extrafield, $extrafield);
         }
-        $this->no_sorting('recordid');
+
         $this->no_sorting('finalgrade');
         $this->no_sorting('userid');
         $this->no_sorting('select');
@@ -1269,7 +1284,7 @@ class assign_grading_table extends table_sql implements renderable {
                         $submissioninfo .= $this->output->container(get_string('graded', 'assign'), 'submissiongraded');
                     }
                 } else if (!$timesubmitted || $status == ASSIGN_SUBMISSION_STATUS_NEW) {
-                    $now = time();
+                    $now = \core\di::get(\core\clock::class)->time();
                     if ($due && ($now > $due)) {
                         $overduestr = get_string('overdue', 'assign', format_time($now - $due));
                         $submissioninfo .= $this->output->container($overduestr, 'overduesubmission');
@@ -1787,8 +1802,9 @@ class assign_grading_table extends table_sql implements renderable {
         if (empty($assignment->blindmarking)) {
             $result = array_merge($result, array('userid' => SORT_ASC));
         } else {
+            $now = \core\di::get(\core\clock::class)->time();
             $result = array_merge($result, [
-                    'COALESCE(s.timecreated, '  . time()        . ')'   => SORT_ASC,
+                    'COALESCE(s.timecreated, '  . $now          . ')'   => SORT_ASC,
                     'COALESCE(s.id, '           . PHP_INT_MAX   . ')'   => SORT_ASC,
                     'um.id'                                             => SORT_ASC,
                 ]);

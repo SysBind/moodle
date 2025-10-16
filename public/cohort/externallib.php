@@ -145,6 +145,8 @@ class core_cohort_external extends external_api {
 
             $cohort->id = cohort_add_cohort($cohort);
 
+            $cohort->name = \core_external\util::format_string($cohort->name, $context);
+
             list($cohort->description, $cohort->descriptionformat) =
                 \core_external\util::format_text($cohort->description, $cohort->descriptionformat,
                         $context, 'cohort', 'description', $cohort->id);
@@ -284,6 +286,8 @@ class core_cohort_external extends external_api {
                 throw new required_capability_exception($context, 'moodle/cohort:view', 'nopermissions', '');
             }
 
+            $cohort->name = \core_external\util::format_string($cohort->name, $context);
+
             // Only return theme when $CFG->allowcohortthemes is enabled.
             if (!empty($cohort->theme) && empty($CFG->allowcohortthemes)) {
                 $cohort->theme = null;
@@ -405,6 +409,12 @@ class core_cohort_external extends external_api {
                 $results = $results + cohort_get_available_cohorts($context, COHORT_ALL, $limitfrom, $limitnum, $query);
             }
         } else if ($includes == 'all') {
+            $contextsystem = context_system::instance();
+            if (!$context instanceof context_system &&
+                    !has_any_capability(['moodle/cohort:view', 'moodle/cohort:manage'], $contextsystem)) {
+
+                throw new required_capability_exception($contextsystem, 'moodle/cohort:view', 'nopermissions', '');
+            }
             $results = cohort_get_all_cohorts($limitfrom, $limitnum, $query);
             $results = $results['cohorts'];
         } else {
@@ -420,6 +430,8 @@ class core_cohort_external extends external_api {
 
         foreach ($results as $key => $cohort) {
             $cohortcontext = context::instance_by_id($cohort->contextid);
+
+            $cohort->name = \core_external\util::format_string($cohort->name, $cohortcontext);
 
             // Only return theme when $CFG->allowcohortthemes is enabled.
             if (!empty($cohort->theme) && empty($CFG->allowcohortthemes)) {

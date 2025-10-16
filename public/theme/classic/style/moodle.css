@@ -31725,6 +31725,7 @@ table.calendartable caption {
 @media (min-width: 576px) {
   .modchooser.modal-dialog .modal-body .carousel-item {
     height: 640px;
+    max-height: calc(100vh - var(--bs-modal-margin) * 2 - 9rem);
   }
 }
 .modchooser.modal-dialog .modal-body .loading-icon {
@@ -31878,7 +31879,7 @@ table.calendartable caption {
 .modchooser .optionsummary .activitychooser-option-details {
   min-width: 15rem;
 }
-.modchooser .optionsummary .activitychooser-option-details .modchooser-detail:not(:last-child) {
+.modchooser .optionsummary .activitychooser-option-details .modchooser-detail:not(:last-child):not(:only-child) {
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid #dee2e6;
@@ -33978,7 +33979,8 @@ a.ygtvspacer:hover {
 }
 
 .chooserdialogue-questionchooser .modicon img.icon,
-#categoryquestions .qtype img.icon {
+#categoryquestions .qtype img.icon,
+.choosercontainer .modicon img.icon {
   /* Override default icon width set for fontawesome icons */
   width: 16px;
 }
@@ -38348,12 +38350,12 @@ body:not(.jsenabled) .langmenu:hover > .dropdown-menu,
  * If a table should continue using the original _reboot.scss styles, add the .table-reboot (styleless) class to opt out
  * of this reset.
  */
-table:not(.table):not(.ygtvtable):not(.table-reboot) thead,
-table:not(.table):not(.ygtvtable):not(.table-reboot) tbody,
-table:not(.table):not(.ygtvtable):not(.table-reboot) tfoot,
-table:not(.table):not(.ygtvtable):not(.table-reboot) tr,
-table:not(.table):not(.ygtvtable):not(.table-reboot) td,
-table:not(.table):not(.ygtvtable):not(.table-reboot) th {
+table:not(.table):not(.ygtvtable):not(.table-reboot):not(.yui3-datatable-table) thead,
+table:not(.table):not(.ygtvtable):not(.table-reboot):not(.yui3-datatable-table) tbody,
+table:not(.table):not(.ygtvtable):not(.table-reboot):not(.yui3-datatable-table) tfoot,
+table:not(.table):not(.ygtvtable):not(.table-reboot):not(.yui3-datatable-table) tr,
+table:not(.table):not(.ygtvtable):not(.table-reboot):not(.yui3-datatable-table) td,
+table:not(.table):not(.ygtvtable):not(.table-reboot):not(.yui3-datatable-table) th {
   border-color: var(--bs-border-color);
   border-style: solid;
   border-width: var(--bs-border-width);

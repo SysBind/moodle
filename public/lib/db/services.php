@@ -842,6 +842,12 @@ $functions = array(
         'type' => 'write',
         'ajax' => true,
     ),
+    'core_course_view_module_instance_list' => [
+        'classname' => 'core_course\external\view_module_instance_list',
+        'description' => 'Logs that a module instance list has been viewed on an external application.',
+        'type' => 'write',
+        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
+    ],
     'core_enrol_get_course_enrolment_methods' => array(
         'classname' => 'core_enrol_external',
         'methodname' => 'get_course_enrolment_methods',
@@ -1745,6 +1751,7 @@ $functions = array(
         'type' => 'read',
         'loginrequired' => false,
         'ajax' => true,
+        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
     ),
     // Question related functions.
     'core_question_update_flag' => array(
@@ -2927,6 +2934,13 @@ $functions = array(
         'type'        => 'write',
         'ajax'        => true,
     ),
+    'core_customfield_toggle_shared' => [
+        'classname'   => core_customfield\external\toggle_shared_category::class,
+        'methodname'  => 'execute',
+        'description' => 'Toggle shared category state',
+        'type'        => 'write',
+        'ajax'        => true,
+    ],
     'core_h5p_get_trusted_h5p_file' => [
         'classname'     => 'core_h5p\external',
         'methodname'    => 'get_trusted_h5p_file',

@@ -292,7 +292,7 @@ class assign {
      */
     public function show_intro() {
         if ($this->get_instance()->alwaysshowdescription ||
-                time() > $this->get_instance()->allowsubmissionsfromdate) {
+                \core\di::get(\core\clock::class)->time() > $this->get_instance()->allowsubmissionsfromdate) {
             return true;
         }
         return false;
@@ -733,8 +733,9 @@ class assign {
         // Add the database record.
         $update = new stdClass();
         $update->name = $formdata->name;
-        $update->timemodified = time();
-        $update->timecreated = time();
+        $now = \core\di::get(\core\clock::class)->time();
+        $update->timemodified = $now;
+        $update->timecreated = $now;
         $update->course = $formdata->course;
         $update->courseid = $formdata->course;
         $update->intro = $formdata->intro;
@@ -1529,7 +1530,7 @@ class assign {
         $update = new stdClass();
         $update->id = $formdata->instance;
         $update->name = $formdata->name;
-        $update->timemodified = time();
+        $update->timemodified = \core\di::get(\core\clock::class)->time();
         $update->course = $formdata->course;
         $update->intro = $formdata->intro;
         $update->introformat = $formdata->introformat;
@@ -2319,8 +2320,9 @@ class assign {
      * @param bool $idsonly
      * @param bool $tablesort
      * @return array List of user records
+     * @param bool|null $onlyactive Whether to show only active users.
      */
-    public function list_participants($currentgroup, $idsonly, $tablesort = false) {
+    public function list_participants($currentgroup, $idsonly, $tablesort = false, ?bool $onlyactive = null) {
         global $DB, $USER;
 
         // Get the last known sort order for the grading table.
@@ -2329,10 +2331,13 @@ class assign {
             $currentgroup = 0;
         }
 
-        $key = $this->context->id . '-' . $currentgroup . '-' . $this->show_only_active_users();
+        if ($onlyactive === null) {
+            $onlyactive = $this->show_only_active_users();
+        }
+
+        $key = $this->context->id . '-' . $currentgroup . '-' . $onlyactive;
         if (!isset($this->participants[$key])) {
-            list($esql, $params) = get_enrolled_sql($this->context, 'mod/assign:submit', $currentgroup,
-                    $this->show_only_active_users());
+            list($esql, $params) = get_enrolled_sql($this->context, 'mod/assign:submit', $currentgroup, $onlyactive);
             list($ssql, $sparams) = $this->get_submitted_sql($currentgroup);
             $params += $sparams;
 
@@ -2359,8 +2364,9 @@ class assign {
                 // Note, different DBs have different ordering of NULL values.
                 // Therefore we coalesce the current time into the timecreated field, and the max possible integer into
                 // the ID field.
+                $now = \core\di::get(\core\clock::class)->time();
                 if (empty($tablesort)) {
-                    $orderby = "COALESCE(s.timecreated, " . time() . ") ASC, COALESCE(s.id, " . PHP_INT_MAX . ") ASC, um.id ASC";
+                    $orderby = "COALESCE(s.timecreated, " . $now . ") ASC, COALESCE(s.id, " . PHP_INT_MAX . ") ASC, um.id ASC";
                 }
             }
 
@@ -2867,8 +2873,8 @@ class assign {
         global $DB;
 
         // Only ever send a max of one days worth of updates.
-        $yesterday = time() - (24 * 3600);
-        $timenow   = time();
+        $timenow = \core\di::get(\core\clock::class)->time();
+        $yesterday = $timenow - (24 * 3600);
         $task = \core\task\manager::get_scheduled_task(mod_assign\task\cron_task::class);
         $lastruntime = $task->get_last_run_time();
 
@@ -3102,7 +3108,7 @@ class assign {
     public function update_grade($grade, $reopenattempt = false) {
         global $DB;
 
-        $grade->timemodified = time();
+        $grade->timemodified = \core\di::get(\core\clock::class)->time();
 
         if (!empty($grade->workflowstate)) {
             $validstates = $this->get_marking_workflow_states_for_current_user();
@@ -3347,8 +3353,10 @@ class assign {
             if ($create) {
                 $action = optional_param('action', '', PARAM_TEXT);
                 if ($action == 'editsubmission') {
-                    if (empty($submission->timestarted) && $this->get_instance()->timelimit) {
-                        $submission->timestarted = time();
+                    $starttimer = optional_param('begin', 0, PARAM_INT);
+                    // Only start the timer if the user has clicked the 'Begin assignment' button.
+                    if (empty($submission->timestarted) && $this->get_instance()->timelimit && $starttimer) {
+                        $submission->timestarted = \core\di::get(\core\clock::class)->time();
                         $DB->update_record('assign_submission', $submission);
                     }
                 }
@@ -3360,7 +3368,7 @@ class assign {
             $submission->assignment = $this->get_instance()->id;
             $submission->userid = 0;
             $submission->groupid = $groupid;
-            $submission->timecreated = time();
+            $submission->timecreated = \core\di::get(\core\clock::class)->time();
             $submission->timemodified = $submission->timecreated;
             if ($attemptnumber >= 0) {
                 $submission->attemptnumber = $attemptnumber;
@@ -3860,8 +3868,10 @@ class assign {
             if ($create) {
                 $action = optional_param('action', '', PARAM_TEXT);
                 if ($action == 'editsubmission') {
-                    if (empty($submission->timestarted) && $this->get_instance()->timelimit) {
-                        $submission->timestarted = time();
+                    $starttimer = optional_param('begin', 0, PARAM_INT);
+                    // Only start the timer if the user has clicked the 'Begin assignment' button.
+                    if (empty($submission->timestarted) && $this->get_instance()->timelimit && $starttimer) {
+                        $submission->timestarted = \core\di::get(\core\clock::class)->time();
                         $DB->update_record('assign_submission', $submission);
                     }
                 }
@@ -3872,7 +3882,7 @@ class assign {
             $submission = new stdClass();
             $submission->assignment   = $this->get_instance()->id;
             $submission->userid       = $userid;
-            $submission->timecreated = time();
+            $submission->timecreated = \core\di::get(\core\clock::class)->time();
             $submission->timemodified = $submission->timecreated;
             $submission->status = ASSIGN_SUBMISSION_STATUS_NEW;
             if ($attemptnumber >= 0) {
@@ -4008,7 +4018,7 @@ class assign {
             $grade = new stdClass();
             $grade->assignment   = $this->get_instance()->id;
             $grade->userid       = $userid;
-            $grade->timecreated = time();
+            $grade->timecreated = \core\di::get(\core\clock::class)->time();
             // If we are "auto-creating" a grade - and there is a submission
             // the new grade should not have a more recent timemodified value
             // than the submission.
@@ -4872,7 +4882,7 @@ class assign {
      * @return string The page output.
      */
     protected function view_edit_submission_page($mform, $notices) {
-        global $CFG, $USER, $DB, $PAGE;
+        global $CFG, $USER, $DB, $PAGE, $OUTPUT;
 
         $o = '';
         require_once($CFG->dirroot . '/mod/assign/submission_form.php');
@@ -4957,7 +4967,30 @@ class assign {
             $o .= $this->get_renderer()->notification($notice);
         }
 
-        $o .= $this->get_renderer()->render(new assign_form('editsubmissionform', $mform));
+        if (
+            $submission->status == ASSIGN_SUBMISSION_STATUS_NEW && $this->get_instance()->timelimit &&
+            empty($submission->timestarted)
+        ) {
+            // Timed assignment should always get a confirmation that the user wants to start it.
+            $confirmation = new \confirm_action(
+                get_string('confirmstart', 'assign', format_time($this->get_instance()->timelimit)),
+                null,
+                get_string('beginassignment', 'assign')
+            );
+            // The 'begin' flag indicates that the user is starting a timed assignment.
+            $urlparams = ['id' => $this->get_course_module()->id, 'action' => 'editsubmission', 'begin' => 1];
+            $beginbutton = new \action_link(
+                new moodle_url('/mod/assign/view.php', $urlparams),
+                get_string('beginassignment', 'assign'),
+                $confirmation,
+                ['class' => 'btn btn-primary']
+            );
+
+            $o .= $OUTPUT->render($beginbutton);
+        } else {
+            $o .= $this->get_renderer()->render(new assign_form('editsubmissionform', $mform));
+        }
+
         $o .= $this->view_footer();
 
         \mod_assign\event\submission_form_viewed::create_from_user($this, $user)->trigger();
@@ -6186,7 +6219,7 @@ class assign {
         global $DB;
 
         if ($updatetime) {
-            $submission->timemodified = time();
+            $submission->timemodified = \core\di::get(\core\clock::class)->time();
         }
 
         // First update the submission for the current user.
@@ -6262,7 +6295,7 @@ class assign {
         }
 
         if ($updatetime) {
-            $submission->timemodified = time();
+            $submission->timemodified = \core\di::get(\core\clock::class)->time();
         }
         $result= $DB->update_record('assign_submission', $submission);
         if ($result) {
@@ -6297,7 +6330,7 @@ class assign {
             $userid = $USER->id;
         }
 
-        $time = time();
+        $time = \core\di::get(\core\clock::class)->time();
         $dateopen = true;
         $finaldate = false;
         if ($this->get_instance()->cutoffdate) {
@@ -6841,7 +6874,7 @@ class assign {
 
         $instance = $this->get_instance();
 
-        $late = $instance->duedate && ($instance->duedate < time());
+        $late = $instance->duedate && ($instance->duedate < \core\di::get(\core\clock::class)->time());
 
         if (!$instance->sendnotifications && !($late && $instance->sendlatenotifications)) {
             // No need to do anything.
@@ -6868,8 +6901,13 @@ class assign {
     /**
      * Submit a submission for grading.
      *
+     * This method does all the normal checks, then calls {@see submit_submission()}
+     * to actually update the submission in the database, and trigger all the necessary
+     * actions.
+     *
      * @param stdClass $data - The form data
-     * @param array $notices - List of error messages to display on an error condition.
+     * @param array $notices - Not actually used. Was meant to be pass-by-reference to return errors,
+     *    but was not passed by reference, and changing this now causes errors because PHP.
      * @return bool Return false if the submission was not submitted.
      */
     public function submit_for_grading($data, $notices) {
@@ -6897,7 +6935,6 @@ class assign {
         }
 
         if (!$this->submissions_open($userid)) {
-            $notices[] = get_string('submissionsclosed', 'assign');
             return false;
         }
 
@@ -6914,38 +6951,53 @@ class assign {
         }
 
         if ($submission->status != ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
-            // Give each submission plugin a chance to process the submission.
-            $plugins = $this->get_submission_plugins();
-            foreach ($plugins as $plugin) {
-                if ($plugin->is_enabled() && $plugin->is_visible()) {
-                    $plugin->submit_for_grading($submission);
-                }
-            }
-
-            $submission->status = ASSIGN_SUBMISSION_STATUS_SUBMITTED;
-            $this->update_submission($submission, $userid, true, $instance->teamsubmission);
-            $completion = new completion_info($this->get_course());
-            if ($completion->is_enabled($this->get_course_module()) && $instance->completionsubmit) {
-                $this->update_activity_completion_records($instance->teamsubmission,
-                                                          $instance->requireallteammemberssubmit,
-                                                          $submission,
-                                                          $userid,
-                                                          COMPLETION_COMPLETE,
-                                                          $completion);
-            }
-
             if (!empty($data->submissionstatement) && $USER->id == $userid) {
                 \mod_assign\event\statement_accepted::create_from_submission($this, $submission)->trigger();
             }
-            $this->notify_graders($submission);
-            $this->notify_student_submission_receipt($submission);
 
-            \mod_assign\event\assessable_submitted::create_from_submission($this, $submission, false)->trigger();
+            $this->submit_submission($submission, $userid);
 
             return true;
         }
-        $notices[] = get_string('submissionsclosed', 'assign');
         return false;
+    }
+
+    /**
+     * Actually submit a submission - do all necessary DB updates, send notifications, log etc.
+     *
+     * This method does not do any checks and is intended only for backend use. When the user
+     * submits from the interface, {@see submit_for_grading} should be called.
+     *
+     * @param stdClass $submission the submission.
+     * @param int $userid the user submitting (only an issue for group submissions).
+     */
+    public function submit_submission(stdClass $submission, int $userid): void {
+        $instance = $this->get_instance();
+
+        // Give each submission plugin a chance to process the submission.
+        $plugins = $this->get_submission_plugins();
+        foreach ($plugins as $plugin) {
+            if ($plugin->is_enabled() && $plugin->is_visible()) {
+                $plugin->submit_for_grading($submission);
+            }
+        }
+
+        $submission->status = ASSIGN_SUBMISSION_STATUS_SUBMITTED;
+        $this->update_submission($submission, $userid, true, $instance->teamsubmission);
+        $completion = new completion_info($this->get_course());
+        if ($completion->is_enabled($this->get_course_module()) && $instance->completionsubmit) {
+            $this->update_activity_completion_records($instance->teamsubmission,
+                $instance->requireallteammemberssubmit,
+                $submission,
+                $userid,
+                COMPLETION_COMPLETE,
+                $completion);
+        }
+
+        $this->notify_graders($submission);
+        $this->notify_student_submission_receipt($submission);
+
+        \mod_assign\event\assessable_submitted::create_from_submission($this, $submission, false)->trigger();
     }
 
     /**
@@ -8794,6 +8846,9 @@ class assign {
                 $shouldreopen = true;
                 break;
             case ASSIGN_ATTEMPT_REOPEN_METHOD_UNTILPASS:
+                if (!is_gradable($this->course->id, 'mod', 'assign', $this->get_instance()->id)) {
+                    return false;
+                }
                 // Check the gradetopass from the gradebook.
                 $gradeitem = $this->get_grade_item();
                 if ($gradeitem) {
@@ -9466,10 +9521,10 @@ class assign {
      *
      * @param int $teamsubmission value of 0 or 1 to indicate whether this is a group activity
      * @param int $requireallteammemberssubmit value of 0 or 1 to indicate whether all group members must click Submit
-     * @param obj $submission the submission
+     * @param stdClass $submission the submission
      * @param int $userid the user id
      * @param int $complete
-     * @param obj $completion
+     * @param completion_info $completion
      *
      * @return null
      */

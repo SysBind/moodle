@@ -26,8 +26,8 @@ use stdClass;
  * @category   test
  * @copyright  2025 Ferran Recio <ferran@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \core_courseformat\external\get_overview_information
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(get_overview_information::class)]
 final class get_overview_information_test extends \core_external\tests\externallib_testcase {
     public function test_get_overview_information(): void {
         $this->resetAfterTest();
@@ -120,18 +120,6 @@ final class get_overview_information_test extends \core_external\tests\externall
             $this->assertEquals($item->contentjson, $resultelement['contentjson']);
             $this->assertEquals($item->extrajson, $resultelement['extrajson']);
         }
-    }
-
-    /**
-     * Test that the overview information returns an exception for the site home course.
-     */
-    public function test_get_overview_information_site(): void {
-        $this->resetAfterTest();
-
-        $this->expectException(\moodle_exception::class);
-        $this->expectExceptionMessage('The site home course overview page is not supported.');
-
-        get_overview_information::execute(SITEID, 'assign');
     }
 
     /**

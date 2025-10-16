@@ -31,6 +31,7 @@ $string['cannotfindanyrunforurl'] = 'Sorry, cannot find any profiling run for th
 $string['cannotfindanyrunforrunid'] = 'Sorry, cannot find the \'{$a}\' profiling run';
 $string['comment'] = 'Comment';
 $string['cputime'] = 'CPU time';
+$string['detailview'] = 'Summary of run';
 $string['differencesbetween2runsof'] = 'Differences between 2 runs of {$a}';
 $string['executiontime'] = 'Execution time';
 $string['export'] = 'Export';
@@ -41,7 +42,6 @@ $string['importok'] = 'File "{$a}" imported successfully.';
 $string['importprefix'] = 'Import prefix';
 $string['importproblem'] = 'Some problem happened importing the file "{$a}".';
 $string['lastrunof'] = 'Summary of last run of {$a}';
-$string['lastrun'] = 'Summary of last run';
 $string['markreferencerun'] = 'Mark as reference run/comment';
 $string['memory'] = 'Memory used';
 $string['pluginname'] = 'Profiling runs';
@@ -55,3 +55,6 @@ $string['viewdetails'] = 'View profiling details';
 $string['viewdiff'] = 'View profiling differences with:';
 $string['viewdiffdetails'] = 'View profiling diff details';
 $string['privacy:metadata'] = 'The Profiling runs plugin does not store any personal data.';
+
+// Deprecated since Moodle 5.1
+$string['lastrun'] = 'Summary of last run';

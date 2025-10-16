@@ -27,6 +27,7 @@ use lesson;
  * @copyright   2025 Mikel Martín <mikel@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(overview::class)]
 final class overview_test extends \advanced_testcase {
     /**
      * Helper function to create lesson pages with multichoice questions.
@@ -54,12 +55,10 @@ final class overview_test extends \advanced_testcase {
     /**
      * Test get_due_date_overview.
      *
-     * @covers ::get_due_date_overview
-     * @dataProvider provider_test_get_due_date_overview
-     *
      * @param int|null $timeincrement the time increment in seconds to add to the current time for the deadline.
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('provider_test_get_due_date_overview')]
     public function test_get_due_date_overview(?int $timeincrement): void {
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -88,32 +87,28 @@ final class overview_test extends \advanced_testcase {
     /**
      * Provider for test_get_due_date_overview.
      *
-     * @return array
+     * @return \Generator
      */
-    public static function provider_test_get_due_date_overview(): array {
-        return [
-            'no_due' => [
-                'timeincrement' => null,
-            ],
-            'past_due' => [
-                'timeincrement' => -1 * (4 * DAYSECS),
-            ],
-            'future_due' => [
-                'timeincrement' => (4 * DAYSECS),
-            ],
+    public static function provider_test_get_due_date_overview(): \Generator {
+        yield 'no_due' => [
+            'timeincrement' => null,
+        ];
+        yield 'past_due' => [
+            'timeincrement' => -1 * (4 * DAYSECS),
+        ];
+        yield 'future_due' => [
+            'timeincrement' => (4 * DAYSECS),
         ];
     }
 
     /**
      * Test get_actions_overview.
      *
-     * @covers ::get_actions_overview
-     * @dataProvider provider_test_get_actions_overview
-     *
      * @param string $role
      * @param array|null $expected
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('provider_test_get_actions_overview')]
     public function test_get_actions_overview(
         string $role,
         ?array $expected
@@ -123,7 +118,7 @@ final class overview_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $currentuser = $this->getDataGenerator()->create_and_enrol($course, $role);
-        $lesson = $this->getDataGenerator()->create_module( 'lesson', ['course' => $course->id]);
+        $lesson = $this->getDataGenerator()->create_module('lesson', ['course' => $course->id]);
 
         $this->setUser($currentuser);
 
@@ -144,29 +139,24 @@ final class overview_test extends \advanced_testcase {
     /**
      * Data provider for test_get_actions_overview.
      *
-     * @return array
+     * @return \Generator
      */
-    public static function provider_test_get_actions_overview(): array {
-        return [
-            'Student' => [
-                'role' => 'student',
-                'expected' => null,
-            ],
-            'Teacher' => [
-                'role' => 'editingteacher',
-                'expected' => [
-                    'name' => get_string('actions'),
-                    'value' => '',
-                ],
+    public static function provider_test_get_actions_overview(): \Generator {
+        yield 'Student' => [
+            'role' => 'student',
+            'expected' => null,
+        ];
+        yield 'Teacher' => [
+            'role' => 'editingteacher',
+            'expected' => [
+                'name' => get_string('actions'),
+                'value' => '',
             ],
         ];
     }
 
     /**
      * Test get_extra_totalattempts_overview.
-     *
-     * @covers ::get_extra_totalattempts_overview
-     * @dataProvider provider_test_get_extra_totalattempts_overview
      *
      * @param string $role
      * @param int $groupmode
@@ -175,6 +165,7 @@ final class overview_test extends \advanced_testcase {
      * @param array|null $expected
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('provider_test_get_extra_totalattempts_overview')]
     public function test_get_extra_totalattempts_overview(
         string $role,
         int $groupmode,
@@ -210,8 +201,16 @@ final class overview_test extends \advanced_testcase {
             $lessongenerator->create_submission([
                 'lessonid' => $lesson->id,
                 'userid' => $student1->id,
-                'grade' => 100,
+                'grade' => 50,
             ]);
+            if ($hasretakes) {
+                // If we can retake, create another attempt for student1.
+                $lessongenerator->create_submission([
+                    'lessonid' => $lesson->id,
+                    'userid' => $student1->id,
+                    'grade' => 100,
+                ]);
+            }
             $lessongenerator->create_submission([
                 'lessonid' => $lesson->id,
                 'userid' => $student2->id,
@@ -236,9 +235,17 @@ final class overview_test extends \advanced_testcase {
             return;
         }
 
+        $this->assertEquals(get_string('totalattepmts', 'mod_lesson'), $item->get_name());
+        $this->assertEquals($expected['value'], $item->get_value());
+        if ($expected['averageindialog'] === null) {
+            $itemcontent = $item->get_content();
+            $this->assertIsString($itemcontent); // In this case the content is a string instead of content object.
+            $this->assertEquals($expected['value'], $item->get_value());
+            return;
+        }
         $this->assertEquals(
-            $expected,
-            ['name' => $item->get_name(), 'value' => $item->get_value()]
+            $expected['averageindialog'],
+            $item->get_content()->get_items()[0]->value
         );
     }
 
@@ -255,8 +262,8 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => true,
                 'hasretakes' => true,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
-                    'value' => 3,
+                    'value' => 4,
+                    'averageindialog' => 1.3,
                 ],
             ],
             'Teacher (with attempts) (Separate Groups)' => [
@@ -265,8 +272,8 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => true,
                 'hasretakes' => true,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
-                    'value' => 3,
+                    'value' => 4,
+                    'averageindialog' => 1.3,
                 ],
             ],
             'Teacher (with attempts) (Visible Groups)' => [
@@ -275,8 +282,8 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => true,
                 'hasretakes' => true,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
-                    'value' => 3,
+                    'value' => 4,
+                    'averageindialog' => 1.3,
                 ],
             ],
             'Teacher (with attempts without retakes)' => [
@@ -285,8 +292,8 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => true,
                 'hasretakes' => false,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
                     'value' => null,
+                    'averageindialog' => null,
                 ],
             ],
             'Teacher (without attempts)' => [
@@ -295,8 +302,8 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => false,
                 'hasretakes' => true,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
                     'value' => 0,
+                    'averageindialog' => 0,
                 ],
             ],
             'Non-editing Teacher (with attempts)' => [
@@ -305,8 +312,8 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => true,
                 'hasretakes' => true,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
-                    'value' => 3,
+                    'value' => 4,
+                    'averageindialog' => 1.3,
                 ],
             ],
             'Non-editing Teacher (with attempts) (Separate Groups)' => [
@@ -315,9 +322,10 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => true,
                 'hasretakes' => true,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
-                    'value' => 2,
+                    'value' => 3,
+                    'averageindialog' => 1.5,
                 ],
+
             ],
             'Non-editing Teacher (with attempts) (Visible Groups)' => [
                 'role' => 'teacher',
@@ -325,8 +333,8 @@ final class overview_test extends \advanced_testcase {
                 'hasentries' => true,
                 'hasretakes' => true,
                 'expected' => [
-                    'name' => get_string('totalattepmts', 'mod_lesson'),
-                    'value' => 3,
+                    'value' => 4,
+                    'averageindialog' => 1.3,
                 ],
             ],
             'Student' => [
@@ -342,15 +350,13 @@ final class overview_test extends \advanced_testcase {
     /**
      * Test get_extra_attemptedstudents_overview.
      *
-     * @covers ::get_extra_attemptedstudents_overview
-     * @dataProvider provider_test_get_extra_attemptedstudents_overview
-     *
      * @param string $role
-     * @param bool $groupmode
+     * @param int $groupmode
      * @param bool $hasentries
      * @param array|null $expected
      * @return void
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('provider_test_get_extra_attemptedstudents_overview')]
     public function test_get_extra_attemptedstudents_overview(
         string $role,
         int $groupmode,

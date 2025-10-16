@@ -16,6 +16,7 @@
 
 namespace mod_lti\reportbuilder\local\systemreports;
 
+use core\output\html_writer;
 use core_reportbuilder\local\helpers\database;
 use core_reportbuilder\local\report\column;
 use mod_lti\reportbuilder\local\entities\tool_types;
@@ -166,10 +167,10 @@ class course_external_tools_list extends system_report {
 
                 $renderer = $PAGE->get_renderer('core_reportbuilder');
                 $attributes = [
-                    ['name' => 'id', 'value' => $row->id],
-                    ['name' => 'courseid', 'value' => $courseid],
-                    ['name' => 'action', 'value' => 'showinactivitychooser-toggle'],
-                    ['name' => 'state', 'value' => $coursevisible],
+                    ['name' => 'data-id', 'value' => $row->id],
+                    ['name' => 'data-courseid', 'value' => $courseid],
+                    ['name' => 'data-action', 'value' => 'showinactivitychooser-toggle'],
+                    ['name' => 'data-state', 'value' => $coursevisible],
                 ];
                 $label = $coursevisible ? get_string('dontshowinactivitychooser', 'mod_lti')
                     : get_string('showinactivitychooser', 'mod_lti');
@@ -180,7 +181,7 @@ class course_external_tools_list extends system_report {
                     'id' => 'showinactivitychooser-toggle-' . $row->id,
                     'checked' => $coursevisible,
                     'disabled' => $disabled,
-                    'dataattributes' => $attributes,
+                    'extraattributes' => $attributes,
                     'label' => $label,
                     'labelclasses' => 'visually-hidden',
                 ]);
@@ -218,8 +219,10 @@ class course_external_tools_list extends system_report {
 
                 // Build and display an action menu.
                 $menu = new \action_menu();
-                $menu->set_menu_trigger($OUTPUT->pix_icon('i/moremenu', get_string('actions', 'core')),
-                    'btn btn-icon d-flex'); // TODO check 'actions' lang string with UX.
+                $triggerlabel = get_string('actions');
+                $visuallyhiddenlabel = html_writer::span($triggerlabel, 'visually-hidden d-inline-block');
+                $menu->set_menu_trigger($OUTPUT->pix_icon('i/moremenu', '') . $visuallyhiddenlabel, 'btn btn-icon d-flex');
+                $menu->triggerattributes['title'] = $triggerlabel;
 
                 $menu->add(new \action_menu_link(
                     new \moodle_url('/mod/lti/coursetooledit.php', ['course' => $row->course, 'typeid' => $row->id]),

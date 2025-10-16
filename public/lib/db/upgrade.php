@@ -1996,19 +1996,6 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2025073100.01);
     }
 
-    if ($oldversion < 2025081900.02) {
-        // Remove activity_modules block.
-
-        if (!file_exists($CFG->dirroot . "/blocks/activity_modules/version.php")) {
-            uninstall_plugin('block', 'activity_modules');
-            // Delete all the admin preset plugin references to activity_modules.
-            $DB->delete_records('adminpresets_plug', ['plugin' => 'block', 'name' => 'activity_modules']);
-        }
-
-        // Main savepoint reached.
-        upgrade_main_savepoint(true, 2025081900.02);
-    }
-
     if ($oldversion < 2025081900.03) {
         // Remove section_links block.
 
@@ -2189,6 +2176,133 @@ function xmldb_main_upgrade($oldversion) {
         // Main savepoint reached.
         upgrade_main_savepoint(true, 2025090200.02);
     }
+
+    if ($oldversion < 2025091600.01) {
+        // Define field shared to be added to customfield_category.
+        $table = new xmldb_table('customfield_category');
+        $field = new xmldb_field('shared', XMLDB_TYPE_INTEGER, '1', null, null, null, '0', 'contextid');
+
+        // Conditionally launch add field shared.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field component to be added to customfield_data.
+        $table = new xmldb_table('customfield_data');
+        $field = new xmldb_field('component', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null, 'contextid');
+
+        // Conditionally launch add field component.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+         // Define field area to be added to customfield_data.
+        $table = new xmldb_table('customfield_data');
+        $field = new xmldb_field('area', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null, 'component');
+
+        // Conditionally launch add field area.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field itemid to be added to customfield_data.
+        $table = new xmldb_table('customfield_data');
+        $field = new xmldb_field('itemid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'area');
+
+        // Conditionally launch add field itemid.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define index instanceid-fieldid (unique) to be dropped form customfield_data.
+        $table = new xmldb_table('customfield_data');
+        $index = new xmldb_index('instanceid-fieldid', XMLDB_INDEX_UNIQUE, ['instanceid', 'fieldid']);
+
+        // Conditionally launch drop index instanceid-fieldid.
+        if ($dbman->index_exists($table, $index)) {
+            $dbman->drop_index($table, $index);
+        }
+
+        // Define index instanceid-fieldid-component-area-itemid (unique) to be added to customfield_data.
+        $table = new xmldb_table('customfield_data');
+        $index = new xmldb_index(
+            'instanceid-fieldid-component-area-itemid',
+            XMLDB_INDEX_UNIQUE,
+            ['instanceid', 'fieldid', 'component', 'area', 'itemid']
+        );
+
+        // Conditionally launch add index instanceid-fieldid-component-area-itemid.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Populate component, area and itemid for each record in customfield_data table.
+        $sql = "SELECT d.id, c.component, c.area, c.itemid
+                  FROM {customfield_data} d
+                  JOIN {customfield_field} f ON d.fieldid = f.id
+                  JOIN {customfield_category} c ON f.categoryid = c.id";
+        $records = $DB->get_records_sql($sql);
+
+        foreach ($records as $r) {
+            $DB->update_record('customfield_data', (object)[
+                'id'        => $r->id,
+                'component' => $r->component,
+                'area'      => $r->area,
+                'itemid'    => $r->itemid,
+            ]);
+        }
+
+        // Define table customfield_shared to be created.
+        $table = new xmldb_table('customfield_shared');
+
+        // Adding fields to table customfield_shared.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('categoryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('component', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('area', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('itemid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table customfield_shared.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('categoryid', XMLDB_KEY_FOREIGN, ['categoryid'], 'customfield_category', ['id']);
+        $table->add_key('usermodified', XMLDB_KEY_FOREIGN, ['usermodified'], 'user', ['id']);
+
+        // Adding indexes to table customfield_shared.
+        $table->add_index('categoryid-component-area-itemid', XMLDB_INDEX_UNIQUE, ['categoryid', 'component', 'area', 'itemid']);
+
+        // Conditionally launch create table for customfield_shared.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2025091600.01);
+    }
+
+    if ($oldversion < 2025092200.00) {
+        // Changing precision of field name on table customfield_category to (1333).
+        $table = new xmldb_table('customfield_category');
+        $field = new xmldb_field('name', XMLDB_TYPE_CHAR, '1333', null, XMLDB_NOTNULL, null, null, 'id');
+
+        // Launch change of precision for field name.
+        $dbman->change_field_precision($table, $field);
+
+        // Changing precision of field name on table customfield_field to (1333).
+        $table = new xmldb_table('customfield_field');
+        $field = new xmldb_field('name', XMLDB_TYPE_CHAR, '1333', null, XMLDB_NOTNULL, null, null, 'shortname');
+
+        // Launch change of precision for field name.
+        $dbman->change_field_precision($table, $field);
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2025092200.00);
+    }
+
+    // Automatically generated Moodle v5.1.0 release upgrade line.
+    // Put any upgrade step following this.
 
     return true;
 }
