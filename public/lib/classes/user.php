@@ -1744,6 +1744,77 @@ class user {
         }
         return $namefields;
     }
+
+    /**
+     * Retrieves the fields used for displaying a user's full name in the system.
+     *
+     * This function extracts the placeholder fields from the configured full name display format and
+     * returns them as an array.
+     *
+     * @param array $options optional array for override.
+     * @return array List of field names used in the full name display format.
+     */
+    public static function get_user_full_name_fields(array $options = []): array {
+        global $CFG;
+        $override = $options["override"] ?? false;
+
+        $template = null;
+        if ($override) {
+            if (!empty($CFG->alternativefullnameformat) && $CFG->alternativefullnameformat !== 'language') {
+                $template = $CFG->alternativefullnameformat;
+            }
+        } else {
+            if (!empty($CFG->fullnamedisplay) && $CFG->fullnamedisplay !== 'language') {
+                $template = $CFG->fullnamedisplay;
+            }
+        }
+
+        if (empty($template) || $template === 'language') {
+            $template = get_string('fullnamedisplay');
+        }
+
+        preg_match_all('/{\$a->(.*?)}/', $template, $matches);
+        return $matches[1];
+    }
+
+    /**
+     * Returns the name fields to be used for the first name and surname initial bars.
+     *
+     * @param array $options optional array for override.
+     * @return array ['firstname' => string, 'lastname' => string]
+     */
+    public static function get_name_initial_fields(array $options = []): array {
+        $fields = self::get_user_full_name_fields($options);
+        if (empty($fields)) {
+            return ['firstname' => 'firstname', 'lastname' => 'lastname'];
+        }
+
+        // Search for the best match for 'firstname'.
+        $firstnamefield = null;
+        foreach (['firstname', 'alternatename', 'firstnamephonetic', 'middlename'] as $check) {
+            if (in_array($check, $fields)) {
+                $firstnamefield = $check;
+                break;
+            }
+        }
+        if (!$firstnamefield) {
+            $firstnamefield = reset($fields);
+        }
+
+        // Search for the best match for 'lastname'.
+        $lastnamefield = null;
+        foreach (['lastname', 'lastnamephonetic'] as $check) {
+            if (in_array($check, $fields)) {
+                $lastnamefield = $check;
+                break;
+            }
+        }
+        if (!$lastnamefield) {
+            $lastnamefield = end($fields);
+        }
+
+        return ['firstname' => $firstnamefield, 'lastname' => $lastnamefield];
+    }
 }
 
 // Alias this class to the old name.

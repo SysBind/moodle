@@ -446,13 +446,14 @@ abstract class grade_report {
         $filtersurnamekey = "filtersurname-{$this->context->id}";
 
         $this->userwheresql = "";
+        $usernamefields = core_user::get_name_initial_fields();
         $this->userwheresql_params = array();
         if (!empty($SESSION->gradereport[$filterfirstnamekey])) {
-            $this->userwheresql .= ' AND '.$DB->sql_like('u.firstname', ':firstname', false, false);
+            $this->userwheresql .= ' AND ' . $DB->sql_like('u.' . $usernamefields['firstname'], ':firstname', false, false);
             $this->userwheresql_params['firstname'] = $SESSION->gradereport[$filterfirstnamekey] . '%';
         }
         if (!empty($SESSION->gradereport[$filtersurnamekey])) {
-            $this->userwheresql .= ' AND '.$DB->sql_like('u.lastname', ':lastname', false, false);
+            $this->userwheresql .= ' AND ' . $DB->sql_like('u.' . $usernamefields['lastname'], ':lastname', false, false);
             $this->userwheresql_params['lastname'] = $SESSION->gradereport[$filtersurnamekey] . '%';
         }
 

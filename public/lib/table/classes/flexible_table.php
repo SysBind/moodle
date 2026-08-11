@@ -20,6 +20,7 @@ use core\context;
 use core_table\local\filter\filterset;
 use core\exception\coding_exception;
 use core\output\renderable;
+use core_user;
 use html_writer;
 use moodle_url;
 use paging_bar;
@@ -687,13 +688,14 @@ class flexible_table {
         if ($this->contains_fullname_columns()) {
             static $i = 0;
             $i++;
+            $usernamefields = core_user::get_name_initial_fields();
 
             if (!empty($this->prefs['i_first'])) {
-                $conditions[] = $DB->sql_like('firstname', ':ifirstc' . $i, false, false);
+                $conditions[] = $DB->sql_like($usernamefields['firstname'], ':ifirstc' . $i, false, false);
                 $params['ifirstc' . $i] = $this->prefs['i_first'] . '%';
             }
             if (!empty($this->prefs['i_last'])) {
-                $conditions[] = $DB->sql_like('lastname', ':ilastc' . $i, false, false);
+                $conditions[] = $DB->sql_like($usernamefields['lastname'], ':ilastc' . $i, false, false);
                 $params['ilastc' . $i] = $this->prefs['i_last'] . '%';
             }
         }

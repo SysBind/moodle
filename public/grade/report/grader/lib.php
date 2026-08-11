@@ -358,6 +358,8 @@ class grade_report_grader extends grade_report {
             $SESSION->gradeuserreport = new stdClass();
         }
 
+        $namefields = core_user::get_user_full_name_fields();
+        $initialfields = core_user::get_name_initial_fields();
         if ($this->sortitemid) {
             if (!isset($SESSION->gradeuserreport->sort)) {
                 $this->sortorder = $SESSION->gradeuserreport->sort = 'ASC';
@@ -380,10 +382,10 @@ class grade_report_grader extends grade_report {
         } else {
             // not requesting sort, use last setting (for paging)
 
-            if (isset($SESSION->gradeuserreport->sortitemid)) {
+            if (isset($SESSION->gradeuserreport->sortitemid) && in_array($SESSION->gradeuserreport->sortitemid, $namefields)) {
                 $this->sortitemid = $SESSION->gradeuserreport->sortitemid;
             } else {
-                $this->sortitemid = 'lastname';
+                $this->sortitemid = $initialfields['lastname'];
             }
 
             if (isset($SESSION->gradeuserreport->sort)) {

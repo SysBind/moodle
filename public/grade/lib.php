@@ -2129,11 +2129,12 @@ class grade_structure {
                     }
 
                     if (($element['type'] == 'userfield') && ($element['name'] == 'fullname')) {
-                        $sortlink->param('sortitemid', 'firstname');
+                        $usernamefields = core_user::get_name_initial_fields();
+                        $sortlink->param('sortitemid', $usernamefields['firstname']);
                         $context->ascendingfirstnameurl = $this->get_sorting_link($sortlink, $gpr);
                         $context->descendingfirstnameurl = $this->get_sorting_link($sortlink, $gpr, 'desc');
 
-                        $sortlink->param('sortitemid', 'lastname');
+                        $sortlink->param('sortitemid', $usernamefields['lastname']);
                         $context->ascendinglastnameurl = $this->get_sorting_link($sortlink, $gpr);
                         $context->descendinglastnameurl = $this->get_sorting_link($sortlink, $gpr, 'desc');
                     } else {

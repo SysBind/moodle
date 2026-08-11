@@ -1035,4 +1035,77 @@ final class user_test extends \advanced_testcase {
             ],
         ];
     }
+
+    /**
+     * Verify that the get_user_full_name_fields function returns the expected
+     * list of fields for various configurations.
+     *
+     * @covers ::get_user_full_name_fields
+     */
+    public function test_get_user_full_name_fields(): void {
+        $this->resetAfterTest();
+
+        // 1. Default (language).
+        set_config('fullnamedisplay', 'language');
+        $this->assertSame(['firstname', 'lastname'], \core_user::get_user_full_name_fields());
+
+        // 2. Explicit custom format.
+        set_config('fullnamedisplay', '{$a->lastname}, {$a->firstname}');
+        $this->assertSame(['lastname', 'firstname'], \core_user::get_user_full_name_fields());
+
+        // 3. Reordered fields.
+        set_config('fullnamedisplay', '{$a->firstname} {$a->middlename} {$a->lastname}');
+        $this->assertSame(['firstname', 'middlename', 'lastname'], \core_user::get_user_full_name_fields());
+
+        // 4. Single field.
+        set_config('fullnamedisplay', '{$a->alternatename}');
+        $this->assertSame(['alternatename'], \core_user::get_user_full_name_fields());
+
+        // 5. Additional fields (non-name).
+        set_config('fullnamedisplay', '{$a->firstname} {$a->lastname} ({$a->idnumber})');
+        $this->assertSame(['firstname', 'lastname', 'idnumber'], \core_user::get_user_full_name_fields());
+
+        // 6. Alternative format with override.
+        set_config('alternativefullnameformat', '{$a->firstnamephonetic} {$a->lastnamephonetic}');
+        $this->assertSame(['firstnamephonetic', 'lastnamephonetic'], \core_user::get_user_full_name_fields(['override' => true]));
+
+        // 7. Alternative format set to language.
+        set_config('alternativefullnameformat', 'language');
+        // Should fall back to fullnamedisplay (custom) or language default.
+        set_config('fullnamedisplay', '{$a->firstname} {$a->lastname}');
+        $this->assertSame(['firstname', 'lastname'], \core_user::get_user_full_name_fields(['override' => true]));
+    }
+
+    /**
+     * Verify that get_name_initial_fields returns the correct mapping for initial bars.
+     *
+     * @covers ::get_name_initial_fields
+     */
+    public function test_get_name_initial_fields(): void {
+        $this->resetAfterTest();
+
+        // 1. Standard.
+        set_config('fullnamedisplay', 'language');
+        $this->assertSame(['firstname' => 'firstname', 'lastname' => 'lastname'], \core_user::get_name_initial_fields());
+
+        // 2. Reordered - should still target firstname/lastname if present.
+        set_config('fullnamedisplay', '{$a->lastname}, {$a->firstname}');
+        $this->assertSame(['firstname' => 'firstname', 'lastname' => 'lastname'], \core_user::get_name_initial_fields());
+
+        // 3. Reordered with middle name.
+        set_config('fullnamedisplay', '{$a->lastname} {$a->firstname} {$a->middlename}');
+        $this->assertSame(['firstname' => 'firstname', 'lastname' => 'lastname'], \core_user::get_name_initial_fields());
+
+        // 4. Using phonetic names.
+        set_config('fullnamedisplay', '{$a->firstnamephonetic} {$a->lastnamephonetic}');
+        $this->assertSame(['firstname' => 'firstnamephonetic', 'lastname' => 'lastnamephonetic'], \core_user::get_name_initial_fields());
+
+        // 5. Single field (alternatename).
+        set_config('fullnamedisplay', '{$a->alternatename}');
+        $this->assertSame(['firstname' => 'alternatename', 'lastname' => 'alternatename'], \core_user::get_name_initial_fields());
+
+        // 6. No standard name fields - fallback to first and last fields.
+        set_config('fullnamedisplay', '{$a->idnumber} {$a->email} {$a->city}');
+        $this->assertSame(['firstname' => 'idnumber', 'lastname' => 'city'], \core_user::get_name_initial_fields());
+    }
 }
