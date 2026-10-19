@@ -178,6 +178,9 @@ class ai_action_register extends base {
             "{$mainalias}.actionname",
         ))
             ->set_options([
+                'embed_image' => new lang_string('action_embed_image', 'core_ai'),
+                'embed_media' => new lang_string('action_embed_media', 'core_ai'),
+                'embed_text' => new lang_string('action_embed_text', 'core_ai'),
                 'explain_text' => new lang_string('action_explain_text', 'core_ai'),
                 'generate_image' => new lang_string('action_generate_image', 'core_ai'),
                 'generate_text' => new lang_string('action_generate_text', 'core_ai'),

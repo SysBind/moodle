@@ -1,0 +1,16 @@
+.git/
+.idea/
+.junie/
+.run/
+*.min.js
+**/amd/build/**
+**/yui/build/**
+public/admin/tool/log/store/standard/classes/log
+public/admin/tool/log/store/database/classes/log
+node_modules/
+vendor/
+
+# Skip frontend markup and styles.
+*.html
+*.htm
+*.css
