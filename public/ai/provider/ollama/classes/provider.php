@@ -34,6 +34,9 @@ class provider extends \core_ai\provider {
             \core_ai\aiactions\generate_text::class,
             \core_ai\aiactions\summarise_text::class,
             \core_ai\aiactions\explain_text::class,
+            \core_ai\aiactions\embed_text::class,
+            \core_ai\aiactions\embed_image::class,
+            \core_ai\aiactions\embed_media::class,
         ];
     }
 
@@ -48,6 +51,8 @@ class provider extends \core_ai\provider {
         $customdata['providername'] = 'aiprovider_ollama';
         if ($actionname === 'generate_text' || $actionname === 'summarise_text' || $actionname === 'explain_text') {
             return new form\action_generate_text_form(customdata: $customdata);
+        } else if ($actionname === 'embed_text' || $actionname === 'embed_image' || $actionname === 'embed_media') {
+            return new form\action_embed_form(customdata: $customdata);
         }
 
         return false;
@@ -74,6 +79,9 @@ class provider extends \core_ai\provider {
         ];
         if ($actionname === 'generate_text' || $actionname === 'summarise_text' || $actionname === 'explain_text') {
             $mform = new form\action_generate_text_form(customdata: $customdata);
+            return $mform->get_defaults();
+        } else if ($actionname === 'embed_text' || $actionname === 'embed_image' || $actionname === 'embed_media') {
+            $mform = new form\action_embed_form(customdata: $customdata);
             return $mform->get_defaults();
         }
 

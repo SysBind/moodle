@@ -38,6 +38,9 @@ class provider extends \core_ai\provider {
             \core_ai\aiactions\generate_image::class,
             \core_ai\aiactions\summarise_text::class,
             \core_ai\aiactions\explain_text::class,
+            \core_ai\aiactions\embed_text::class,
+            \core_ai\aiactions\embed_image::class,
+            \core_ai\aiactions\embed_media::class,
         ];
     }
 
@@ -64,6 +67,8 @@ class provider extends \core_ai\provider {
             return new form\action_generate_text_form(customdata: $customdata);
         } else if ($actionname === 'generate_image') {
             return new form\action_generate_image_form(customdata: $customdata);
+        } else if ($actionname === 'embed_text' || $actionname === 'embed_image' || $actionname === 'embed_media') {
+            return new form\action_embed_form(customdata: $customdata);
         }
 
         return false;
@@ -82,6 +87,9 @@ class provider extends \core_ai\provider {
             return $mform->get_defaults();
         } else if ($actionname === 'generate_image') {
             $mform = new form\action_generate_image_form(customdata: $customdata);
+            return $mform->get_defaults();
+        } else if ($actionname === 'embed_text' || $actionname === 'embed_image' || $actionname === 'embed_media') {
+            $mform = new form\action_embed_form(customdata: $customdata);
             return $mform->get_defaults();
         }
 

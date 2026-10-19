@@ -17,6 +17,9 @@
 namespace core_ai;
 
 use core_ai\aiactions\generate_image;
+use core_ai\aiactions\embed_image;
+use core_ai\aiactions\embed_media;
+use core_ai\aiactions\embed_text;
 use core_ai\aiactions\generate_text;
 use core_ai\aiactions\summarise_text;
 use core_ai\aiactions\explain_text;
@@ -90,6 +93,9 @@ final class manager_test extends \advanced_testcase {
             generate_image::class,
             summarise_text::class,
             explain_text::class,
+            embed_text::class,
+            embed_image::class,
+            embed_media::class,
         ], $actions);
     }
 
