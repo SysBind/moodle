@@ -68,6 +68,20 @@ class process_embed_text extends abstract_processor {
             $embedding = $bodyobj->embeddings[0];
         }
 
+        foreach ($embedding as $value) {
+            if ((!is_int($value) && !is_float($value)) || !is_finite((float) $value)) {
+                $embedding = [];
+                break;
+            }
+        }
+
+        if ($embedding === []) {
+            return \core_ai\error\factory::create(
+                500,
+                'Invalid embedding response from Ollama: no embedding vector returned.',
+            )->get_error_details();
+        }
+
         return [
             'success' => true,
             'id' => $bodyobj->id ?? null,

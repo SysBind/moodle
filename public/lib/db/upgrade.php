@@ -2390,33 +2390,6 @@ function xmldb_main_upgrade($oldversion) {
         if (!$dbman->table_exists($table)) {
             $dbman->create_table($table);
         }
-
-        // Define table ai_action_embed_image to be created.
-        $table = new xmldb_table('ai_action_embed_image');
-        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
-        $table->add_field('sourceref', XMLDB_TYPE_TEXT, null, null, null, null, null);
-        $table->add_field('mimetype', XMLDB_TYPE_CHAR, '127', null, null, null, null);
-        $table->add_field('responseid', XMLDB_TYPE_CHAR, '128', null, null, null, null);
-        $table->add_field('embeddingdims', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
-        $table->add_field('embeddinghash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
-        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
-        if (!$dbman->table_exists($table)) {
-            $dbman->create_table($table);
-        }
-
-        // Define table ai_action_embed_media to be created.
-        $table = new xmldb_table('ai_action_embed_media');
-        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
-        $table->add_field('sourceref', XMLDB_TYPE_TEXT, null, null, null, null, null);
-        $table->add_field('mimetype', XMLDB_TYPE_CHAR, '127', null, null, null, null);
-        $table->add_field('responseid', XMLDB_TYPE_CHAR, '128', null, null, null, null);
-        $table->add_field('embeddingdims', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
-        $table->add_field('embeddinghash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
-        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
-        if (!$dbman->table_exists($table)) {
-            $dbman->create_table($table);
-        }
-
         // Main savepoint reached.
         upgrade_main_savepoint(true, 2026100500.01);
     }

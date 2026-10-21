@@ -55,10 +55,8 @@ final class provider_test extends \advanced_testcase {
     public function test_get_action_list(): void {
         $actionlist = $this->provider->get_action_list();
         $this->assertIsArray($actionlist);
-        $this->assertCount(6, $actionlist);
+        $this->assertCount(4, $actionlist);
         $this->assertContains(\core_ai\aiactions\embed_text::class, $actionlist);
-        $this->assertContains(\core_ai\aiactions\embed_image::class, $actionlist);
-        $this->assertContains(\core_ai\aiactions\embed_media::class, $actionlist);
         $this->assertContains(\core_ai\aiactions\generate_text::class, $actionlist);
         $this->assertContains(\core_ai\aiactions\summarise_text::class, $actionlist);
         $this->assertContains(\core_ai\aiactions\explain_text::class, $actionlist);
