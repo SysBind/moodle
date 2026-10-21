@@ -2378,7 +2378,6 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2026092300.01);
     }
 
-
     // Automatically generated Moodle v5.3.0 release upgrade line.
     // Put any upgrade step following this.
 
@@ -2395,7 +2394,7 @@ function xmldb_main_upgrade($oldversion) {
             $dbman->create_table($table);
         }
         // Main savepoint reached.
-        upgrade_main_savepoint(true, 2026100500.01);
+        upgrade_main_savepoint(true, 2026100500.03);
     }
 
     return true;
