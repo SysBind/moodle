@@ -36,8 +36,6 @@ class manager {
         'explain_text',
         'generate_image',
         'embed_text',
-        'embed_image',
-        'embed_media',
     ];
 
     /**

@@ -2378,8 +2378,25 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2026092300.01);
     }
 
+
     // Automatically generated Moodle v5.3.0 release upgrade line.
     // Put any upgrade step following this.
+
+    if ($oldversion < 2026100500.03) {
+        // Define table ai_action_embed_text to be created.
+        $table = new xmldb_table('ai_action_embed_text');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('inputtext', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('responseid', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('embeddingdims', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('embeddinghash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026100500.01);
+    }
 
     return true;
 }
