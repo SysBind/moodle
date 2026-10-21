@@ -2385,10 +2385,9 @@ function xmldb_main_upgrade($oldversion) {
         // Define table ai_action_embed_text to be created.
         $table = new xmldb_table('ai_action_embed_text');
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
-        $table->add_field('inputtext', XMLDB_TYPE_TEXT, null, null, null, null, null);
-        $table->add_field('responseid', XMLDB_TYPE_CHAR, '128', null, null, null, null);
+        $table->add_field('inputhash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
+        $table->add_field('inputlength', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('embeddingdims', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
-        $table->add_field('embeddinghash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
         $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
         if (!$dbman->table_exists($table)) {
             $dbman->create_table($table);

@@ -24,8 +24,8 @@ use core_ai\aiactions\responses\response_embed_text;
  * @package    core_ai
  * @copyright  2026 Asaf Ohayon <asaf@sysbind.co.il>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \core_ai\aiactions\embed_text
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\core_ai\aiactions\embed_text::class)]
 final class embed_text_test extends \advanced_testcase {
     public function test_configure(): void {
         $action = new embed_text(
@@ -57,9 +57,11 @@ final class embed_text_test extends \advanced_testcase {
         $storeid = $action->store($response);
         $record = $DB->get_record('ai_action_embed_text', ['id' => $storeid], '*', MUST_EXIST);
 
-        $this->assertEquals('Vector input text', $record->inputtext);
-        $this->assertEquals('emb_123', $record->responseid);
+        $this->assertEquals(hash('sha256', 'Vector input text'), $record->inputhash);
+        $this->assertEquals(strlen('Vector input text'), (int)$record->inputlength);
         $this->assertEquals(3, (int)$record->embeddingdims);
-        $this->assertEquals(hash('sha256', json_encode([0.1, 0.2, 0.3])), $record->embeddinghash);
+        // Neither the input text nor the vector is persisted.
+        $this->assertObjectNotHasProperty('inputtext', $record);
+        $this->assertObjectNotHasProperty('embedding', $record);
     }
 }

@@ -7,6 +7,15 @@
 - The ai_action_register table now includes a courseid column, populated at log time (and backfilled in the background for existing rows) by resolving the action's context to a course. A new report_aiusage plugin adds a course-level AI usage report, with new report/aiusage:view and report/aiusage:viewown capabilities.
 
   For more information see [MDL-80893](https://tracker.moodle.org/browse/MDL-80893)
+- A new `embed_text` action (`core_ai\aiactions\embed_text`, response `core_ai\aiactions\responses\response_embed_text`) turns text into an embedding vector. Unlike the existing actions it is not user facing and has no placement: it is meant to be called by other components, for example a semantic search engine. The `aiprovider_ollama` provider supports it.
+
+  Embeddings are only comparable when produced by the same provider instance and model. Consumers that store vectors must therefore:
+  - let the admin choose a provider instance in the consumer's own settings (the model stays an action setting of that provider instance),
+  - record the provider instance id, the model and the vector dimensions they indexed with, and refuse to mix vectors from a different combination,
+  - re-embed all stored content when any of those change.
+
+  The vector is returned to the caller and belongs to the consumer. The `ai_action_embed_text` table only stores a hash and length of the input and the vector dimensions; neither the text nor the vector is persisted by core.
+- `core_ai\manager::process_action()` accepts an optional `$providerid`. When given, only that provider instance is used to process the action and there is no failover to other instances. Use it for actions such as `embed_text` where results from different provider instances are not interchangeable.
 
 ### Changed
 

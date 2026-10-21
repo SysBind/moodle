@@ -5034,10 +5034,9 @@
     <TABLE NAME="ai_action_embed_text" COMMENT="Stores specific data about embed text actions.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="inputtext" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="The text input that was embedded."/>
-        <FIELD NAME="responseid" TYPE="char" LENGTH="128" NOTNULL="false" SEQUENCE="false" COMMENT="A unique identifier returned by the provider when available."/>
-        <FIELD NAME="embeddingdims" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="The embedding vector dimensions returned by the provider."/>
-        <FIELD NAME="embeddinghash" TYPE="char" LENGTH="64" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="A hash of the embedding vector, used for traceability without storing the full vector."/>
+        <FIELD NAME="inputhash" TYPE="char" LENGTH="64" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="SHA-256 hash of the embedded text. The text itself is not stored."/>
+        <FIELD NAME="inputlength" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Length in characters of the embedded text."/>
+        <FIELD NAME="embeddingdims" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Number of dimensions of the returned vector. The vector itself is not stored."/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

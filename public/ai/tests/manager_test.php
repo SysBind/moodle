@@ -516,6 +516,78 @@ final class manager_test extends \advanced_testcase {
     }
 
     /**
+     * Test process_action restricted to one provider instance: no failover to other instances.
+     */
+    public function test_process_action_with_providerid(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $manager = \core\di::get(manager::class);
+        $config = ['apikey' => 'goeshere'];
+        $provider1 = $manager->create_provider_instance(
+                classname: '\aiprovider_openai\provider',
+                name: 'dummy1',
+                enabled: true,
+                config: $config,
+        );
+        // A second instance of the same provider plugin, as an admin would create for a different model.
+        $provider2 = $manager->create_provider_instance(
+                classname: '\aiprovider_openai\provider',
+                name: 'dummy2',
+                enabled: true,
+                config: $config,
+        );
+        $available = $manager->get_providers_for_actions([generate_image::class], true)[generate_image::class];
+        $this->assertCount(2, $available);
+
+        $managermock = $this->getMockBuilder(manager::class)
+            ->setConstructorArgs([$DB])
+            ->onlyMethods(['call_action_provider'])
+            ->getMock();
+
+        // Every call fails, so without a provider restriction both instances would be tried.
+        $failedresult = new aiactions\responses\response_generate_image(
+            success: false,
+            errorcode: 500,
+            error: 'Internal server error',
+            errormessage: 'Upstream failure',
+        );
+        $calledproviders = [];
+        $managermock->expects($this->once())
+            ->method('call_action_provider')
+            ->willReturnCallback(function (provider $provider) use ($failedresult, &$calledproviders) {
+                $calledproviders[] = $provider->id;
+                return $failedresult;
+            });
+
+        $action = new generate_image(
+            contextid: 1,
+            userid: 1,
+            prompttext: 'This is a test prompt',
+            quality: 'hd',
+            aspectratio: 'square',
+            numimages: 1,
+            style: 'vivid',
+        );
+
+        // Only the requested instance is called, even though it fails and another instance exists.
+        $result = $managermock->process_action($action, $provider2->id);
+        $this->assertFalse($result->get_success());
+        $this->assertEquals(500, $result->get_errorcode());
+        $this->assertEquals([$provider2->id], $calledproviders);
+        $this->assertEquals(1, $DB->count_records('ai_action_register'));
+        $this->assertEquals($provider2->get_name(), $DB->get_field('ai_action_register', 'provider', []));
+        $this->assertNotEquals($provider1->id, $provider2->id);
+
+        // An unknown or unavailable instance id means no provider is tried at all.
+        $result = $managermock->process_action($action, $provider2->id + 1000);
+        $this->assertFalse($result->get_success());
+        $this->assertEquals(-1, $result->get_errorcode());
+        $this->assertEquals(get_string('error:noproviders', 'core_ai'), $result->get_error());
+        $this->assertEquals(1, $DB->count_records('ai_action_register'));
+    }
+
+    /**
      * Test set_user_policy.
      */
     public function test_set_user_policy(): void {

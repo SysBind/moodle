@@ -89,10 +89,9 @@ class provider implements
             'generatedcontent' => 'privacy:metadata:ai_action_explain_text:generatedcontent',
         ], 'privacy:metadata:ai_action_explain_text');
         $collection->add_database_table('ai_action_embed_text', [
-            'inputtext' => 'privacy:metadata:ai_action_embed_text:inputtext',
-            'responseid' => 'privacy:metadata:ai_action_embed_text:responseid',
+            'inputhash' => 'privacy:metadata:ai_action_embed_text:inputhash',
+            'inputlength' => 'privacy:metadata:ai_action_embed_text:inputlength',
             'embeddingdims' => 'privacy:metadata:ai_action_embed_text:embeddingdims',
-            'embeddinghash' => 'privacy:metadata:ai_action_embed_text:embeddinghash',
         ], 'privacy:metadata:ai_action_embed_text');
 
         return $collection;
@@ -388,7 +387,7 @@ class provider implements
 
         // AI action embed text.
         $sql = "SELECT aar.actionname, aar.success, aar.provider, aar.timecreated, aar.timecompleted, aar.contextid,
-                       aaet.inputtext, aaet.responseid, aaet.embeddingdims, aaet.embeddinghash,
+                       aaet.inputhash, aaet.inputlength, aaet.embeddingdims,
                        aar.prompttokens, aar.completiontokens, aar.model
                   FROM {ai_action_register} aar
                   JOIN {ai_action_embed_text} aaet
@@ -412,10 +411,9 @@ class provider implements
             $details = (object) [
                 'actionname' => $textembeddetail->actionname,
                 'contextid' => $textembeddetail->contextid,
-                'inputtext' => $textembeddetail->inputtext,
-                'responseid' => $textembeddetail->responseid,
+                'inputhash' => $textembeddetail->inputhash,
+                'inputlength' => $textembeddetail->inputlength,
                 'embeddingdims' => $textembeddetail->embeddingdims,
-                'embeddinghash' => $textembeddetail->embeddinghash,
                 'prompttokens' => $textembeddetail->prompttokens,
                 'completiontokens' => $textembeddetail->completiontokens,
                 'model' => $textembeddetail->model,
@@ -564,10 +562,9 @@ class provider implements
         if ($aaetids) {
             [$aaetidsql, $aaetidparams] = $DB->get_in_or_equal(array_keys($aaetids), SQL_PARAMS_NAMED);
             $sql = "UPDATE {ai_action_embed_text}
-                   SET inputtext = '',
-                       responseid = '',
-                       embeddingdims = 0,
-                       embeddinghash = ''
+                   SET inputhash = '',
+                       inputlength = 0,
+                       embeddingdims = 0
                  WHERE id " . $aaetidsql;
             $DB->execute($sql, $aaetidparams);
         }
@@ -729,10 +726,9 @@ class provider implements
         if ($aaetids) {
             [$aaetidsql, $aaetidparams] = $DB->get_in_or_equal($aaetids, SQL_PARAMS_NAMED);
             $sql = "UPDATE {ai_action_embed_text}
-                   SET inputtext = '',
-                       responseid = '',
-                       embeddingdims = 0,
-                       embeddinghash = ''
+                   SET inputhash = '',
+                       inputlength = 0,
+                       embeddingdims = 0
                  WHERE id " . $aaetidsql;
             $DB->execute($sql, $aaetidparams);
         }
@@ -940,10 +936,9 @@ class provider implements
         if ($aaetids) {
             [$aaetidsql, $aaetidparams] = $DB->get_in_or_equal(array_keys($aaetids), SQL_PARAMS_NAMED);
             $sql = "UPDATE {ai_action_embed_text}
-                   SET inputtext = '',
-                       responseid = '',
-                       embeddingdims = 0,
-                       embeddinghash = ''
+                   SET inputhash = '',
+                       inputlength = 0,
+                       embeddingdims = 0
                  WHERE id " . $aaetidsql;
             $DB->execute($sql, $aaetidparams);
         }

@@ -22,8 +22,8 @@ namespace core_ai\aiactions\responses;
  * @package    core_ai
  * @copyright  2026 Asaf Ohayon <asaf@sysbind.co.il>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \core_ai\aiactions\responses\response_embed_text
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\core_ai\aiactions\responses\response_embed_text::class)]
 final class response_embed_text_test extends \advanced_testcase {
     public function test_get_success(): void {
         $response = new response_embed_text(success: true);

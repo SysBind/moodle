@@ -27,8 +27,8 @@ require_once(__DIR__ . '/testcase_helper_trait.php');
  * @package    aiprovider_ollama
  * @copyright  2026 Asaf Ohayon <asaf@sysbind.co.il>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \aiprovider_ollama\process_embed_text
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\aiprovider_ollama\process_embed_text::class)]
 final class process_embed_text_test extends \advanced_testcase {
 
     use testcase_helper_trait;

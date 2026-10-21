@@ -19,7 +19,19 @@ namespace core_ai\aiactions;
 use core_ai\aiactions\responses\response_base;
 
 /**
- * Embed text class.
+ * Embed text action.
+ *
+ * Unlike the other core actions this one is not user facing and has no placement. It exists for
+ * other components (for example a semantic search engine) to turn text into an embedding vector.
+ *
+ * Embeddings are only comparable when produced by the same provider instance and model, so a
+ * consumer that stores vectors must record the provider instance id, model and vector dimensions
+ * it indexed with and always process this action through that provider instance, using
+ * {@see \core_ai\manager::process_action()} with the $providerid argument. Changing either means
+ * re-embedding everything previously stored.
+ *
+ * The vector itself is returned to the caller and belongs to the consumer. The action table only
+ * keeps a hash and length of the input plus the vector dimensions for auditing and usage reporting.
  *
  * @package    core_ai
  * @copyright  2026 Asaf Ohayon <asaf@sysbind.co.il>
@@ -48,13 +60,14 @@ class embed_text extends base {
         global $DB;
 
         $responsearr = $response->get_response_data();
-        $embedding = $responsearr['embedding'] ?? [];
 
+        // The vector belongs to the consumer and is not stored here. The input text is not stored
+        // either: embedding is a bulk, system driven operation and the text already lives in the
+        // component that asked for it. Keep only what is needed for auditing and usage reporting.
         $record = new \stdClass();
-        $record->inputtext = $this->text;
-        $record->responseid = $responsearr['id'] ?? null;
-        $record->embeddingdims = count($embedding);
-        $record->embeddinghash = hash('sha256', json_encode($embedding));
+        $record->inputhash = hash('sha256', $this->text);
+        $record->inputlength = \core_text::strlen($this->text);
+        $record->embeddingdims = count($responsearr['embedding'] ?? []);
 
         return $DB->insert_record($this->get_tablename(), $record);
     }
