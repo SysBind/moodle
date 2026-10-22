@@ -182,6 +182,7 @@ class ai_action_register extends base {
                 'generate_image' => new lang_string('action_generate_image', 'core_ai'),
                 'generate_text' => new lang_string('action_generate_text', 'core_ai'),
                 'summarise_text' => new lang_string('action_summarise_text', 'core_ai'),
+                'embed_text' => new lang_string('action_embed_text', 'core_ai'),
             ]);
 
         // Provider filter.
