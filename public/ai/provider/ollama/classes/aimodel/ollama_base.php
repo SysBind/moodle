@@ -29,6 +29,8 @@ interface ollama_base {
     public const MODEL_TYPE_TEXT = 1;
     /** @var int MODEL_TYPE_IMAGE Image model type. */
     public const MODEL_TYPE_IMAGE = 2;
+    /** @var int MODEL_TYPE_EMBEDDING Text embedding model type. */
+    public const MODEL_TYPE_EMBEDDING = 3;
 
     /**
      * Get model type.

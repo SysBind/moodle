@@ -158,13 +158,15 @@ class action_form extends action_settings_form {
         $PAGE->requires->js_call_amd('aiprovider_ollama/modelchooser', 'init');
         $mform = $this->_form;
 
-        // Determine which model to use as the default.
+        // Determine which model to use as the default: the first predefined model of this type.
+        $modellist = $this->get_model_list($modeltype);
+        $firstmodel = (string) (array_key_first(array_diff_key($modellist, ['custom' => true])) ?? 'custom');
         if (!empty($this->actionconfig['model']) &&
-                (!array_key_exists($this->actionconfig['model'], $this->get_model_list($modeltype)) ||
+                (!array_key_exists($this->actionconfig['model'], $modellist) ||
                 !empty($this->actionconfig['modelextraparams']))) {
             $defaultmodel = 'custom';
         } else {
-            $defaultmodel = $this->actionconfig['model'] ?? 'llama3.3';
+            $defaultmodel = $this->actionconfig['model'] ?? $firstmodel;
         }
 
         // Get this model's stored values to assist model switching and value population in JS.
@@ -186,7 +188,7 @@ class action_form extends action_settings_form {
         $mform->setDefault('modeltemplate', $defaultmodel);
         $mform->addHelpButton('modeltemplate', "action:{$this->actionname}:model", 'aiprovider_ollama');
 
-        $mform->addElement('hidden', 'model', $this->actionconfig['model'] ?? 'llama3.3');
+        $mform->addElement('hidden', 'model', $this->actionconfig['model'] ?? $firstmodel);
         $mform->setType('model', PARAM_TEXT);
 
         $mform->addElement('text', 'custommodel', get_string('custom_model_name', 'aiprovider_ollama'));

@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+$string['action:embed_text:model'] = 'Text embedding model';
+$string['action:embed_text:model_help'] = 'The model used to generate text embeddings. Changing it invalidates every embedding already produced with this provider instance.';
 $string['action:explain_text:model'] = 'Text explanation model';
 $string['action:explain_text:model_help'] = 'The model used to explain the provided text.';
 $string['action:explain_text:systeminstruction'] = 'System instruction';
