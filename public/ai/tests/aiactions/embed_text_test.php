@@ -40,7 +40,7 @@ final class embed_text_test extends \advanced_testcase {
     public function test_store(): void {
         $this->resetAfterTest();
         global $DB;
-        throw new Exception("BU");
+
         $action = new embed_text(
             contextid: 1,
             userid: 7,
