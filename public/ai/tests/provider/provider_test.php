@@ -16,8 +16,10 @@
 
 namespace core_ai\provider;
 
+use core_ai\aiactions\embed_text;
 use core_ai\aiactions\generate_image;
 use core_ai\aiactions\generate_text;
+use core_ai\aiactions\responses\response_embed_text;
 use core_ai\aiactions\responses\response_generate_image;
 use core_ai\aiactions\responses\response_generate_text;
 use core_ai\aiactions\responses\response_summarise_text;
@@ -1538,6 +1540,259 @@ final class provider_test extends \advanced_testcase {
         $this->assertNotEquals('', $record->responseid);
         $this->assertNotEquals('', $record->fingerprint);
         $this->assertNotEquals('', $record->generatedcontent);
+    }
+
+    /**
+     * Store an embed_text action result for a user in a context.
+     *
+     * @param int $contextid The context the action was created in.
+     * @param int $userid The user requesting the action.
+     * @param string $text The text that was embedded.
+     * @param float[] $embedding The embedding vector returned by the provider.
+     * @param int $prompttokens The prompt tokens reported by the provider.
+     * @return int The id of the ai_action_register record.
+     */
+    private function store_embed_text(
+        int $contextid,
+        int $userid,
+        string $text,
+        array $embedding,
+        int $prompttokens,
+    ): int {
+        $action = new embed_text(
+            contextid: $contextid,
+            userid: $userid,
+            text: $text,
+        );
+        $actionresponse = new response_embed_text(
+            success: true,
+        );
+        $actionresponse->set_response_data([
+            'id' => 'embd-123',
+            'embedding' => $embedding,
+            'prompttokens' => $prompttokens,
+            'model' => 'text-embedding-3-small',
+        ]);
+
+        $method = new \ReflectionMethod($this->manager, 'store_action_result');
+        return $method->invoke($this->manager, $this->provider, $action, $actionresponse);
+    }
+
+    /**
+     * Test get_contexts_for_userid() for embed text.
+     */
+    public function test_get_contexts_for_userid_for_embed_text(): void {
+        $user1 = $this->getDataGenerator()->create_user();
+        $user2 = $this->getDataGenerator()->create_user();
+        $course = $this->getDataGenerator()->create_course();
+        $coursecontext = \context_course::instance($course->id);
+        $syscontext = \context_system::instance();
+
+        // Index time embedding in a course context, and query time embedding in the system context.
+        $this->store_embed_text($coursecontext->id, $user1->id, 'This is a test text 1', [0.1, 0.2, 0.3], 9);
+        $this->store_embed_text($syscontext->id, $user1->id, 'This is a test text 2', [0.4, 0.5, 0.6], 10);
+
+        $contextids = provider::get_contexts_for_userid($user1->id)->get_contextids();
+        $this->assertCount(2, $contextids);
+        $this->assertContainsEquals($coursecontext->id, $contextids);
+        $this->assertContainsEquals($syscontext->id, $contextids);
+
+        $this->assertEmpty(provider::get_contexts_for_userid($user2->id)->get_contextids());
+    }
+
+    /**
+     * Test export_user_data() for embed text.
+     */
+    public function test_export_user_data_for_embed_text(): void {
+        $user = $this->getDataGenerator()->create_user();
+        $course1 = $this->getDataGenerator()->create_course();
+        $course2 = $this->getDataGenerator()->create_course();
+        $course1context = \context_course::instance($course1->id);
+        $course2context = \context_course::instance($course2->id);
+        $clock = $this->mock_clock_with_frozen();
+
+        $timecreated1 = $clock->time();
+        $this->store_embed_text($course1context->id, $user->id, 'This is a test text 1', [0.1, 0.2, 0.3], 9);
+
+        $clock->bump(2);
+        $timecreated2 = $clock->time();
+        $this->store_embed_text($course2context->id, $user->id, 'This is a test text 2', [0.1, 0.2, 0.3, 0.4], 10);
+
+        // Retrieve the user's context ids.
+        $contextlist = provider::get_contexts_for_userid($user->id);
+        $approvedcontextlist = new approved_contextlist($user, 'core_ai', $contextlist->get_contextids());
+        provider::export_user_data($approvedcontextlist);
+
+        foreach ($contextlist as $context) {
+            /** @var content_writer $writer */
+            $writer = writer::with_context($context);
+            $this->assertTrue($writer->has_any_data());
+
+            if ($context->instanceid == $course1context->instanceid) {
+                $subcontexts = [
+                    get_string('ai', 'core_ai'),
+                    get_string('action_embed_text', 'core_ai'),
+                    date('c', $timecreated1),
+                ];
+                $data = $writer->get_related_data($subcontexts, 'action_embed_text');
+                $this->assertEquals('embed_text', $data->actionname);
+                $this->assertEquals($course1context->id, $data->contextid);
+                $this->assertEquals(hash('sha256', 'This is a test text 1'), $data->inputhash);
+                $this->assertEquals(21, $data->inputlength);
+                $this->assertEquals(3, $data->embeddingdims);
+                $this->assertEquals('9', $data->prompttokens);
+                $this->assertEquals(get_string('yes'), $data->success);
+                $this->assertEquals('text-embedding-3-small', $data->model);
+                // Neither the text nor the vector is stored, so neither can be exported.
+                $this->assertObjectNotHasProperty('prompt', $data);
+                $this->assertObjectNotHasProperty('embedding', $data);
+            }
+
+            if ($context->instanceid == $course2context->instanceid) {
+                $subcontexts = [
+                    get_string('ai', 'core_ai'),
+                    get_string('action_embed_text', 'core_ai'),
+                    date('c', $timecreated2),
+                ];
+                $data = $writer->get_related_data($subcontexts, 'action_embed_text');
+                $this->assertEquals('embed_text', $data->actionname);
+                $this->assertEquals($course2context->id, $data->contextid);
+                $this->assertEquals(hash('sha256', 'This is a test text 2'), $data->inputhash);
+                $this->assertEquals(21, $data->inputlength);
+                $this->assertEquals(4, $data->embeddingdims);
+                $this->assertEquals('10', $data->prompttokens);
+                $this->assertEquals(get_string('yes'), $data->success);
+                $this->assertEquals('text-embedding-3-small', $data->model);
+            }
+        }
+    }
+
+    /**
+     * Test delete_data_for_all_users_in_context() for embed text.
+     */
+    public function test_delete_data_for_all_users_in_context_for_embed_text(): void {
+        global $DB;
+        $user = $this->getDataGenerator()->create_user();
+        $course1 = $this->getDataGenerator()->create_course();
+        $course2 = $this->getDataGenerator()->create_course();
+        $course1context = \context_course::instance($course1->id);
+        $course2context = \context_course::instance($course2->id);
+        $clock = $this->mock_clock_with_frozen();
+
+        $storeresult1 = $this->store_embed_text($course1context->id, $user->id, 'This is a test text 1', [0.1, 0.2, 0.3], 9);
+        $clock->bump(2);
+        $storeresult2 = $this->store_embed_text($course2context->id, $user->id, 'This is a test text 2', [0.1, 0.2, 0.3], 10);
+
+        provider::delete_data_for_all_users_in_context($course1context);
+
+        $actionid1 = $DB->get_field('ai_action_register', 'actionid', ['id' => $storeresult1]);
+        $actionid2 = $DB->get_field('ai_action_register', 'actionid', ['id' => $storeresult2]);
+
+        // The hash is derived from user content and is removed. Usage counters are kept.
+        $record = $DB->get_record('ai_action_embed_text', ['id' => $actionid1]);
+        $this->assertEquals('', $record->inputhash);
+        $this->assertEquals(21, $record->inputlength);
+        $this->assertEquals(3, $record->embeddingdims);
+
+        $record = $DB->get_record('ai_action_embed_text', ['id' => $actionid2]);
+        $this->assertEquals(hash('sha256', 'This is a test text 2'), $record->inputhash);
+        $this->assertEquals(21, $record->inputlength);
+        $this->assertEquals(3, $record->embeddingdims);
+    }
+
+    /**
+     * Test delete_data_for_user() for embed text.
+     */
+    public function test_delete_data_for_user_for_embed_text(): void {
+        global $DB;
+        $user1 = $this->getDataGenerator()->create_user();
+        $user2 = $this->getDataGenerator()->create_user();
+        $course = $this->getDataGenerator()->create_course();
+        $coursecontext = \context_course::instance($course->id);
+        $clock = $this->mock_clock_with_frozen();
+
+        $storeresult1 = $this->store_embed_text($coursecontext->id, $user1->id, 'This is a test text 1', [0.1, 0.2, 0.3], 9);
+        $clock->bump(2);
+        $storeresult2 = $this->store_embed_text($coursecontext->id, $user2->id, 'This is a test text 2', [0.1, 0.2, 0.3], 10);
+
+        $contextlist = provider::get_contexts_for_userid($user1->id);
+        $approvedcontextlist = new approved_contextlist($user1, 'core_ai', $contextlist->get_contextids());
+        provider::delete_data_for_user($approvedcontextlist);
+
+        $actionid1 = $DB->get_field('ai_action_register', 'actionid', ['id' => $storeresult1]);
+        $actionid2 = $DB->get_field('ai_action_register', 'actionid', ['id' => $storeresult2]);
+
+        $record = $DB->get_record('ai_action_embed_text', ['id' => $actionid1]);
+        $this->assertEquals('', $record->inputhash);
+        $this->assertEquals(21, $record->inputlength);
+        $this->assertEquals(3, $record->embeddingdims);
+
+        $record = $DB->get_record('ai_action_embed_text', ['id' => $actionid2]);
+        $this->assertEquals(hash('sha256', 'This is a test text 2'), $record->inputhash);
+    }
+
+    /**
+     * Test get_users_in_context() for embed text.
+     */
+    public function test_get_users_in_context_for_embed_text(): void {
+        $user1 = $this->getDataGenerator()->create_user();
+        $user2 = $this->getDataGenerator()->create_user();
+        $course1 = $this->getDataGenerator()->create_course();
+        $course2 = $this->getDataGenerator()->create_course();
+        $course1context = \context_course::instance($course1->id);
+        $course2context = \context_course::instance($course2->id);
+        $clock = $this->mock_clock_with_frozen();
+
+        $this->store_embed_text($course1context->id, $user1->id, 'This is a test text 1', [0.1, 0.2, 0.3], 9);
+        $clock->bump(2);
+        $this->store_embed_text($course2context->id, $user2->id, 'This is a test text 2', [0.1, 0.2, 0.3], 10);
+
+        // The user list for course1context should return user1.
+        $userlist = new \core_privacy\local\request\userlist($course1context, 'core_ai');
+        provider::get_users_in_context($userlist);
+        $this->assertCount(1, $userlist);
+        $this->assertTrue(in_array($user1->id, $userlist->get_userids()));
+        $this->assertFalse(in_array($user2->id, $userlist->get_userids()));
+
+        // The user list for course2context should return user2.
+        $userlist = new \core_privacy\local\request\userlist($course2context, 'core_ai');
+        provider::get_users_in_context($userlist);
+        $this->assertCount(1, $userlist);
+        $this->assertTrue(in_array($user2->id, $userlist->get_userids()));
+        $this->assertFalse(in_array($user1->id, $userlist->get_userids()));
+    }
+
+    /**
+     * Test delete_data_for_users() for embed text.
+     */
+    public function test_delete_data_for_users_for_embed_text(): void {
+        global $DB;
+        $user = $this->getDataGenerator()->create_user();
+        $course1 = $this->getDataGenerator()->create_course();
+        $course2 = $this->getDataGenerator()->create_course();
+        $course1context = \context_course::instance($course1->id);
+        $course2context = \context_course::instance($course2->id);
+        $clock = $this->mock_clock_with_frozen();
+
+        $storeresult1 = $this->store_embed_text($course1context->id, $user->id, 'This is a test text 1', [0.1, 0.2, 0.3], 9);
+        $clock->bump(2);
+        $storeresult2 = $this->store_embed_text($course2context->id, $user->id, 'This is a test text 2', [0.1, 0.2, 0.3], 10);
+
+        $userlist = new \core_privacy\local\request\userlist($course1context, 'core_ai');
+        provider::get_users_in_context($userlist);
+        $approvedlist = new approved_userlist($course1context, 'core_ai', $userlist->get_userids());
+        provider::delete_data_for_users($approvedlist);
+
+        $actionid1 = $DB->get_field('ai_action_register', 'actionid', ['id' => $storeresult1]);
+        $actionid2 = $DB->get_field('ai_action_register', 'actionid', ['id' => $storeresult2]);
+
+        $record = $DB->get_record('ai_action_embed_text', ['id' => $actionid1]);
+        $this->assertEquals('', $record->inputhash);
+        $this->assertEquals(21, $record->inputlength);
+        $this->assertEquals(3, $record->embeddingdims);
+
+        $record = $DB->get_record('ai_action_embed_text', ['id' => $actionid2]);
+        $this->assertEquals(hash('sha256', 'This is a test text 2'), $record->inputhash);
     }
 
     /**

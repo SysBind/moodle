@@ -88,6 +88,11 @@ class provider implements
             'fingerprint' => 'privacy:metadata:ai_action_explain_text:fingerprint',
             'generatedcontent' => 'privacy:metadata:ai_action_explain_text:generatedcontent',
         ], 'privacy:metadata:ai_action_explain_text');
+        $collection->add_database_table('ai_action_embed_text', [
+            'inputhash' => 'privacy:metadata:ai_action_embed_text:inputhash',
+            'inputlength' => 'privacy:metadata:ai_action_embed_text:inputlength',
+            'embeddingdims' => 'privacy:metadata:ai_action_embed_text:embeddingdims',
+        ], 'privacy:metadata:ai_action_embed_text');
 
         return $collection;
     }
@@ -150,6 +155,17 @@ class provider implements
                   JOIN {ai_action_explain_text} aaet
                     ON aaet.id = aar.actionid
                  WHERE aar.actionname = 'explain_text'
+                       AND aar.userid = :userid";
+        $contextlist->add_from_sql($sql, ['userid' => $userid]);
+
+        // AI action embed text.
+        $sql = "SELECT DISTINCT ctx.id
+                  FROM {context} ctx
+                  JOIN {ai_action_register} aar
+                    ON aar.contextid = ctx.id
+                  JOIN {ai_action_embed_text} aaem
+                    ON aaem.id = aar.actionid
+                 WHERE aar.actionname = 'embed_text'
                        AND aar.userid = :userid";
         $contextlist->add_from_sql($sql, ['userid' => $userid]);
 
@@ -368,6 +384,49 @@ class provider implements
             writer::with_context($context)->export_related_data($subcontexts, $name, $details);
         }
         $textexplaindetails->close();
+
+        // AI action embed text.
+        $sql = "SELECT aar.actionname, aar.success, aar.provider, aar.timecreated, aar.timecompleted, aar.contextid,
+                       aaem.inputhash, aaem.inputlength, aaem.embeddingdims,
+                       aar.prompttokens, aar.completiontokens, aar.model
+                  FROM {ai_action_register} aar
+                  JOIN {ai_action_embed_text} aaem
+                    ON aar.actionid = aaem.id
+                  JOIN {context} ctx
+                    ON aar.contextid = ctx.id
+                 WHERE aar.actionname = 'embed_text'
+                       AND aar.userid = :userid
+                       AND ctx.id " . $contextsql;
+        $params = [
+            'userid' => $userid,
+        ];
+        $params += $contextparams;
+        $textembeddetails = $DB->get_recordset_sql($sql, $params);
+        foreach ($textembeddetails as $textembeddetail) {
+            $subcontexts = [
+                get_string('ai', 'core_ai'),
+                get_string('action_embed_text', 'core_ai'),
+                date('c', $textembeddetail->timecreated),
+            ];
+            $details = (object) [
+                'actionname' => $textembeddetail->actionname,
+                'contextid' => $textembeddetail->contextid,
+                'inputhash' => $textembeddetail->inputhash,
+                'inputlength' => $textembeddetail->inputlength,
+                'embeddingdims' => $textembeddetail->embeddingdims,
+                'prompttokens' => $textembeddetail->prompttokens,
+                'completiontokens' => $textembeddetail->completiontokens,
+                'model' => $textembeddetail->model,
+                'success' => transform::yesno($textembeddetail->success),
+                'provider' => $textembeddetail->provider,
+                'timecreated' => transform::datetime($textembeddetail->timecreated),
+                'timecompleted' => transform::datetime($textembeddetail->timecompleted),
+            ];
+            $name = 'action_embed_text';
+            $context = \context::instance_by_id($textembeddetail->contextid);
+            writer::with_context($context)->export_related_data($subcontexts, $name, $details);
+        }
+        $textembeddetails->close();
     }
 
     /**
@@ -485,6 +544,28 @@ class provider implements
                        generatedcontent = ''
                  WHERE id " . $aaetidsql;
             $DB->execute($sql, $aaetidparams);
+        }
+
+        // AI action embed text.
+        $sql = "SELECT DISTINCT aaem.id
+                  FROM {ai_action_register} aar
+                  JOIN {ai_action_embed_text} aaem
+                    ON aar.actionid = aaem.id
+                  JOIN {context} ctx
+                    ON aar.contextid = ctx.id
+                 WHERE aar.actionname = 'embed_text'
+                       AND ctx.id = :contextid";
+        $params = [
+            'contextid' => $context->id,
+        ];
+        $aaemids = $DB->get_records_sql_menu($sql, $params);
+        if ($aaemids) {
+            [$aaemidsql, $aaemidparams] = $DB->get_in_or_equal(array_keys($aaemids), SQL_PARAMS_NAMED);
+            // Only the input hash is derived from user content. Length and dimensions are kept for usage reporting.
+            $sql = "UPDATE {ai_action_embed_text}
+                   SET inputhash = ''
+                 WHERE id " . $aaemidsql;
+            $DB->execute($sql, $aaemidparams);
         }
     }
 
@@ -624,6 +705,31 @@ class provider implements
                  WHERE id " . $aaetidsql;
             $DB->execute($sql, $aaetidparams);
         }
+
+        // AI action embed text.
+        $sql = "SELECT DISTINCT aaem.id AS textembedid
+                  FROM {ai_action_register} aar
+                  JOIN {ai_action_embed_text} aaem
+                    ON aar.actionid = aaem.id
+                  JOIN {context} ctx
+                    ON aar.contextid = ctx.id
+                 WHERE aar.actionname = 'embed_text'
+                       AND aar.userid = :userid
+                       AND ctx.id " . $contextsql;
+        $textembeddetails = $DB->get_recordset_sql($sql, $params);
+        $aaemids = [];
+        foreach ($textembeddetails as $textembeddetail) {
+            $aaemids[] = $textembeddetail->textembedid;
+        }
+        $textembeddetails->close();
+        if ($aaemids) {
+            [$aaemidsql, $aaemidparams] = $DB->get_in_or_equal($aaemids, SQL_PARAMS_NAMED);
+            // Only the input hash is derived from user content. Length and dimensions are kept for usage reporting.
+            $sql = "UPDATE {ai_action_embed_text}
+                   SET inputhash = ''
+                 WHERE id " . $aaemidsql;
+            $DB->execute($sql, $aaemidparams);
+        }
     }
 
     /**
@@ -683,6 +789,17 @@ class provider implements
                   JOIN {ai_action_explain_text} aaet
                     ON aaet.id = aar.actionid
                  WHERE aar.actionname = 'explain_text'
+                       AND aar.contextid = :contextid";
+        $userlist->add_from_sql('userid', $sql, ['contextid' => $context->id]);
+
+        // AI action embed text.
+        $sql = "SELECT DISTINCT aar.userid
+                  FROM {context} ctx
+                  JOIN {ai_action_register} aar
+                    ON aar.contextid = ctx.id
+                  JOIN {ai_action_embed_text} aaem
+                    ON aaem.id = aar.actionid
+                 WHERE aar.actionname = 'embed_text'
                        AND aar.contextid = :contextid";
         $userlist->add_from_sql('userid', $sql, ['contextid' => $context->id]);
     }
@@ -801,6 +918,26 @@ class provider implements
                        generatedcontent = ''
                  WHERE id " . $aaetidsql;
             $DB->execute($sql, $aaetidparams);
+        }
+
+        // AI action embed text.
+        $sql = "SELECT DISTINCT aaem.id
+                  FROM {ai_action_register} aar
+                  JOIN {ai_action_embed_text} aaem
+                    ON aar.actionid = aaem.id
+                  JOIN {context} ctx
+                    ON aar.contextid = ctx.id
+                 WHERE aar.actionname = 'embed_text'
+                       AND ctx.id = :contextid
+                       AND aar.userid " . $useridssql;
+        $aaemids = $DB->get_records_sql_menu($sql, $params);
+        if ($aaemids) {
+            [$aaemidsql, $aaemidparams] = $DB->get_in_or_equal(array_keys($aaemids), SQL_PARAMS_NAMED);
+            // Only the input hash is derived from user content. Length and dimensions are kept for usage reporting.
+            $sql = "UPDATE {ai_action_embed_text}
+                   SET inputhash = ''
+                 WHERE id " . $aaemidsql;
+            $DB->execute($sql, $aaemidparams);
         }
     }
 }
