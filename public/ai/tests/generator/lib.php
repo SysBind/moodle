@@ -51,22 +51,29 @@ class core_ai_generator extends component_generator_base {
             $data['contextid'] = \context_course::instance($data['courseid'])->id;
         }
 
-        // Create the child action record.
-        $child = new stdClass();
-        $child->prompt = 'Prompt text';
-
-        // Generate image actions need to be structured differently.
-        if ($data['actionname'] === 'generate_image') {
-            $child->numberimages = 1;
-            $child->quality = 'hd';
-            $child->aspectratio = 'landscape';
-            $child->style = 'vivid';
-            $child->sourceurl = 'http://localhost/yourimage';
-            $child->revisedprompt = 'Revised prompt';
-        } else {
+        // Create the child action record. Each action table stores different details.
+        $child = match ($data['actionname']) {
+            'generate_image' => (object) [
+                'prompt' => 'Prompt text',
+                'numberimages' => 1,
+                'quality' => 'hd',
+                'aspectratio' => 'landscape',
+                'style' => 'vivid',
+                'sourceurl' => 'http://localhost/yourimage',
+                'revisedprompt' => 'Revised prompt',
+            ],
+            // Embed text stores neither the input nor the vector, only metadata about them.
+            'embed_text' => (object) [
+                'inputhash' => hash('sha256', 'Prompt text'),
+                'inputlength' => \core_text::strlen('Prompt text'),
+                'embeddingdims' => $data['success'] ? 768 : 0,
+            ],
             // Generate text (and variants).
-            $child->generatedcontent = 'Your generated content';
-        }
+            default => (object) [
+                'prompt' => 'Prompt text',
+                'generatedcontent' => 'Your generated content',
+            ],
+        };
 
         // Simulate an error.
         if ($data['success'] == 0) {
@@ -77,13 +84,17 @@ class core_ai_generator extends component_generator_base {
             unset($child->revisedprompt);
             unset($data['prompttokens']);
             unset($data['completiontokens']);
-        } else if ($data['actionname'] !== 'generate_image') {
+        } else if ($data['actionname'] === 'generate_image') {
+            // Image generation does not report token usage.
+            unset($data['prompttokens']);
+            unset($data['completiontokens']);
+        } else if ($data['actionname'] === 'embed_text') {
+            // Embedding responses report prompt tokens only; completion tokens stay empty unless given.
+            $data['prompttokens'] = $data['prompttokens'] ?? 111;
+        } else {
             // Token counts describe the AI provider call, so they are stored on the register record.
             $data['prompttokens'] = $data['prompttokens'] ?? 111;
             $data['completiontokens'] = $data['completiontokens'] ?? 222;
-        } else {
-            unset($data['prompttokens']);
-            unset($data['completiontokens']);
         }
 
         $childid = $DB->insert_record("ai_action_{$data['actionname']}", $child);
