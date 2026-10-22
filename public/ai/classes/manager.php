@@ -35,6 +35,7 @@ class manager {
         'summarise_text',
         'explain_text',
         'generate_image',
+        'embed_text',
     ];
 
     /**
@@ -185,16 +186,30 @@ class manager {
      *
      * This is the entry point for processing an action.
      *
+     * By default every enabled provider instance that supports the action is tried in order
+     * until one succeeds. Pass $providerid to process the action with one specific provider
+     * instance and no failover. This is required for actions whose results are only comparable
+     * when produced by the same provider and model, such as embed_text: a consumer that indexes
+     * embeddings must keep using the provider instance it indexed with.
+     *
      * @param base $action The action to process. Action must be configured.
+     * @param int|null $providerid Restrict processing to this provider instance id, or null to allow any.
      * @return responses\response_base The result of the action.
      */
-    public function process_action(base $action): responses\response_base {
+    public function process_action(base $action, ?int $providerid = null): responses\response_base {
         // Get the action response_base name.
         $actionname = $action::class;
         $responseclassname = 'core_ai\\aiactions\\responses\\response_' . $action->get_basename();
 
         // Get the providers that support the action.
         $providers = $this->get_providers_for_actions([$actionname], true);
+        if ($providerid !== null) {
+            // Only the requested provider instance may process the action; no failover.
+            $providers[$actionname] = array_values(array_filter(
+                $providers[$actionname],
+                static fn (provider $provider): bool => (int) $provider->id === $providerid,
+            ));
+        }
 
         // Loop through the providers and process the action.
         foreach ($providers[$actionname] as $provider) {

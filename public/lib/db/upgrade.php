@@ -2418,5 +2418,20 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2026101600.00);
     }
 
+    if ($oldversion <  2026102100.00) {
+        // Define table ai_action_embed_text to be created.
+        $table = new xmldb_table('ai_action_embed_text');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('inputhash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
+        $table->add_field('inputlength', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('embeddingdims', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        // Main savepoint reached.
+        upgrade_main_savepoint(true,  2026102100.00);
+    }
+
     return true;
 }
