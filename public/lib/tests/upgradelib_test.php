@@ -43,6 +43,7 @@ require_once($CFG->dirroot . '/calendar/tests/helpers.php');
 #[\PHPUnit\Framework\Attributes\CoversFunction('moodlenet_migrate_profile_field')]
 #[\PHPUnit\Framework\Attributes\CoversFunction('upgrade_migrate_classic_theme_to_boost')]
 #[\PHPUnit\Framework\Attributes\CoversFunction('upgrade_penalty_calculation_freeze')]
+#[\PHPUnit\Framework\Attributes\CoversFunction('upgrade_add_embed_text_action_to_ai_providers')]
 final class upgradelib_test extends advanced_testcase {
 
     /**
@@ -2306,5 +2307,80 @@ calendar,core_calendar|/calendar/view.php?view=month',
         upgrade_penalty_calculation_freeze();
 
         $this->assertTrue(empty($CFG->{'gradebook_calculations_freeze_' . $course->id}));
+    }
+
+    /**
+     * Test that the embed_text action config is added to existing provider instances that support it.
+     */
+    public function test_upgrade_add_embed_text_action_to_ai_providers(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest();
+
+        require_once($CFG->libdir . '/db/upgradelib.php');
+
+        $embedkey = 'core_ai\aiactions\embed_text';
+        $generatekey = 'core_ai\aiactions\generate_text';
+
+        // An Ollama instance created before the action existed: no embed_text entry at all.
+        $ollamaid = $DB->insert_record('ai_providers', (object) [
+            'name' => 'Ollama old',
+            'provider' => 'aiprovider_ollama\provider',
+            'enabled' => 1,
+            'config' => json_encode(['endpoint' => 'http://localhost:11434']),
+            'actionconfig' => json_encode([
+                $generatekey => ['enabled' => true, 'settings' => ['model' => 'llama3.3']],
+            ]),
+        ]);
+        // An Ollama instance where the admin toggled the action on through the UI before upgrading,
+        // leaving an entry with no settings.
+        $toggledid = $DB->insert_record('ai_providers', (object) [
+            'name' => 'Ollama toggled',
+            'provider' => 'aiprovider_ollama\provider',
+            'enabled' => 1,
+            'config' => json_encode(['endpoint' => 'http://localhost:11434']),
+            'actionconfig' => json_encode([
+                $generatekey => ['enabled' => true, 'settings' => ['model' => 'llama3.3']],
+                $embedkey => ['enabled' => false],
+            ]),
+        ]);
+        // An Ollama instance that already has a complete embed_text entry: must be left alone.
+        $doneid = $DB->insert_record('ai_providers', (object) [
+            'name' => 'Ollama done',
+            'provider' => 'aiprovider_ollama\provider',
+            'enabled' => 1,
+            'config' => json_encode(['endpoint' => 'http://localhost:11434']),
+            'actionconfig' => json_encode([
+                $embedkey => ['enabled' => false, 'settings' => ['model' => 'my-embedder']],
+            ]),
+        ]);
+        // A provider that does not support the action: must not get an entry.
+        $openaiid = $DB->insert_record('ai_providers', (object) [
+            'name' => 'OpenAI',
+            'provider' => 'aiprovider_openai\provider',
+            'enabled' => 1,
+            'config' => json_encode(['apikey' => 'goeshere']),
+            'actionconfig' => json_encode([
+                $generatekey => ['enabled' => true, 'settings' => ['model' => 'gpt-4o']],
+            ]),
+        ]);
+
+        upgrade_add_embed_text_action_to_ai_providers();
+
+        $expected = ['enabled' => true, 'settings' => ['model' => 'nomic-embed-text']];
+
+        $actionconfig = json_decode($DB->get_field('ai_providers', 'actionconfig', ['id' => $ollamaid]), true);
+        $this->assertSame($expected, $actionconfig[$embedkey]);
+        // Existing actions are untouched.
+        $this->assertSame('llama3.3', $actionconfig[$generatekey]['settings']['model']);
+
+        $actionconfig = json_decode($DB->get_field('ai_providers', 'actionconfig', ['id' => $toggledid]), true);
+        $this->assertSame($expected, $actionconfig[$embedkey]);
+
+        $actionconfig = json_decode($DB->get_field('ai_providers', 'actionconfig', ['id' => $doneid]), true);
+        $this->assertSame(['enabled' => false, 'settings' => ['model' => 'my-embedder']], $actionconfig[$embedkey]);
+
+        $actionconfig = json_decode($DB->get_field('ai_providers', 'actionconfig', ['id' => $openaiid]), true);
+        $this->assertArrayNotHasKey($embedkey, $actionconfig);
     }
 }

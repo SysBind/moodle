@@ -33,6 +33,18 @@ use core_ai\aiactions\responses\response_base;
  * The vector itself is returned to the caller and belongs to the consumer. The action table only
  * keeps a hash and length of the input plus the vector dimensions for auditing and usage reporting.
  *
+ * This action is normally called in bulk by a system process (an indexer embeds every chunk of every
+ * document, and a search embeds every query), yet every call goes through the same pipeline as a
+ * user-facing action. Consumers should be aware that each call:
+ * - writes one row to ai_action_register and one row to ai_action_embed_text, neither of which is pruned,
+ *   so a full index of a large site adds hundreds of thousands of rows;
+ * - counts against the provider's per-user and global rate limits, shared with the user-facing actions;
+ * - is attributed to the $userid passed in and shows up in the AI usage reports and hub statistics for
+ *   the context it was created in, so a cron-driven indexer should expect its service user to appear as
+ *   the heaviest "user" in every course;
+ * - is not checked against the user's AI policy acceptance or the course/activity "AI tools" switch.
+ *   {@see \core_ai\manager::process_action()} leaves both to the caller, as it does for placements.
+ *
  * @package    core_ai
  * @copyright  2026 Asaf Ohayon <asaf@sysbind.co.il>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

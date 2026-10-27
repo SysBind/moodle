@@ -2205,6 +2205,42 @@ function upgrade_add_explain_action_to_ai_providers() {
 }
 
 /**
+ * Upgrade script to add the embed_text action config to existing AI provider instances.
+ *
+ * Provider instances created before the action existed keep their stored action config, which has no
+ * entry for embed_text. Without one, enabling the action only stores the enabled flag and processors
+ * that read the model setting fail. Only providers that support the action get an entry.
+ */
+function upgrade_add_embed_text_action_to_ai_providers() {
+    global $DB;
+    $currentrecords = $DB->get_recordset('ai_providers');
+
+    foreach ($currentrecords as $currentrecord) {
+        $embedconfig = null;
+        if ($currentrecord->provider === 'aiprovider_ollama\provider') {
+            $embedconfig = [
+                'enabled' => true,
+                'settings' => [
+                    'model' => 'nomic-embed-text',
+                ],
+            ];
+        }
+
+        // Update the record with the changes, leaving an existing embed_text entry untouched.
+        if ($embedconfig !== null) {
+            $actionconfig = json_decode($currentrecord->actionconfig, true) ?: [];
+            if (!isset($actionconfig['core_ai\aiactions\embed_text']['settings']['model'])) {
+                $actionconfig['core_ai\aiactions\embed_text'] = $embedconfig;
+                $currentrecord->actionconfig = json_encode($actionconfig);
+                $DB->update_record('ai_providers', $currentrecord);
+            }
+        }
+    }
+
+    $currentrecords->close();
+}
+
+/**
  * Creates a new ad-hoc task to upgrade the mime-type of files asynchronously.
  * Thus, we can considerably reduce the time an upgrade takes.
  *

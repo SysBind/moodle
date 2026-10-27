@@ -1,0 +1,39 @@
+issueNumber: MDL-90218
+notes:
+  core_ai:
+    - message: >-
+        A new `embed_text` action (`core_ai\aiactions\embed_text`, response
+        `core_ai\aiactions\responses\response_embed_text`) turns text into an
+        embedding vector. Unlike the existing actions it is not user facing and
+        has no placement: it is meant to be called by other components, for
+        example a semantic search engine. Embeddings are only comparable when
+        produced by the same provider instance and model, so consumers that
+        store vectors must let the admin choose a provider instance, record the
+        provider instance id, model and vector dimensions they indexed with,
+        refuse to mix vectors from a different combination, and re-embed when
+        any of those change. The vector is returned to the caller and belongs
+        to the consumer; the `ai_action_embed_text` table only stores a hash and
+        length of the input and the vector dimensions. Because the action is
+        called in bulk, every call still writes a row to `ai_action_register`
+        and `ai_action_embed_text`, counts against the provider rate limits and
+        appears in AI usage reports attributed to the given user id; policy
+        acceptance and the course/activity "AI tools" switch are not checked by
+        `process_action()` and remain the caller's responsibility.
+      type: improved
+    - message: >-
+        `core_ai\manager::process_action()` accepts an optional `$providerid`.
+        When given, only that provider instance is used to process the action
+        and there is no failover to other instances. Use it for actions such as
+        `embed_text` where results from different provider instances are not
+        interchangeable.
+      type: improved
+  aiprovider_ollama:
+    - message: >-
+        The Ollama provider supports the new `embed_text` action through
+        `aiprovider_ollama\process_embed_text` (calling `/api/embed`), a new
+        `action_embed_form` settings form, a `nomic_embed_text` model class and
+        a new `ollama_base::MODEL_TYPE_EMBEDDING` model type. Existing provider
+        instances get an `embed_text` action config on upgrade. The default
+        model in the action settings form is now the first predefined model of
+        the requested type instead of the literal `llama3.3`.
+      type: improved
