@@ -5883,6 +5883,8 @@ class restore_create_question_files extends restore_execution_step {
                                                ORDER BY categoryid ASC", array($this->get_restoreid()));
 
         $currentcatid = -1;
+        $commonfilescontexts = [];
+        $qtypefilescontexts = [];
         foreach ($catqtypes as $categoryid => $row) {
             $qtype = $row->qtype;
 
@@ -5902,11 +5904,17 @@ class restore_create_question_files extends restore_execution_step {
                 $oldctxid = $qcatmapping->info->contextid;
                 $newctxid = $qcatmapping->parentitemid;
 
-                $this->send_common_files($oldctxid, $newctxid, $progress);
+                if (!isset($commonfilescontexts[$oldctxid][$newctxid])) {
+                    $this->send_common_files($oldctxid, $newctxid, $progress);
+                    $commonfilescontexts[$oldctxid][$newctxid] = true;
+                }
                 $currentcatid = $categoryid;
             }
 
-            $this->send_qtype_files($qtype, $oldctxid, $newctxid, $progress);
+            if (!isset($qtypefilescontexts[$oldctxid][$newctxid][$qtype])) {
+                $this->send_qtype_files($qtype, $oldctxid, $newctxid, $progress);
+                $qtypefilescontexts[$oldctxid][$newctxid][$qtype] = true;
+            }
         }
         $catqtypes->close();
         $progress->end_progress();
@@ -5919,7 +5927,7 @@ class restore_create_question_files extends restore_execution_step {
      * @param int             $newctxid New context id.
      * @param \core\progress\base  $progress Progress object to use.
      */
-    private function send_common_files($oldctxid, $newctxid, $progress) {
+    protected function send_common_files($oldctxid, $newctxid, $progress) {
         // Add common question files (question and question_answer ones).
         restore_dbops::send_files_to_pool($this->get_basepath(), $this->get_restoreid(), 'question', 'questiontext',
                 $oldctxid, $this->task->get_userid(), 'question_created', null, $newctxid, true, $progress);
@@ -5947,7 +5955,7 @@ class restore_create_question_files extends restore_execution_step {
      * @param int             $newctxid New context id.
      * @param \core\progress\base  $progress Progress object to use.
      */
-    private function send_qtype_files($qtype, $oldctxid, $newctxid, $progress) {
+    protected function send_qtype_files($qtype, $oldctxid, $newctxid, $progress) {
         if (!isset($this->qtypecomponentscache[$qtype])) {
             $this->qtypecomponentscache[$qtype] = backup_qtype_plugin::get_components_and_fileareas($qtype);
         }
