@@ -25,13 +25,19 @@
 
 namespace ltiservice_gradebookservices\local\service;
 
+use coding_exception;
+use dml_exception;
+use Exception;
+use grade_item;
 use ltiservice_gradebookservices\local\resources\lineitem;
 use ltiservice_gradebookservices\local\resources\lineitems;
 use ltiservice_gradebookservices\local\resources\results;
 use ltiservice_gradebookservices\local\resources\scores;
 use mod_lti\local\ltiservice\resource_base;
 use mod_lti\local\ltiservice\service_base;
+use moodle_exception;
 use moodle_url;
+use MoodleQuickForm;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -46,7 +52,6 @@ require_once($CFG->dirroot . '/mod/lti/locallib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class gradebookservices extends service_base {
-
     /** Read-only access to Gradebook services */
     const GRADEBOOKSERVICES_READ = 1;
     /** Full access to Gradebook services */
@@ -69,7 +74,6 @@ class gradebookservices extends service_base {
         parent::__construct();
         $this->id = 'gradebookservices';
         $this->name = get_string($this->get_component_id(), $this->get_component_id());
-
     }
 
     /**
@@ -82,7 +86,7 @@ class gradebookservices extends service_base {
         // The containers should be ordered in the array after their elements.
         // Lineitems should be after lineitem.
         if (empty($this->resources)) {
-            $this->resources = array();
+            $this->resources = [];
             $this->resources[] = new lineitem($this);
             $this->resources[] = new lineitems($this);
             $this->resources[] = new results($this);
@@ -99,7 +103,7 @@ class gradebookservices extends service_base {
      */
     public function get_permitted_scopes() {
 
-        $scopes = array();
+        $scopes = [];
         $ok = !empty($this->get_type());
         if ($ok && isset($this->get_typeconfig()['ltiservice_gradesynchronization'])) {
             if (!empty($setting = $this->get_typeconfig()['ltiservice_gradesynchronization'])) {
@@ -113,7 +117,6 @@ class gradebookservices extends service_base {
         }
 
         return $scopes;
-
     }
 
     /**
@@ -129,7 +132,8 @@ class gradebookservices extends service_base {
     /**
      * Adds form elements for gradebook sync add/edit page.
      *
-     * @param \MoodleQuickForm $mform Moodle quickform object definition
+     * @param MoodleQuickForm $mform Moodle quickform object definition
+     * @throws coding_exception
      */
     public function get_configuration_options(&$mform) {
 
@@ -138,7 +142,7 @@ class gradebookservices extends service_base {
         $options = [
             get_string('nevergs', $this->get_component_id()),
             get_string('partialgs', $this->get_component_id()),
-            get_string('alwaysgs', $this->get_component_id())
+            get_string('alwaysgs', $this->get_component_id()),
         ];
 
         $mform->addElement('select', $selectelementname, get_string($identifier, $this->get_component_id()), $options);
@@ -157,12 +161,18 @@ class gradebookservices extends service_base {
      * @param null|object $lti LTI Instance.
      *
      * @return array containing the target link URL and the custom params string to use.
+     * @throws dml_exception
      */
-    public function override_endpoint(string $messagetype, string $targetlinkuri, ?string $customstr, int $courseid,
-            ?object $lti = null): array {
+    public function override_endpoint(
+        string $messagetype,
+        string $targetlinkuri,
+        ?string $customstr,
+        int $courseid,
+        ?object $lti = null
+    ): array {
         global $DB;
         if ($messagetype == 'LtiSubmissionReviewRequest' && isset($lti->id)) {
-            $conditions = array('courseid' => $courseid, 'ltilinkid' => $lti->id);
+            $conditions = ['courseid' => $courseid, 'ltilinkid' => $lti->id];
             $coupledlineitems = $DB->get_records('ltiservice_gradebookservices', $conditions);
             if (count($coupledlineitems) == 1) {
                 $item = reset($coupledlineitems);
@@ -195,44 +205,44 @@ class gradebookservices extends service_base {
                 'suffix' => 'ags',
                 'group' => 'endpoint',
                 'claim' => 'scope',
-                'isarray' => true
+                'isarray' => true,
             ],
             'custom_lineitems_url' => [
                 'suffix' => 'ags',
                 'group' => 'endpoint',
                 'claim' => 'lineitems',
-                'isarray' => false
+                'isarray' => false,
             ],
             'custom_lineitem_url' => [
                 'suffix' => 'ags',
                 'group' => 'endpoint',
                 'claim' => 'lineitem',
-                'isarray' => false
+                'isarray' => false,
             ],
             'custom_results_url' => [
                 'suffix' => 'ags',
                 'group' => 'endpoint',
                 'claim' => 'results',
-                'isarray' => false
+                'isarray' => false,
             ],
             'custom_result_url' => [
                 'suffix' => 'ags',
                 'group' => 'endpoint',
                 'claim' => 'result',
-                'isarray' => false
+                'isarray' => false,
             ],
             'custom_scores_url' => [
                 'suffix' => 'ags',
                 'group' => 'endpoint',
                 'claim' => 'scores',
-                'isarray' => false
+                'isarray' => false,
             ],
             'custom_score_url' => [
                 'suffix' => 'ags',
                 'group' => 'endpoint',
                 'claim' => 'score',
-                'isarray' => false
-            ]
+                'isarray' => false,
+            ],
         ];
     }
 
@@ -249,25 +259,28 @@ class gradebookservices extends service_base {
      * and not return parameters for services not used.
      *
      * @return array of key/value pairs to add as launch parameters.
+     * @throws dml_exception
      */
     public function get_launch_parameters($messagetype, $courseid, $user, $typeid, $modlti = null) {
         global $DB;
-        $launchparameters = array();
+        $launchparameters = [];
         $this->set_type(lti_get_type($typeid));
         $this->set_typeconfig(lti_get_type_config($typeid));
         // Only inject parameters if the service is enabled for this tool.
         if (isset($this->get_typeconfig()['ltiservice_gradesynchronization'])) {
-            if ($this->get_typeconfig()['ltiservice_gradesynchronization'] == self::GRADEBOOKSERVICES_READ ||
-                    $this->get_typeconfig()['ltiservice_gradesynchronization'] == self::GRADEBOOKSERVICES_FULL) {
+            if (
+                $this->get_typeconfig()['ltiservice_gradesynchronization'] == self::GRADEBOOKSERVICES_READ ||
+                    $this->get_typeconfig()['ltiservice_gradesynchronization'] == self::GRADEBOOKSERVICES_FULL
+            ) {
                 // Check for used in context is only needed because there is no explicit site tool - course relation.
                 if ($this->is_allowed_in_context($typeid, $courseid)) {
                     $id = null;
                     if (!is_null($modlti)) {
-                        $conditions = array('courseid' => $courseid, 'itemtype' => 'mod',
-                                'itemmodule' => 'lti', 'iteminstance' => $modlti);
+                        $conditions = ['courseid' => $courseid, 'itemtype' => 'mod',
+                                'itemmodule' => 'lti', 'iteminstance' => $modlti];
 
                         $coupledlineitems = $DB->get_records('grade_items', $conditions);
-                        $conditionsgbs = array('courseid' => $courseid, 'ltilinkid' => $modlti);
+                        $conditionsgbs = ['courseid' => $courseid, 'ltilinkid' => $modlti];
                         $lineitemsgbs = $DB->get_records('ltiservice_gradebookservices', $conditionsgbs);
                         // If a link has more that one attached grade items, per spec we do not populate line item url.
                         if (count($lineitemsgbs) == 1) {
@@ -305,13 +318,13 @@ class gradebookservices extends service_base {
      * @param string $typeid
      *
      * @return array
-     * @throws \Exception
+     * @throws Exception
      */
     public function get_lineitems($courseid, $resourceid, $ltilinkid, $tag, $limitfrom, $limitnum, $typeid) {
         global $DB;
 
         // Select all lti potential linetiems in site.
-        $params = array('courseid' => $courseid);
+        $params = ['courseid' => $courseid];
 
         $sql = "SELECT i.*
                   FROM {grade_items} i
@@ -321,14 +334,16 @@ class gradebookservices extends service_base {
 
         // For each one, check the gbs id, and check that toolproxy matches. If so, add the
         // tag to the result and add it to a final results array.
-        $lineitemstoreturn = array();
-        $lineitemsandtotalcount = array();
+        $lineitemstoreturn = [];
+        $lineitemsandtotalcount = [];
         if ($lineitems) {
             foreach ($lineitems as $lineitem) {
                 $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($lineitem->id);
-                if ($gbs && (!isset($tag) || (isset($tag) && $gbs->tag == $tag))
+                if (
+                    $gbs && (!isset($tag) || (isset($tag) && $gbs->tag == $tag))
                         && (!isset($ltilinkid) || (isset($ltilinkid) && $gbs->ltilinkid == $ltilinkid))
-                        && (!isset($resourceid) || (isset($resourceid) && $gbs->resourceid == $resourceid))) {
+                        && (!isset($resourceid) || (isset($resourceid) && $gbs->resourceid == $resourceid))
+                ) {
                     if (is_null($typeid)) {
                         if ($this->get_tool_proxy()->id == $gbs->toolproxyid) {
                             array_push($lineitemstoreturn, $lineitem);
@@ -338,15 +353,17 @@ class gradebookservices extends service_base {
                             array_push($lineitemstoreturn, $lineitem);
                         }
                     }
-                } else if (($lineitem->itemtype == 'mod' && $lineitem->itemmodule == 'lti'
+                } else if (
+                    ($lineitem->itemtype == 'mod' && $lineitem->itemmodule == 'lti'
                         && !isset($resourceid) && !isset($tag)
                         && (!isset($ltilinkid) || (isset($ltilinkid)
-                        && $lineitem->iteminstance == $ltilinkid)))) {
+                        && $lineitem->iteminstance == $ltilinkid)))
+                ) {
                     // We will need to check if the activity related belongs to our tool proxy.
-                    $ltiactivity = $DB->get_record('lti', array('id' => $lineitem->iteminstance));
+                    $ltiactivity = $DB->get_record('lti', ['id' => $lineitem->iteminstance]);
                     if (($ltiactivity) && (isset($ltiactivity->typeid))) {
                         if ($ltiactivity->typeid != 0) {
-                            $tool = $DB->get_record('lti_types', array('id' => $ltiactivity->typeid));
+                            $tool = $DB->get_record('lti_types', ['id' => $ltiactivity->typeid]);
                         } else {
                             $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $courseid);
                             if (!$tool) {
@@ -365,7 +382,7 @@ class gradebookservices extends service_base {
                     }
                 }
             }
-            $lineitemsandtotalcount = array();
+            $lineitemsandtotalcount = [];
             array_push($lineitemsandtotalcount, count($lineitemstoreturn));
             // Return the right array based in the paging parameters limit and from.
             if (($limitnum) && ($limitnum > 0)) {
@@ -385,21 +402,22 @@ class gradebookservices extends service_base {
      * @param string $itemid ID of lineitem
      * @param string $typeid
      *
-     * @return \ltiservice_gradebookservices\local\resources\lineitem|bool
+     * @return bool|grade_item
+     * @throws dml_exception
      */
     public function get_lineitem($courseid, $itemid, $typeid) {
         global $DB, $CFG;
 
         require_once($CFG->libdir . '/gradelib.php');
-        $lineitem = \grade_item::fetch(array('id' => $itemid));
+        $lineitem = grade_item::fetch(['id' => $itemid]);
         if ($lineitem) {
             $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($itemid);
             if (!$gbs) {
                 // We will need to check if the activity related belongs to our tool proxy.
-                $ltiactivity = $DB->get_record('lti', array('id' => $lineitem->iteminstance));
+                $ltiactivity = $DB->get_record('lti', ['id' => $lineitem->iteminstance]);
                 if (($ltiactivity) && (isset($ltiactivity->typeid))) {
                     if ($ltiactivity->typeid != 0) {
-                        $tool = $DB->get_record('lti_types', array('id' => $ltiactivity->typeid));
+                        $tool = $DB->get_record('lti_types', ['id' => $ltiactivity->typeid]);
                     } else {
                         $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $courseid);
                         if (!$tool) {
@@ -443,22 +461,32 @@ class gradebookservices extends service_base {
      * @param int|null $toolproxyid lti2 tool proxy to which this lineitem is associated to
      *
      * @return int id of the created gradeitem
+     * @throws moodle_exception
+     * @throws dml_exception
      */
-    public function add_standalone_lineitem(string $courseid, string $label, float $maximumscore,
-            string $baseurl, ?int $ltilinkid, ?string $resourceid, ?string $tag, int $typeid,
-            ?int $toolproxyid = null): int {
+    public function add_standalone_lineitem(
+        string $courseid,
+        string $label,
+        float $maximumscore,
+        string $baseurl,
+        ?int $ltilinkid,
+        ?string $resourceid,
+        ?string $tag,
+        int $typeid,
+        ?int $toolproxyid = null
+    ): int {
         global $DB;
-        $params = array();
+        $params = [];
         $params['itemname'] = $label;
         $params['gradetype'] = GRADE_TYPE_VALUE;
         $params['grademax']  = $maximumscore;
         $params['grademin']  = 0;
-        $item = new \grade_item(array('id' => 0, 'courseid' => $courseid));
-        \grade_item::set_properties($item, $params);
+        $item = new grade_item(['id' => 0, 'courseid' => $courseid]);
+        grade_item::set_properties($item, $params);
         $item->itemtype = 'manual';
         $item->grademax = $maximumscore;
         $id = $item->insert('mod/ltiservice_gradebookservices');
-        $DB->insert_record('ltiservice_gradebookservices', (object)array(
+        $DB->insert_record('ltiservice_gradebookservices', (object)[
                 'gradeitemid' => $id,
                 'courseid' => $courseid,
                 'toolproxyid' => $toolproxyid,
@@ -466,8 +494,8 @@ class gradebookservices extends service_base {
                 'baseurl' => $baseurl,
                 'ltilinkid' => $ltilinkid,
                 'resourceid' => $resourceid,
-                'tag' => $tag
-        ));
+                'tag' => $tag,
+        ]);
         return $id;
     }
 
@@ -478,7 +506,7 @@ class gradebookservices extends service_base {
      * @param object $score Result object
      * @param int $userid User ID
      *
-     * @throws \Exception
+     * @throws Exception
      * @deprecated since Moodle 3.7 MDL-62599 - please do not use this function any more.
      * @see gradebookservices::save_grade_item($gradeitem, $score, $userid)
      */
@@ -494,13 +522,13 @@ class gradebookservices extends service_base {
      * @param object $score Result object
      * @param int $userid User ID
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function save_grade_item($gradeitem, $score, $userid) {
         global $DB, $CFG;
         $source = 'mod' . $this->get_component_id();
-        if ($DB->get_record('user', array('id' => $userid)) === false) {
-            throw new \Exception(null, 400);
+        if ($DB->get_record('user', ['id' => $userid]) === false) {
+            throw new Exception(null, 400);
         }
         require_once($CFG->libdir . '/gradelib.php');
         $finalgrade = null;
@@ -531,7 +559,7 @@ class gradebookservices extends service_base {
         if ($gradeitem->is_manual_item()) {
             $result = $gradeitem->update_final_grade($userid, $finalgrade, null, $feedback, FORMAT_PLAIN, null, $timemodified);
         } else {
-            if (!$grade = \grade_grade::fetch(array('itemid' => $gradeitem->id, 'userid' => $userid))) {
+            if (!$grade = \grade_grade::fetch(['itemid' => $gradeitem->id, 'userid' => $userid])) {
                 $grade = new \grade_grade();
                 $grade->userid = $userid;
                 $grade->itemid = $gradeitem->id;
@@ -542,17 +570,22 @@ class gradebookservices extends service_base {
             $grade->feedback = $feedback;
             $grade->rawgrade = $finalgrade;
             $grade->dategraded = $timemodified;
-            $status = grade_update($source, $gradeitem->courseid,
-                $gradeitem->itemtype, $gradeitem->itemmodule,
-                $gradeitem->iteminstance, $gradeitem->itemnumber, $grade);
+            $status = grade_update(
+                $source,
+                $gradeitem->courseid,
+                $gradeitem->itemtype,
+                $gradeitem->itemmodule,
+                $gradeitem->iteminstance,
+                $gradeitem->itemnumber,
+                $grade
+            );
 
             $result = ($status == GRADE_UPDATE_OK);
         }
         if (!$result) {
-            debugging("failed to save score for item ".$gradeitem->id." and user ".$grade->userid);
-            throw new \Exception(null, 500);
+            debugging("failed to save score for item " . $gradeitem->id . " and user " . $grade->userid);
+            throw new Exception(null, 500);
         }
-
     }
 
     /**
@@ -563,6 +596,7 @@ class gradebookservices extends service_base {
      * @param string $typeid
      *
      * @return object
+     * @throws dml_exception
      */
     public static function item_for_json($item, $endpoint, $typeid) {
 
@@ -602,7 +636,6 @@ class gradebookservices extends service_base {
         }
 
         return $lineitem;
-
     }
 
     /**
@@ -643,19 +676,20 @@ class gradebookservices extends service_base {
     /**
      * Check if an LTI id is valid.
      *
-     * @param string $linkid             The lti id
-     * @param string  $course            The course
-     * @param string  $toolproxy         The tool proxy id
+     * @param string $linkid The lti id
+     * @param string $course The course
+     * @param string $toolproxy The tool proxy id
      *
      * @return boolean
+     * @throws dml_exception
      */
     public static function check_lti_id($linkid, $course, $toolproxy) {
         global $DB;
         // Check if lti type is zero or not (comes from a backup).
-        $sqlparams1 = array();
+        $sqlparams1 = [];
         $sqlparams1['linkid'] = $linkid;
         $sqlparams1['course'] = $course;
-        $ltiactivity = $DB->get_record('lti', array('id' => $linkid, 'course' => $course));
+        $ltiactivity = $DB->get_record('lti', ['id' => $linkid, 'course' => $course]);
         if ($ltiactivity->typeid == 0) {
             $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $course);
             if (!$tool) {
@@ -663,7 +697,7 @@ class gradebookservices extends service_base {
             }
             return (($tool) && ($toolproxy == $tool->toolproxyid));
         } else {
-            $sqlparams2 = array();
+            $sqlparams2 = [];
             $sqlparams2['linkid'] = $linkid;
             $sqlparams2['course'] = $course;
             $sqlparams2['toolproxy'] = $toolproxy;
@@ -680,19 +714,20 @@ class gradebookservices extends service_base {
     /**
      * Check if an LTI id is valid when we are in a LTI 1.x case
      *
-     * @param string $linkid             The lti id
-     * @param string  $course            The course
-     * @param string  $typeid            The lti type id
+     * @param string $linkid The lti id
+     * @param string $course The course
+     * @param string $typeid The lti type id
      *
      * @return boolean
+     * @throws dml_exception
      */
     public static function check_lti_1x_id($linkid, $course, $typeid) {
         global $DB;
         // Check if lti type is zero or not (comes from a backup).
-        $sqlparams1 = array();
+        $sqlparams1 = [];
         $sqlparams1['linkid'] = $linkid;
         $sqlparams1['course'] = $course;
-        $ltiactivity = $DB->get_record('lti', array('id' => $linkid, 'course' => $course));
+        $ltiactivity = $DB->get_record('lti', ['id' => $linkid, 'course' => $course]);
         if ($ltiactivity) {
             if ($ltiactivity->typeid == 0) {
                 $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $course);
@@ -701,7 +736,7 @@ class gradebookservices extends service_base {
                 }
                 return (($tool) && ($typeid == $tool->id));
             } else {
-                $sqlparams2 = array();
+                $sqlparams2 = [];
                 $sqlparams2['linkid'] = $linkid;
                 $sqlparams2['course'] = $course;
                 $sqlparams2['typeid'] = $typeid;
@@ -727,13 +762,22 @@ class gradebookservices extends service_base {
      * @param moodle_url|null $subreviewurl The submission review target link URL
      * @param string|null $subreviewparams The submission review custom parameters.
      *
+     * @throws dml_exception
      */
-    public static function update_coupled_gradebookservices(object $ltiinstance,
-            ?string $resourceid, ?string $tag, ?\moodle_url $subreviewurl, ?string $subreviewparams): void {
+    public static function update_coupled_gradebookservices(
+        object $ltiinstance,
+        ?string $resourceid,
+        ?string $tag,
+        ?\moodle_url $subreviewurl,
+        ?string $subreviewparams
+    ): void {
         global $DB;
 
         if ($ltiinstance && $ltiinstance->typeid) {
-            $gradeitem = $DB->get_record('grade_items', array('itemmodule' => 'lti', 'iteminstance' => $ltiinstance->id));
+            $gradeitem = $DB->get_record(
+                'grade_items',
+                ['itemtype' => 'mod', 'itemmodule' => 'lti', 'iteminstance' => $ltiinstance->id]
+            );
             if ($gradeitem) {
                 $resourceid = (isset($resourceid) && empty(trim($resourceid))) ? null : $resourceid;
                 $subreviewurlstr = $subreviewurl ? $subreviewurl->out(false) : null;
@@ -747,7 +791,7 @@ class gradebookservices extends service_base {
                     $DB->update_record('ltiservice_gradebookservices', $gbs);
                 } else {
                     $baseurl = lti_get_type_type_config($ltiinstance->typeid)->lti_toolurl;
-                    $DB->insert_record('ltiservice_gradebookservices', (object)array(
+                    $DB->insert_record('ltiservice_gradebookservices', (object)[
                         'gradeitemid' => $gradeitem->id,
                         'courseid' => $gradeitem->courseid,
                         'typeid' => $ltiinstance->typeid,
@@ -756,8 +800,8 @@ class gradebookservices extends service_base {
                         'resourceid' => $resourceid,
                         'tag' => $tag,
                         'subreviewurl' => $subreviewurlstr,
-                        'subreviewparams' => $subreviewparams
-                    ));
+                        'subreviewparams' => $subreviewparams,
+                    ]);
                 }
             }
         }
@@ -767,34 +811,47 @@ class gradebookservices extends service_base {
      * Called when a new LTI Instance is added.
      *
      * @param object $lti LTI Instance.
+     * @throws \core\exception\moodle_exception
+     * @throws dml_exception
      */
     public function instance_added(object $lti): void {
-        self::update_coupled_gradebookservices($lti, $lti->lineitemresourceid ?? null, $lti->lineitemtag ?? null,
+        self::update_coupled_gradebookservices(
+            $lti,
+            $lti->lineitemresourceid ?? null,
+            $lti->lineitemtag ?? null,
             isset($lti->lineitemsubreviewurl) ? new moodle_url($lti->lineitemsubreviewurl) : null,
-            $lti->lineitemsubreviewparams ?? null);
+            $lti->lineitemsubreviewparams ?? null
+        );
     }
 
     /**
      * Called when a new LTI Instance is updated.
      *
      * @param object $lti LTI Instance.
+     * @throws \core\exception\moodle_exception
+     * @throws dml_exception
      */
     public function instance_updated(object $lti): void {
-        self::update_coupled_gradebookservices($lti, $lti->lineitemresourceid ?? null, $lti->lineitemtag ?? null,
+        self::update_coupled_gradebookservices(
+            $lti,
+            $lti->lineitemresourceid ?? null,
+            $lti->lineitemtag ?? null,
             isset($lti->lineitemsubreviewurl) ? new moodle_url($lti->lineitemsubreviewurl) : null,
-            $lti->lineitemsubreviewparams ?? null);
+            $lti->lineitemsubreviewparams ?? null
+        );
     }
 
     /**
      * Set the form data when displaying the LTI Instance form.
      *
      * @param object $defaultvalues Default form values.
+     * @throws dml_exception
      */
     public function set_instance_form_values(object $defaultvalues): void {
         $defaultvalues->lineitemresourceid = '';
         $defaultvalues->lineitemtag = '';
-        $defaultvalues->subreviewurl = '';
-        $defaultvalues->subreviewparams = '';
+        $defaultvalues->lineitemsubreviewurl = '';
+        $defaultvalues->lineitemsubreviewparams = '';
         if (is_object($defaultvalues) && $defaultvalues->instance) {
             $gbs = self::find_ltiservice_gradebookservice_for_lti($defaultvalues->instance);
             if ($gbs) {
@@ -856,12 +913,16 @@ class gradebookservices extends service_base {
      *
      * @param string $instanceid The LTI module instance id
      * @return object gradebookservice for this line item
+     * @throws dml_exception
      */
     public static function find_ltiservice_gradebookservice_for_lti($instanceid) {
         global $DB;
 
         if ($instanceid) {
-            $gradeitem = $DB->get_record('grade_items', array('itemmodule' => 'lti', 'iteminstance' => $instanceid));
+            $gradeitem = $DB->get_record(
+                'grade_items',
+                ['itemtype' => 'mod', 'itemmodule' => 'lti', 'iteminstance' => $instanceid]
+            );
             if ($gradeitem) {
                 return self::find_ltiservice_gradebookservice_for_lineitem($gradeitem->id);
             }
@@ -873,12 +934,15 @@ class gradebookservices extends service_base {
      *
      * @param string $lineitemid The lineitem (gradeitem) id
      * @return object gradebookservice if it exists
+     * @throws dml_exception
      */
     public static function find_ltiservice_gradebookservice_for_lineitem($lineitemid) {
         global $DB;
         if ($lineitemid) {
-            return $DB->get_record('ltiservice_gradebookservices',
-                    array('gradeitemid' => $lineitemid));
+            return $DB->get_record(
+                'ltiservice_gradebookservices',
+                ['gradeitemid' => $lineitemid]
+            );
         }
     }
 
@@ -890,10 +954,12 @@ class gradebookservices extends service_base {
      *
      */
     public static function validate_iso8601_date($date) {
-        if (preg_match('/^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])' .
+        if (
+            preg_match('/^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])' .
                 '(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))' .
                 '([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)' .
-                '?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$/', $date) > 0) {
+                '?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$/', $date) > 0
+        ) {
             return true;
         } else {
             return false;
